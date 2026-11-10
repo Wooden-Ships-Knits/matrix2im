@@ -47,3 +47,9 @@ TARGET_NAME = "F27 IM MASTER (sheet F27, header baris 54)"
 FONT_WHS_000 = frozenset({"000 ONLY COLOR", "000 REPEAT COLOR"})
 FONT_WHS_000_SY = frozenset({"NEW COLOR", "REPEAT COLOR"})
 WHS_SETS = {"000": frozenset({"000"}), "SY": frozenset({"SY"}), "000 & SY": frozenset({"000", "SY"})}
+# Kunci IM MASTER (Password to modify, ECMA-376 fileSharing).
+IM_LOCK_ALGORITHMS = {"SHA-512": "sha512", "SHA-384": "sha384", "SHA-256": "sha256", "SHA-1": "sha1"}
+OWNER_FILE_PREFIX = "~$"                   # file kunci Excel di folder yang sama dengan workbook
+OWNER_FILE_TRUNCATE = 2                    # Excel kadang memotong 2 huruf pertama nama pada file pemilik
+OWNER_NAME_MAX_LEN = 53                    # byte pertama file pemilik = panjang nama (maks 53)
+OWNER_NAME_FALLBACK = "seseorang"
