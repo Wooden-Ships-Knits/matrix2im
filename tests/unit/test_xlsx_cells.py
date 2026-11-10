@@ -198,9 +198,10 @@ def test_full_calc_not_placed_inside_bookviews_extlst(tmp_path):
     ET.fromstring(wbxml)
 
 
-def test_row_search_is_linear(tmp_path):
-    """Banyak baris berubah: tiap pencarian <row> mulai dari baris sebelumnya, bukan dari awal."""
-    n = 5000
+def test_row_search_is_linear(tmp_path, monkeypatch):
+    """Tiap pencarian <row> mulai di/after akhir baris sebelumnya, bukan dari offset 0."""
+    from matrix_to_im import xlsx_cells
+    n = 300
     wb = Workbook()
     ws = wb.active
     ws.title = IM_SHEET
@@ -208,9 +209,20 @@ def test_row_search_is_linear(tmp_path):
         ws.cell(r, 1, "x")
     p = tmp_path / "x.xlsx"
     wb.save(p)
-    import time
-    t0 = time.perf_counter()
+    calls = []
+    real = xlsx_cells._find_row
+
+    def spy(data, row, frm=0):
+        res = real(data, row, frm)
+        calls.append((row, frm, res[1]))
+        return res
+
+    monkeypatch.setattr(xlsx_cells, "_find_row", spy)
     apply_cell_values(p, tmp_path / "o.xlsx", IM_SHEET,
-                      [CellChange(r, c, None, "v") for r in range(1, n + 1) for c in (2, 3, 4)])
-    assert time.perf_counter() - t0 < 10
-    assert load_workbook(tmp_path / "o.xlsx")[IM_SHEET].cell(n, 4).value == "v"
+                      [CellChange(r, c, None, "v") for r in range(n, 0, -1) for c in (2, 3)])
+    assert [c[0] for c in calls] == list(range(1, n + 1))
+    prev_end = 0
+    for row, frm, end in calls:
+        assert frm >= prev_end, f"baris {row}: pencarian mulai di {frm}, sebelum akhir baris sebelumnya {prev_end}"
+        prev_end = end
+    assert load_workbook(tmp_path / "o.xlsx")[IM_SHEET].cell(n, 3).value == "v"
