@@ -30,3 +30,7 @@ IM_SHEET = "F27"
 IM_HEADER_ROW = 54
 SOURCE_NAME = "F27 MATRIX MASTER"
 TARGET_NAME = "F27 IM MASTER (sheet F27, header baris 54)"
+# Arti font -> WHS warna di atas garis merah; di bawah garis merah selalu "SY".
+FONT_WHS_000 = frozenset({"000 ONLY COLOR", "000 REPEAT COLOR"})
+FONT_WHS_000_SY = frozenset({"NEW COLOR", "REPEAT COLOR"})
+WHS_SETS = {"000": frozenset({"000"}), "SY": frozenset({"SY"}), "000 & SY": frozenset({"000", "SY"})}
