@@ -118,10 +118,46 @@ def _sort_key(item: dict) -> int:
     return 10**6
 
 
+_STYLE_KEYS = ("no", "style", "tag", "sheet", "section")
+_COLORWAY_KEYS = ("yarns", "font_color", "cell")
+
+
+def _check_structure(raw: dict) -> None:
+    """Tolak raw JSON yang kuncinya tidak lengkap dengan pesan jelas, bukan KeyError mentah.
+
+    Raw JSON bisa diedit tangan atau berasal dari versi lain; lebih baik gagal di awal
+    dengan nama key dan nomor style daripada di tengah transformasi.
+    """
+    if not isinstance(raw.get("warnings", []), list):
+        raise Matrix2ImError("Raw JSON tidak valid: 'warnings' harus berupa list")
+    for i, st in enumerate(raw["styles"], 1):
+        if not isinstance(st, dict):
+            raise Matrix2ImError(f"Raw JSON tidak valid: style #{i} bukan objek")
+        for key in _STYLE_KEYS:
+            if key not in st:
+                raise Matrix2ImError(f"Raw JSON tidak valid: style #{i} tidak punya key '{key}'")
+        for group_key, _ in GROUPS:
+            if not isinstance(st.get(group_key), list):
+                raise Matrix2ImError(
+                    f"Raw JSON tidak valid: style #{i} key '{group_key}' tidak ada atau bukan list")
+            for j, cw in enumerate(st[group_key], 1):
+                if not isinstance(cw, dict):
+                    raise Matrix2ImError(
+                        f"Raw JSON tidak valid: style #{i} '{group_key}' colorway #{j} bukan objek")
+                for key in _COLORWAY_KEYS:
+                    if key not in cw:
+                        raise Matrix2ImError(f"Raw JSON tidak valid: style #{i} '{group_key}' "
+                                             f"colorway #{j} tidak punya key '{key}'")
+                if not isinstance(cw["yarns"], list):
+                    raise Matrix2ImError(f"Raw JSON tidak valid: style #{i} '{group_key}' "
+                                         f"colorway #{j} key 'yarns' bukan list")
+
+
 def transform(raw: dict, generated: str | None = None) -> dict:
     """Ubah raw JSON MATRIX jadi dokumen final: records, needs_review, summary."""
     if not isinstance(raw, dict) or not isinstance(raw.get("styles"), list):
         raise Matrix2ImError("Bukan raw JSON MATRIX: key 'styles' tidak ada")
+    _check_structure(raw)
     records, review = _build_records(raw)
     review += _duplicate_items(records)
     for w in raw.get("warnings", []):

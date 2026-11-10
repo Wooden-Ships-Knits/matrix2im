@@ -159,3 +159,48 @@ def test_read_json_errors(tmp_path):
     bad.write_text("{oops", encoding="utf-8")
     with pytest.raises(Matrix2ImError):
         read_json(bad)
+
+
+# --- pemeriksaan struktur raw JSON (Ruling 8) ---
+
+@pytest.mark.parametrize("key", ["style", "tag", "sheet", "no", "section", "color_above_black_line",
+                                 "color_between_black_and_red_line", "color_below_red_line"])
+def test_style_missing_key_raises(key):
+    st = style(above=[cw(["A"])])
+    del st[key]
+    with pytest.raises(Matrix2ImError, match=rf"style #1.*{key}"):
+        transform(raw_of(st))
+
+
+def test_error_names_style_index():
+    bad = style(name="B", above=[cw(["A"])])
+    del bad["tag"]
+    with pytest.raises(Matrix2ImError, match=r"style #2"):
+        transform(raw_of(style(above=[cw(["A"])]), bad))
+
+
+@pytest.mark.parametrize("key", ["yarns", "font_color", "cell"])
+def test_colorway_missing_key_raises(key):
+    c = cw(["A"])
+    del c[key]
+    with pytest.raises(Matrix2ImError, match=rf"style #1.*colorway.*{key}"):
+        transform(raw_of(style(above=[c])))
+
+
+def test_group_not_a_list_raises():
+    st = style(above=[cw(["A"])])
+    st["color_below_red_line"] = "x"
+    with pytest.raises(Matrix2ImError, match="color_below_red_line"):
+        transform(raw_of(st))
+
+
+def test_style_not_a_dict_raises():
+    with pytest.raises(Matrix2ImError, match="style #1"):
+        transform({"styles": ["x"], "warnings": []})
+
+
+def test_warnings_not_a_list_raises():
+    raw = raw_one(["A"])
+    raw["warnings"] = "oops"
+    with pytest.raises(Matrix2ImError, match="warnings"):
+        transform(raw)
