@@ -137,6 +137,15 @@ def _uncached_formula(ws: Worksheet, values: Worksheet, row: int, col: int) -> b
     return ws.cell(row, col).data_type == "f" and values.cell(row, col).value is None
 
 
+def _value(ws: Worksheet, values: Worksheet, row: int, col: int) -> object:
+    """Isi sel sebagai data: untuk sel formula pakai nilai hasil dari workbook data_only.
+
+    Workbook normal menyimpan teks formula (mis. '=C163'), yang bukan nama style/TAG/warna.
+    """
+    cell = ws.cell(row, col)
+    return values.cell(row, col).value if cell.data_type == "f" else cell.value
+
+
 def _page_bounds(ws: Worksheet) -> list[tuple[int, int]]:
     """(baris awal, baris akhir eksklusif) tiap halaman; satu sheet memuat banyak halaman cetak."""
     tops = [c.row for c in ws["A"] if isinstance(c.value, str) and c.value.startswith(PAGE_MARKER)]
@@ -229,32 +238,38 @@ def _read_page(ws: Worksheet, values: Worksheet, number: int, top: int, bottom: 
     return _Page(ws, values, number, columns, nr_row, width_row, num_row, _section(ws, num_row), red_row)
 
 
-def _tag_rows(ws: Worksheet, col: int, nr_row: int, width_row: int) -> list[int]:
+def _tag_rows(ws: Worksheet, values: Worksheet, col: int, nr_row: int, width_row: int) -> list[int]:
     """Sel TAG pertama di bawah baris NEW/REPEAT plus sel TAG berurutan di bawahnya
     (instruksi TAG panjang kadang ditulis di beberapa sel)."""
     rows: list[int] = []
     for row in range(nr_row, width_row):
-        if _is_tag(ws.cell(row, col).value):
+        if _is_tag(_value(ws, values, row, col)):
             rows.append(row)
         elif rows:
             break
     return rows
 
 
-def _read_colorway(ws: Worksheet, row: int, col: int, warnings: list[str]) -> Colorway | None:
+def _read_colorway(ws: Worksheet, values: Worksheet, row: int, col: int,
+                   warnings: list[str]) -> Colorway | None:
     """Sel area warna -> Colorway.
 
-    Sel TAG (D10), sel tanda baca (D5) dan warna font di luar legend (D9) dicatat sebagai
-    warning supaya tidak hilang diam-diam; dua yang pertama bukan colorway.
+    Sel TAG (D10), sel tanda baca (D5), formula tanpa nilai tersimpan, dan warna font di luar
+    legend (D9) dicatat sebagai warning supaya tidak hilang diam-diam; tiga yang pertama bukan
+    colorway.
     """
     cell = ws.cell(row, col)
-    if cell.value is None:
+    where = f"{ws.title} {cell.coordinate}"
+    if _uncached_formula(ws, values, row, col):
+        warnings.append(f"{where}: formula tanpa nilai tersimpan, diabaikan")
         return None
-    text = norm(cell.value)
+    value = _value(ws, values, row, col)
+    if value is None:
+        return None
+    text = norm(value)
     if not text:
         return None
-    where = f"{ws.title} {cell.coordinate}"
-    if _is_tag(cell.value):
+    if _is_tag(value):
         flat = text.replace("\n", " ")
         warnings.append(f'{where}: sel "{flat}" di area warna tidak dihitung sebagai colorway, '
                         "periksa manual")
@@ -266,24 +281,34 @@ def _read_colorway(ws: Worksheet, row: int, col: int, warnings: list[str]) -> Co
     meaning, known = font_meaning(rgb)
     if not known:
         warnings.append(f'{where}: warna font {rgb} tidak ada di legend, font_color diisi "{meaning}"')
-    yarns = split_yarns(cell.value)
+    yarns = split_yarns(value)
     comment = norm(cell.comment.text) if cell.comment else None
     return Colorway("/".join(yarns), yarns, meaning, cell.coordinate, comment, row)
 
 
 def _read_card(page: _Page, col: int, warnings: list[str]) -> Card | None:
     """Satu kolom kartu; None bila sel nama (tepat di atas baris NEW/REPEAT) kosong."""
-    ws = page.ws
+    ws, values = page.ws, page.values
     name_row = page.nr_row - 1
-    name = ws.cell(name_row, col).value
+    letter = get_column_letter(col)
+    name_cell = f"{letter}{name_row}"
+    if _uncached_formula(ws, values, name_row, col):
+        warnings.append(f"{ws.title} {name_cell}: formula tanpa nilai tersimpan di sel nama style, "
+                        "kartu dilewati")
+        return None
+    name = _value(ws, values, name_row, col)
     style = norm(name) if name is not None else ""
     if not style:
         return None
-    letter = get_column_letter(col)
-    name_cell = f"{letter}{name_row}"
 
-    tag_rows = _tag_rows(ws, col, page.nr_row, page.width_row)
+    tag_rows = _tag_rows(ws, values, col, page.nr_row, page.width_row)
     start = (tag_rows[-1] if tag_rows else page.nr_row) + 1
+    # Sel di zona TAG (baris NEW/REPEAT sampai blok TAG) tidak dibaca area warna; formula tanpa
+    # nilai di situ mungkin TAG yang hilang, jadi tetap diberi warning.
+    for row in range(page.nr_row, start):
+        if row not in tag_rows and _uncached_formula(ws, values, row, col):
+            warnings.append(f"{ws.title} {ws.cell(row, col).coordinate}: formula tanpa nilai tersimpan, "
+                            "diabaikan")
     # Garis dicari per kolom karena posisinya bisa beda antar kartu; garis merah halaman
     # hanya fallback. Garis hitam dicari mulai start+1 seperti prototipe (D15).
     red = next((row for row in range(start, page.width_row + 1)
@@ -294,7 +319,7 @@ def _read_card(page: _Page, col: int, warnings: list[str]) -> Card | None:
     between: list[Colorway] = []
     below: list[Colorway] = []
     for row in range(start, page.width_row):
-        colorway = _read_colorway(ws, row, col, warnings)
+        colorway = _read_colorway(ws, values, row, col, warnings)
         if colorway is None:
             continue
         if red is not None and row >= red:
@@ -307,7 +332,7 @@ def _read_card(page: _Page, col: int, warnings: list[str]) -> Card | None:
     no = no_cell = no_fill = None
     if page.num_row is not None:
         number_cell = ws.cell(page.num_row, col)
-        no = parse_no(page.values.cell(page.num_row, col).value)
+        no = parse_no(values.cell(page.num_row, col).value)
         no_cell, no_fill = number_cell.coordinate, fill_key(number_cell)
     style_whs = STYLE_WHS_BY_FILL.get(no_fill)   # WHS style = warna background sel nomor
 
@@ -328,7 +353,7 @@ def _read_card(page: _Page, col: int, warnings: list[str]) -> Card | None:
 
     return Card(sheet=ws.title, page=page.number, column=letter, section=page.section,
                 no=no, no_cell=no_cell, no_fill=no_fill, style_whs=style_whs, style=style,
-                tag=join_tag_cells([ws.cell(row, col).value for row in tag_rows]),
+                tag=join_tag_cells([_value(ws, values, row, col) for row in tag_rows]),
                 red_line_row=red, black_line_row=black,
                 above_black=above, between=between, below_red=below)
 

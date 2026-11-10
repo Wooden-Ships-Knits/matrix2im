@@ -5,6 +5,7 @@ from helpers.matrix_factory import build_matrix, build_no_pages
 from openpyxl import Workbook, load_workbook
 
 from matrix_to_im.errors import Matrix2ImError
+from matrix_to_im.excel_reader import open_workbooks
 from matrix_to_im.extract import extract, extract_workbook, to_raw_json
 from matrix_to_im.legend_config import SOURCE_NAME
 
@@ -146,3 +147,44 @@ def test_missing_number_with_known_fill_says_whs_from_background(tmp_path):   # 
     assert (b.no, b.no_cell, b.style_whs) == (None, "B9", "000 & SY")
     assert [w for w in result.warnings if "B9" in w] == [
         "TEST B9 JUDE T NECK: nomor style tidak ditemukan, WHS style 000 & SY diambil dari warna background"]
+
+
+def _with_cache(monkeypatch, path, cache):
+    """Simulasikan file yang disimpan Excel: formula di workbook normal, nilai hasilnya di data_only."""
+    normal, values = open_workbooks(path)
+    for ref, value in cache.items():
+        values["TEST"][ref] = value
+    monkeypatch.setattr("matrix_to_im.extract.open_workbooks", lambda _path: (normal, values))
+
+
+def test_formula_cells_read_cached_value_like_literals(tmp_path, monkeypatch):   # F4 + F5
+    literal = to_raw_json(extract_workbook(build_matrix(tmp_path / "lit.xlsx")))
+    path = _variant(tmp_path, "formula.xlsx", B9="=A9+1", C12="=A12", B14='="TAG: C1"', A16="=A15")
+    _with_cache(monkeypatch, path, {"B9": 2, "C12": "STRIPE CARDI", "B14": "TAG: C1 (For Solid)",
+                                    "A16": "DARK CEDAR"})
+    assert to_raw_json(extract_workbook(path)) == literal
+
+
+def test_uncached_formula_colour_cell_warns_and_is_skipped(tmp_path):    # F5
+    result = extract_workbook(_variant(tmp_path, "warna.xlsx", A16="=A15"))
+    a = result.cards[0]
+    assert [x.cell for x in a.above_black + a.between + a.below_red] == ["A15", "A17", "A18"]
+    assert "TEST A16: formula tanpa nilai tersimpan, diabaikan" in result.warnings
+    assert not any(x.colorway.startswith("=") for c in result.cards
+                   for x in c.above_black + c.between + c.below_red)
+
+
+def test_uncached_formula_name_cell_skips_card_with_warning(tmp_path):
+    result = extract_workbook(_variant(tmp_path, "nama.xlsx", C12="=A12"))
+    assert [c.style for c in result.cards] == ["NEWPORT CREW", "JUDE T NECK", "SINGLE CARD"]
+    assert "TEST C12: formula tanpa nilai tersimpan di sel nama style, kartu dilewati" in result.warnings
+
+
+def test_uncached_formula_tag_cell_is_not_a_tag(tmp_path):
+    result = extract_workbook(_variant(tmp_path, "tag.xlsx", B14='="TAG: C1"', B13="=A13"))
+    b = result.cards[1]
+    assert b.tag is None and [x.cell for x in b.between + b.below_red] == ["B15", "B16", "B18"]
+    w = result.warnings
+    assert "TEST B14: formula tanpa nilai tersimpan, diabaikan" in w
+    assert "TEST B13: formula tanpa nilai tersimpan, diabaikan" in w   # sebelum blok TAG
+    assert "TEST B12 JUDE T NECK: tidak ada baris TAG" in w
