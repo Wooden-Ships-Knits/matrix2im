@@ -113,7 +113,8 @@
   .whs-null { border: 1px dashed var(--muted); color: var(--muted); font-weight: 500; }
   .revbtn { border: 0; background: var(--warn-bg); color: var(--warn); border-radius: 6px; padding: 1px 7px; font-size: 12px;
             font-weight: 600; cursor: pointer; white-space: nowrap; }
-  .revbtn.info { background: var(--info-bg); color: var(--info); }
+  .needrev { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 600;
+             background: var(--warn-bg); color: var(--warn); white-space: nowrap; }
 
   .code-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
   .code-chip { border: 1px solid var(--border); background: var(--surface); border-radius: 99px; padding: 4px 12px; cursor: pointer; font-size: 12.5px; }
@@ -138,29 +139,30 @@
                 border-radius: 6px; padding: 6px 8px; max-height: 160px; overflow: auto; }
   .hint { color: var(--muted); font-size: 12.5px; margin: 0 0 10px; }
 
-  .styles { display: grid; gap: 10px; }
-  .style { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
-  .style header { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
-  .style .meta { color: var(--muted); font-size: 12px; }
-  .style h3 { font-size: 15px; }
-  .style .tagline { font-family: var(--mono); font-size: 12px; margin-top: 6px; color: var(--muted); }
-  .groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
-  .group { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
-  .group h4 { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
-  .group h4.g-black { border-left: 3px solid var(--text); padding-left: 6px; }
-  .group h4.g-red { border-left: 3px solid #e5372c; padding-left: 6px; }
-  .group h4.g-top { border-left: 3px solid transparent; padding-left: 6px; }
-  .group ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
-  .group li { font-size: 13px; display: grid; grid-template-columns: 10px 1fr; gap: 6px; align-items: baseline; }
-  .group li small { display: block; color: var(--muted); font-size: 11.5px; }
-  .group .empty { color: var(--muted); font-size: 12.5px; font-style: italic; margin-top: 6px; }
+  .im-wrap { max-height: 75vh; }
+  .im-table { font-size: 12.5px; }
+  .im-table th, .im-table td { white-space: nowrap; }
+  .im-table th.im { background: var(--accent-soft); color: var(--accent); }
+  .im-table th.mx { color: var(--muted); font-weight: 500; }
+  .im-table td.mx { color: var(--muted); }
+  .im-table thead th:first-child { left: 0; z-index: 3; }
+  .im-table td.desc-col { position: sticky; left: 0; z-index: 1; background: var(--surface); font-weight: 600;
+                          max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+  .im-table tr.has-review td.desc-col { box-shadow: inset 3px 0 0 var(--warn); }
+  .im-table tr.style-head td { background: var(--surface-2); padding: 8px 10px; border-top: 2px solid var(--border); }
+  .im-table tr.line-black td { border-top: 2px solid var(--text); }
+  .im-table tr.line-red td { border-top: 2px solid #e5372c; }
+  .sh { position: sticky; left: 10px; display: inline-flex; gap: 12px; align-items: center; flex-wrap: wrap; white-space: normal; }
+  .sh .meta { color: var(--muted); }
+  .sh b { font-size: 13px; }
+  .sh .mono { color: var(--muted); }
   .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; border: 1px solid color-mix(in srgb, var(--text) 25%, transparent); }
   .legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 12px; margin-bottom: 10px; }
   .legend span { display: inline-flex; gap: 5px; align-items: center; }
   .warnings { display: grid; gap: 6px; }
   .warning { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; }
   .empty-state { color: var(--muted); padding: 24px; text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); }
-  @media (max-width: 760px) { .groups { grid-template-columns: 1fr; } .controls .shown { margin-left: 0; } }
+  @media (max-width: 760px) { .controls .shown { margin-left: 0; } }
 </style>
 </head>
 <body>
@@ -234,7 +236,7 @@
     </div>
 
     <div class="panel" id="panel-review" role="tabpanel" hidden>
-      <p class="hint">Item yang tidak bisa diputuskan aturan: nilainya dibiarkan null (tidak ditulis ke IM) dan perlu dicek tim. WHS_CAPPED_BY_STYLE hanya informasi.</p>
+      <p class="hint">Item yang tidak bisa diputuskan aturan dan perlu dicek tim. WS TAG COLOR-nya diisi <span class="needrev">Need Review</span> (ikut ditulis ke IM); WHS yang tidak bisa diputuskan dibiarkan null (tidak ditulis).</p>
       <div class="code-chips" id="code-chips"></div>
       <div id="review-filter"></div>
       <div class="items" id="review-items"></div>
@@ -242,12 +244,17 @@
 
     <div class="panel" id="panel-styles" role="tabpanel" hidden>
       <div class="controls">
-        <input type="search" id="q-styles" placeholder="Cari style, nomor, TAG, warna…">
+        <input type="search" id="q-styles" placeholder="Cari style, nomor, TAG, warna, sel…">
         <select id="f-sheet" aria-label="Filter sheet"><option value="">Semua sheet</option></select>
+        <label><input type="checkbox" id="f-styles-review"> Hanya style yang perlu review</label>
         <span class="shown" id="shown-styles"></span>
       </div>
+      <p class="hint">Kolom biru = nama kolom IM MASTER (header baris 54), urut seperti di IM. Kolom abu di kanan = asal di MATRIX.
+        Garis hitam / merah di tabel = garis hitam / merah di kartu MATRIX.</p>
       <div class="legend" id="legend"></div>
-      <div class="styles" id="style-list"></div>
+      <div class="table-wrap im-wrap">
+        <table class="im-table"><thead id="thead-styles"></thead><tbody id="tbody-styles"></tbody></table>
+      </div>
     </div>
 
     <div class="panel" id="panel-warnings" role="tabpanel" hidden>
@@ -274,16 +281,18 @@
     TAG_CONDITIONAL: "TAG bersyarat atau singkatan; aturannya belum ada",
     TAG_CN_OUT_OF_RANGE: "TAG meminta Cn melebihi jumlah benang",
     TAG_EMPTY: "TAG kosong",
-    WHS_CAPPED_BY_STYLE: "Info: WHS warna diturunkan oleh batas WHS style",
-    WHS_STYLE_UNKNOWN: "Background nomor tidak dikenali; dipakai WHS warna",
+    TAG_UNRESOLVED: "TAG masih berisi instruksi yang belum diterjemahkan, mis. C(car) atau GONDOLA color",
+    WHS_STYLE_UNKNOWN: "Warna background nomor di luar legend; dipakai WHS warna",
     WHS_CONFLICT: "WHS style dan WHS warna tidak beririsan",
     FONT_COLOR_NO_RULE: "Warna font belum punya aturan WHS",
     COLOR_IS_DESCRIPTOR: "COLOR berupa deskripsi stripe/marl, bukan nama benang",
-    DUPLICATE_STYLE_ACROSS_SHEETS: "Style + colorway muncul lebih dari sekali",
     TOO_MANY_YARNS: "Lebih dari 18 benang unik",
     EXTRACTION_WARNING: "Warning saat membaca Excel",
   };
-  const codeClass = (code) => code === "WHS_CAPPED_BY_STYLE" ? "info" : code === "EXTRACTION_WARNING" ? "neutral" : "warn";
+  const NEED_REVIEW = "Need Review";
+  const codeClass = (code) => code === "EXTRACTION_WARNING" ? "neutral" : "warn";
+  const wsTagCell = (v) => v === null || v === undefined ? '<span class="null">null</span>'
+    : v === NEED_REVIEW ? `<span class="needrev">${NEED_REVIEW}</span>` : esc(v);
   const whsBadge = (v) => {
     if (v === null || v === undefined) return '<span class="badge whs-null">null</span>';
     const cls = v === "000" ? "whs-000" : v === "SY" ? "whs-sy" : "whs-both";
@@ -397,6 +406,7 @@
     renderTiles();
     renderRecords();
     renderReview();
+    buildStyleRows();
     renderStyleFilters();
     renderStyles();
     renderWarnings();
@@ -437,6 +447,7 @@
       </div></div>
       <div class="tile"><div class="label">WS TAG COLOR</div><div class="split">
         <div><b>${num(s.WS_TAG_COLOR_filled)}</b><span class="sub">terisi</span></div>
+        <div><b>${num(s.WS_TAG_COLOR_need_review ?? 0)}</b><span class="sub">Need Review</span></div>
         <div><b>${num(s.WS_TAG_COLOR_null)}</b><span class="sub">null</span></div></div></div>
       <div class="tile"><div class="label">needs_review</div><div class="value">${num(s.needs_review_items)}</div>
         <div class="sub">${Object.keys(s.needs_review_by_issue).length} jenis masalah</div></div>
@@ -465,14 +476,13 @@
       }
       shown++;
       const codes = reviews.map((j) => data.final.needs_review[j].code);
-      const onlyInfo = codes.length && codes.every((c) => c === "WHS_CAPPED_BY_STYLE");
       rows.push(`<tr>
         <td class="num">${i}</td>
         <td class="desc">${esc(rec.DESCRIPTION)}</td>
         <td><div class="chips">${colorKeys(rec).map((k) => `<span class="chip" title="${esc(k)}">${esc(rec[k])}</span>`).join("")}</div></td>
-        <td>${rec["WS TAG COLOR"] === null ? '<span class="null">null</span>' : esc(rec["WS TAG COLOR"])}</td>
+        <td>${wsTagCell(rec["WS TAG COLOR"])}</td>
         <td>${whsBadge(rec.WHS)}</td>
-        <td>${codes.length ? `<button class="revbtn ${onlyInfo ? "info" : ""}" data-rec="${i}" title="${esc(codes.join(", "))}">${codes.length}</button>` : ""}</td>
+        <td>${codes.length ? `<button class="revbtn" data-rec="${i}" title="${esc(codes.join(", "))}">${codes.length}</button>` : ""}</td>
         <td class="ref">${esc(rec._ref)}</td></tr>`);
     });
     $("#tbody-records").innerHTML = rows.join("") ||
@@ -547,44 +557,105 @@
     selectTab("records");
   });
 
-  // ---------- per style ----------
+  // ---------- per style: tabel dengan kolom IM MASTER ----------
+  const IM_COLS = ["DESCRIPTION", "COLOR1", "COLOR2", "COLOR3", "COLOR 4",
+    ...Array.from({ length: 14 }, (_, i) => `COLOR${i + 5}`), "WS TAG COLOR", "WHS"];
+  const MX_COLS = ["Sel MATRIX", "Posisi garis", "Warna font", "Review"];
+  const NCOLS = IM_COLS.length + MX_COLS.length;
+  const POSITION = {
+    color_above_black_line: "atas garis hitam",
+    color_between_black_and_red_line: "antara hitam & merah",
+    color_below_red_line: "bawah garis merah",
+  };
+  let styleRows = [];
+
+  function buildStyleRows() {
+    // Record dibuat berurutan per style: atas garis hitam -> antara -> bawah garis merah (sama seperti transform).
+    let k = 0;
+    styleRows = data.raw.styles.map((st) => {
+      const rows = [];
+      for (const [key] of GROUPS) {
+        for (const cw of st[key]) { rows.push({ rec: data.final.records[k] || {}, idx: k, cw, key }); k++; }
+      }
+      return { st, rows };
+    });
+  }
   function renderStyleFilters() {
     const sheets = [...new Set(data.raw.styles.map((s) => s.sheet))];
     $("#f-sheet").innerHTML = '<option value="">Semua sheet</option>' + sheets.map((s) => `<option>${esc(s)}</option>`).join("");
     $("#legend").innerHTML = Object.entries(FONT_DOT)
       .map(([label, color]) => `<span><i class="dot" style="background:${color}"></i>${esc(label)}</span>`).join("");
+    $("#thead-styles").innerHTML = `<tr>${IM_COLS.map((c) => `<th class="im">${esc(c)}</th>`).join("")}${
+      MX_COLS.map((c) => `<th class="mx">${esc(c)}</th>`).join("")}</tr>`;
+  }
+  function styleRowHtml(st, r, line) {
+    const codes = (reviewByRecord.get(r.idx) || []).map((j) => data.final.needs_review[j].code);
+    const cells = IM_COLS.map((col) => {
+      const v = r.rec[col];
+      if (col === "DESCRIPTION") return `<td class="desc-col" title="${esc(v)}">${esc(v)}</td>`;
+      if (col === "WS TAG COLOR") return `<td>${wsTagCell(v)}</td>`;
+      if (col === "WHS") return `<td>${whsBadge(v)}</td>`;
+      return `<td>${v === undefined ? "" : esc(v)}</td>`;
+    }).join("");
+    const comment = r.cw.comment ? ` <span title="${esc(r.cw.comment)}">💬</span>` : "";
+    return `<tr class="${line}${codes.length ? " has-review" : ""}">${cells}
+      <td class="mx mono">${esc(r.cw.cell)}${comment}</td>
+      <td class="mx">${POSITION[r.key]}</td>
+      <td class="mx"><i class="dot" style="background:${FONT_DOT[r.cw.font_color] || "#9aa4b2"}"></i> ${esc(r.cw.font_color)}</td>
+      <td class="mx">${codes.length ? `<button class="revbtn" data-rec="${r.idx}" title="${esc(codes.join(", "))}">${codes.length}</button>` : ""}</td></tr>`;
   }
   function renderStyles() {
     const q = $("#q-styles").value.trim().toLowerCase();
     const sheet = $("#f-sheet").value;
-    const cards = [];
-    for (const st of data.raw.styles) {
+    const onlyReview = $("#f-styles-review").checked;
+    const out = [];
+    let shownStyles = 0, shownRows = 0;
+    for (const { st, rows } of styleRows) {
       if (sheet && st.sheet !== sheet) continue;
+      if (onlyReview && !rows.some((r) => reviewByRecord.has(r.idx))) continue;
       if (q) {
         const hay = [st.style, st.sheet, st.section, `no.${st.no}`, st.tag,
-          ...GROUPS.flatMap(([key]) => st[key].map((c) => `${c.colorway} ${c.cell}`))].join(" ").toLowerCase();
+          ...rows.flatMap((r) => [r.cw.cell, r.rec["WS TAG COLOR"], ...colorKeys(r.rec).map((c) => r.rec[c])])]
+          .join(" ").toLowerCase();
         if (!hay.includes(q)) continue;
       }
-      const groups = GROUPS.map(([key, label, cls]) => {
-        const list = st[key];
-        const items = list.map((c) => `<li><i class="dot" style="background:${FONT_DOT[c.font_color] || "#9aa4b2"}"></i>
-          <span>${esc(c.colorway)}${c.comment ? ` <span title="${esc(c.comment)}">💬</span>` : ""}
-          <small>${esc(c.cell)} · ${esc(c.font_color)}</small></span></li>`).join("");
-        return `<div class="group"><h4 class="${cls}"><span>${label}</span><span>${list.length}</span></h4>
-          ${list.length ? `<ul>${items}</ul>` : '<div class="empty">kosong</div>'}</div>`;
-      }).join("");
-      cards.push(`<article class="style">
-        <header><div><div class="meta">${esc(st.sheet)}${st.section ? ` · ${esc(st.section)}` : ""} · No.${esc(st.no)}</div>
-          <h3>${esc(st.style)}</h3></div>
-          <div title="WHS style dari background sel nomor">${st.style_whs === null ? '<span class="badge whs-null">WHS style tidak diketahui</span>' : whsBadge(st.style_whs)}</div></header>
-        <div class="tagline">${st.tag ? esc(st.tag) : "tidak ada TAG"}</div>
-        <div class="groups">${groups}</div></article>`);
+      shownStyles++;
+      shownRows += rows.length;
+      out.push(`<tr class="style-head"><td colspan="${NCOLS}"><div class="sh">
+        <span class="meta">${esc(st.sheet)}${st.section ? ` · ${esc(st.section)}` : ""} · No.${esc(st.no)}</span>
+        <b>${esc(st.style)}</b>
+        <span title="WHS style dari background sel nomor">WHS style ${st.style_whs === null ? '<span class="badge whs-null">tidak diketahui</span>' : whsBadge(st.style_whs)}</span>
+        <span class="mono">${st.tag ? esc(st.tag) : "tidak ada TAG"}</span></div></td></tr>`);
+      if (!rows.length) out.push(`<tr><td colspan="${NCOLS}" class="null">tidak ada colorway</td></tr>`);
+      // Garis di tabel mengikuti garis kartu MATRIX: hitam di atas kelompok "antara", merah di atas "bawah merah".
+      const hasAbove = st.color_above_black_line.length > 0;
+      let prevKey = null;
+      for (const r of rows) {
+        let line = "";
+        if (r.key !== prevKey) {
+          if (r.key === "color_between_black_and_red_line" && hasAbove) line = "line-black";
+          if (r.key === "color_below_red_line") line = "line-red";
+        }
+        prevKey = r.key;
+        out.push(styleRowHtml(st, r, line));
+      }
     }
-    $("#style-list").innerHTML = cards.join("") || '<div class="empty-state">Tidak ada style yang cocok</div>';
-    $("#shown-styles").textContent = `Menampilkan ${num(cards.length)} dari ${num(data.raw.styles.length)}`;
+    $("#tbody-styles").innerHTML = out.join("") ||
+      `<tr><td colspan="${NCOLS}" class="null" style="text-align:center;padding:24px">Tidak ada style yang cocok</td></tr>`;
+    $("#shown-styles").textContent =
+      `Menampilkan ${num(shownStyles)} style (${num(shownRows)} baris) dari ${num(styleRows.length)} style`;
   }
   $("#q-styles").addEventListener("input", () => data && renderStyles());
   $("#f-sheet").addEventListener("change", () => data && renderStyles());
+  $("#f-styles-review").addEventListener("change", () => data && renderStyles());
+  $("#tbody-styles").addEventListener("click", (e) => {
+    const btn = e.target.closest(".revbtn");
+    if (!btn) return;
+    reviewFilter.record = Number(btn.dataset.rec);
+    reviewFilter.code = null;
+    renderReview();
+    selectTab("review");
+  });
 
   // ---------- warnings ----------
   function renderWarnings() {
