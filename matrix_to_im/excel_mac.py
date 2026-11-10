@@ -55,17 +55,20 @@ def _op_lines(op: InsertOp, last_col: str) -> list[str]:
     return lines
 
 
-def build_insert_script(ops: list[InsertOp], sheet: str, last_col: str) -> str:
+def build_insert_script(ops: list[InsertOp], sheet: str, last_col: str,
+                        timeout_s: int = EXCEL_TIMEOUT_S) -> str:
     body = [line for op in ops for line in _op_lines(op, last_col)]
     return "\n".join([
         "on run argv",
         "  set f to (POSIX file (item 1 of argv)) as text",
         '  set pw to system attribute "MATRIX2IM_PW"',
         "  set wb to missing value",
+        f"  with timeout of {timeout_s} seconds",
         '  tell application "Microsoft Excel"',
         "    try",
-        "      set wb to open workbook workbook file name f write reserved password pw "
+        "      open workbook workbook file name f write reserved password pw "
         "update links do not update links ignore read only recommended true",
+        "      set wb to active workbook",
         f'      set ws to worksheet "{_esc(sheet)}" of wb',
         "      set screen updating to false",
         "      set calculation to calculation manual",
@@ -86,6 +89,7 @@ def build_insert_script(ops: list[InsertOp], sheet: str, last_col: str) -> str:
         '      return "ERROR " & errNum & ": " & errMsg',
         "    end try",
         "  end tell",
+        "  end timeout",
         "end run",
         "",
     ])
@@ -96,12 +100,12 @@ def run_excel_inserts(path: Path, password: str, ops: list[InsertOp], sheet: str
     """Jalankan sisipan di path; password hanya lewat environment, bukan argumen atau skrip."""
     if not excel_available():
         raise ExcelUnavailable("Microsoft Excel for Mac tidak ditemukan di komputer ini.")
-    script = build_insert_script(ops, sheet, last_col)
+    script = build_insert_script(ops, sheet, last_col, timeout_s)
     start = time.monotonic()
     try:
         proc = subprocess.run(["osascript", "-", str(path)], input=script,
                               env={**os.environ, "MATRIX2IM_PW": password},
-                              capture_output=True, text=True, timeout=timeout_s)
+                              capture_output=True, text=True, timeout=timeout_s + 15)
     except subprocess.TimeoutExpired as exc:
         raise Matrix2ImError(
             f"Excel tidak merespons dalam {timeout_s} detik. "

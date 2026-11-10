@@ -38,6 +38,14 @@ def test_script_formula_fixes_grouped_in_runs_and_escaped():
     assert two.index('range "B62:C62"') < two.index('insert into range (range "10:10"')
 
 
+def test_script_opens_via_active_workbook_and_has_timeout():
+    script = build_insert_script([_op(57, 2, 56, 58)], "F27", "IJ", 180)
+    assert "set wb to active workbook" in script
+    assert "set wb to open workbook" not in script
+    assert "with timeout of 180 seconds" in script and "end timeout" in script
+    assert script.index("set wb to missing value") < script.index("open workbook workbook file name")
+
+
 def _capture(monkeypatch, result=None, exc=None):
     seen = {}
 
