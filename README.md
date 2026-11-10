@@ -17,6 +17,20 @@ python3.12 -m venv .venv
 
 Pillow sengaja tidak dipasang. Tanpa Pillow, openpyxl melewati 220 foto di MATRIX sehingga pembacaan tetap cepat (`run` pada F27 sekitar 2 detik).
 
+## Mencoba lewat UI (browser)
+
+```bash
+.venv/bin/matrix2im ui
+```
+
+Perintah ini membuka halaman `http://127.0.0.1:8765/` di browser (pakai `--port` untuk port lain, `--no-browser` agar tidak membuka browser otomatis). Di halaman itu:
+
+1. Pilih atau seret file **MATRIX MASTER** (wajib) dan, bila ingin mencocokkan nama kolom, **IM MASTER** (opsional).
+2. Klik **Proses**. Tahap 1, Tahap 2, dan validasi dijalankan sama seperti `matrix2im run`.
+3. Lihat hasilnya: ringkasan, status validasi, tab **Records** (bisa dicari dan difilter per WHS / perlu review), **Needs review** (per kode, dengan comment sel MATRIX), **Per style** (colorway dikelompokkan menurut garis hitam/merah, dengan warna font legend), dan **Warning**. Tombol **raw.json** / **final.json** mengunduh hasilnya.
+
+Server hanya bisa diakses dari komputer ini (127.0.0.1). File yang diupload disimpan sebagai salinan di folder sementara dan dihapus saat server dihentikan (Ctrl+C); file asli tidak disentuh. Berbeda dengan `run`, UI tetap menampilkan hasil walau validasi gagal (errornya ditampilkan di atas), supaya datanya bisa diperiksa.
+
 ## Perintah
 
 ```bash

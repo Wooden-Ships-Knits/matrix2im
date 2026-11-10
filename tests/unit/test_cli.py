@@ -1,24 +1,9 @@
 import json
 
 import pytest
-from helpers.matrix_factory import build_matrix, build_no_pages
-from openpyxl import Workbook
+from helpers.matrix_factory import build_im, build_matrix, build_no_pages
 
 from matrix_to_im.cli import format_summary, main
-from matrix_to_im.legend_config import IM_HEADER_ROW
-
-IM_KEYS = ["DESCRIPTION", "COLOR1", "COLOR2", "COLOR3", "COLOR 4", *[f"COLOR{i}" for i in range(5, 19)],
-           "WS TAG COLOR\n(Note - isi sesuai instruksi TAG)", "WHS"]
-
-
-def build_im(path, drop=None):
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "F27"
-    for col, key in enumerate([k for k in IM_KEYS if k != drop], 1):
-        ws.cell(row=IM_HEADER_ROW, column=col, value=key)
-    wb.save(path)
-    return path
 
 
 @pytest.fixture

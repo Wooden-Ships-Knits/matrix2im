@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>matrix2im</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --surface: #ffffff; --surface-2: #f0f2f5; --text: #1b1f24; --muted: #5d6672;
+    --border: #dde1e6; --accent: #2f5bd3; --accent-ink: #ffffff; --accent-soft: #e8eefc;
+    --ok: #17703f; --ok-bg: #e5f4eb; --err: #b42318; --err-bg: #fdecea;
+    --warn: #8a5a00; --warn-bg: #fff3d6; --info: #1f5fbf; --info-bg: #e7efff;
+    --whs000-bg: #f6e3f8; --whs000: #8a2a93; --whssy-bg: #fde5e5; --whssy: #a12020;
+    --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --surface: #171b21; --surface-2: #1f242c; --text: #e6e9ee; --muted: #9aa4b2;
+      --border: #2c323b; --accent: #7aa2ff; --accent-ink: #0f1216; --accent-soft: #1c2740;
+      --ok: #62c98f; --ok-bg: #11281b; --err: #ff8a80; --err-bg: #3a1714;
+      --warn: #f2c14e; --warn-bg: #33290f; --info: #8fb4ff; --info-bg: #16223a;
+      --whs000-bg: #3a1f3d; --whs000: #f0a6f5; --whssy-bg: #3d1a1a; --whssy: #ff9b9b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1280px; margin: 0 auto; padding: 0 16px 48px; }
+  h1, h2, h3, h4 { margin: 0; }
+  button, input, select { font: inherit; color: inherit; }
+  .top { max-width: 1280px; margin: 0 auto; padding: 24px 16px 16px; display: flex; align-items: center; gap: 12px; }
+  .logo { width: 40px; height: 40px; border-radius: 10px; background: var(--accent); color: var(--accent-ink);
+          display: grid; place-items: center; font-weight: 700; font-size: 13px; letter-spacing: .5px; }
+  .top h1 { font-size: 20px; }
+  .top p { margin: 0; color: var(--muted); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .drops { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .drop { position: relative; border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 16px;
+          cursor: pointer; display: flex; flex-direction: column; gap: 4px; min-height: 108px; background: var(--surface-2);
+          transition: border-color .15s, background .15s; }
+  .drop:hover, .drop:focus-visible { border-color: var(--accent); outline: none; }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop.has-file { border-style: solid; }
+  .drop-title { font-weight: 600; }
+  .drop-title em { font-style: normal; font-weight: 500; font-size: 12px; color: var(--muted); margin-left: 6px; }
+  .drop-hint { color: var(--muted); font-size: 13px; }
+  .drop-file { margin-top: auto; font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  .drop-file:empty { display: none; }
+  .clear { position: absolute; top: 10px; right: 10px; border: 1px solid var(--border); background: var(--surface);
+           border-radius: 6px; padding: 2px 8px; font-size: 12px; cursor: pointer; }
+  .actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 9px 22px;
+             font-weight: 600; cursor: pointer; }
+  .primary:disabled { opacity: .45; cursor: not-allowed; }
+  .status { color: var(--muted); }
+  .progress { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: 12px; }
+  .bar { height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+  .progress.indeterminate .bar { width: 30%; animation: slide 1.1s ease-in-out infinite; }
+  @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }
+
+  .alert { border-radius: var(--radius); padding: 12px 14px; margin-top: 16px; border: 1px solid transparent; }
+  .alert.error { background: var(--err-bg); color: var(--err); border-color: color-mix(in srgb, var(--err) 30%, transparent); }
+  .alert.ok { background: var(--ok-bg); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
+  .alert strong { display: block; margin-bottom: 2px; }
+  .alert ul { margin: 6px 0 0; padding-left: 18px; }
+  .alert .files { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 16px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .tile .label { color: var(--muted); font-size: 12.5px; }
+  .tile .value { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .tile .sub { color: var(--muted); font-size: 12.5px; }
+  .tile .split { display: flex; gap: 14px; margin-top: 2px; }
+  .tile .split div { display: flex; flex-direction: column; }
+  .tile .split b { font-size: 18px; font-variant-numeric: tabular-nums; }
+
+  .tabbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 20px;
+            border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .tabs { display: flex; gap: 2px; flex-wrap: wrap; }
+  .tab { border: 0; background: none; padding: 9px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent;
+         margin-bottom: -1px; font-weight: 500; }
+  .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .tab .count { font-size: 12px; background: var(--surface-2); border-radius: 99px; padding: 0 7px; margin-left: 4px; }
+  .downloads { display: flex; gap: 8px; padding-bottom: 6px; }
+  .btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+         text-decoration: none; color: var(--text); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { border-color: var(--accent); }
+
+  .panel { margin-top: 14px; }
+  .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .controls input[type="search"], .controls select { background: var(--surface); border: 1px solid var(--border);
+         border-radius: 8px; padding: 7px 10px; }
+  .controls input[type="search"] { min-width: 260px; flex: 1 1 260px; max-width: 420px; }
+  .controls label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+  .controls .shown { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+
+  .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); max-height: 70vh; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 7px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+  th { position: sticky; top: 0; background: var(--surface-2); font-weight: 600; z-index: 1; white-space: nowrap; }
+  tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  td.num { color: var(--muted); font-variant-numeric: tabular-nums; }
+  td.desc { font-weight: 550; min-width: 200px; }
+  td.ref { font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 200px; }
+  .chip { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
+  .null { color: var(--muted); font-style: italic; }
+  .badge { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .whs-000 { background: var(--whs000-bg); color: var(--whs000); }
+  .whs-sy { background: var(--whssy-bg); color: var(--whssy); }
+  .whs-both { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+  .whs-null { border: 1px dashed var(--muted); color: var(--muted); font-weight: 500; }
+  .revbtn { border: 0; background: var(--warn-bg); color: var(--warn); border-radius: 6px; padding: 1px 7px; font-size: 12px;
+            font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .revbtn.info { background: var(--info-bg); color: var(--info); }
+
+  .code-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .code-chip { border: 1px solid var(--border); background: var(--surface); border-radius: 99px; padding: 4px 12px; cursor: pointer; font-size: 12.5px; }
+  .code-chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .code-chip b { font-variant-numeric: tabular-nums; margin-left: 4px; }
+  .pill { display: inline-flex; gap: 6px; align-items: center; background: var(--accent-soft); color: var(--accent);
+          border-radius: 99px; padding: 3px 10px; font-size: 12.5px; }
+  .pill button { border: 0; background: none; color: inherit; cursor: pointer; padding: 0; font-size: 14px; }
+  .items { display: grid; gap: 8px; }
+  .item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+  .item-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .code { font-family: var(--mono); font-size: 11.5px; border-radius: 6px; padding: 1px 7px; font-weight: 600; }
+  .code.warn { background: var(--warn-bg); color: var(--warn); }
+  .code.info { background: var(--info-bg); color: var(--info); }
+  .code.neutral { background: var(--surface-2); color: var(--muted); }
+  .reclink { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12.5px; }
+  .item dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 8px 0 0; font-size: 13px; }
+  .item dt { color: var(--muted); }
+  .item dd { margin: 0; word-break: break-word; }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  pre.comment { margin: 0; white-space: pre-wrap; font-family: var(--mono); font-size: 12px; background: var(--surface-2);
+                border-radius: 6px; padding: 6px 8px; max-height: 160px; overflow: auto; }
+  .hint { color: var(--muted); font-size: 12.5px; margin: 0 0 10px; }
+
+  .styles { display: grid; gap: 10px; }
+  .style { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .style header { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+  .style .meta { color: var(--muted); font-size: 12px; }
+  .style h3 { font-size: 15px; }
+  .style .tagline { font-family: var(--mono); font-size: 12px; margin-top: 6px; color: var(--muted); }
+  .groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+  .group { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+  .group h4 { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+  .group h4.g-black { border-left: 3px solid var(--text); padding-left: 6px; }
+  .group h4.g-red { border-left: 3px solid #e5372c; padding-left: 6px; }
+  .group h4.g-top { border-left: 3px solid transparent; padding-left: 6px; }
+  .group ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+  .group li { font-size: 13px; display: grid; grid-template-columns: 10px 1fr; gap: 6px; align-items: baseline; }
+  .group li small { display: block; color: var(--muted); font-size: 11.5px; }
+  .group .empty { color: var(--muted); font-size: 12.5px; font-style: italic; margin-top: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; border: 1px solid color-mix(in srgb, var(--text) 25%, transparent); }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+  .legend span { display: inline-flex; gap: 5px; align-items: center; }
+  .warnings { display: grid; gap: 6px; }
+  .warning { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; }
+  .empty-state { color: var(--muted); padding: 24px; text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); }
+  @media (max-width: 760px) { .groups { grid-template-columns: 1fr; } .controls .shown { margin-left: 0; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo">m2i</div>
+  <div>
+    <h1>matrix2im</h1>
+    <p>Upload MATRIX MASTER (Excel), lihat hasil raw JSON dan JSON final untuk IM MASTER</p>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="drops">
+      <div class="drop" id="drop-matrix" tabindex="0" role="button" aria-label="Pilih file MATRIX MASTER">
+        <input type="file" id="file-matrix" accept=".xlsx,.xlsm" hidden>
+        <span class="drop-title">MATRIX MASTER <em>wajib</em></span>
+        <span class="drop-hint">Klik atau seret file .xlsx ke sini</span>
+        <span class="drop-file" id="name-matrix"></span>
+      </div>
+      <div class="drop" id="drop-im" tabindex="0" role="button" aria-label="Pilih file IM MASTER">
+        <input type="file" id="file-im" accept=".xlsx,.xlsm" hidden>
+        <span class="drop-title">IM MASTER <em>opsional</em></span>
+        <span class="drop-hint">Untuk mencocokkan nama kolom dengan header baris 54</span>
+        <span class="drop-file" id="name-im"></span>
+        <button class="clear" id="clear-im" type="button" hidden>Hapus</button>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="run" type="button" disabled>Proses</button>
+      <span class="status" id="status" aria-live="polite"></span>
+    </div>
+    <div class="progress" id="progress" hidden><div class="bar" id="bar"></div></div>
+  </section>
+
+  <div class="alert error" id="error" role="alert" hidden></div>
+
+  <section id="results" hidden>
+    <div id="validation"></div>
+    <div class="tiles" id="tiles"></div>
+
+    <div class="tabbar">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="records">Records <span class="count" id="count-records"></span></button>
+        <button class="tab" role="tab" data-tab="review">Needs review <span class="count" id="count-review"></span></button>
+        <button class="tab" role="tab" data-tab="styles">Per style <span class="count" id="count-styles"></span></button>
+        <button class="tab" role="tab" data-tab="warnings">Warning <span class="count" id="count-warnings"></span></button>
+      </div>
+      <div class="downloads">
+        <a class="btn" href="/api/download/raw.json" download>⬇ raw.json</a>
+        <a class="btn" href="/api/download/final.json" download>⬇ final.json</a>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-records" role="tabpanel">
+      <div class="controls">
+        <input type="search" id="q-records" placeholder="Cari style, warna, WS TAG COLOR, sel… (atau #61)">
+        <select id="f-whs" aria-label="Filter WHS">
+          <option value="">Semua WHS</option><option value="000">000</option>
+          <option value="000 &amp; SY">000 &amp; SY</option><option value="SY">SY</option><option value="null">null</option>
+        </select>
+        <label><input type="checkbox" id="f-review"> Hanya yang perlu review</label>
+        <span class="shown" id="shown-records"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>DESCRIPTION</th><th>COLOR1–COLOR18</th><th>WS TAG COLOR</th><th>WHS</th><th>Review</th><th>_ref (asal di MATRIX)</th></tr></thead>
+          <tbody id="tbody-records"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-review" role="tabpanel" hidden>
+      <p class="hint">Item yang tidak bisa diputuskan aturan: nilainya dibiarkan null (tidak ditulis ke IM) dan perlu dicek tim. WHS_CAPPED_BY_STYLE hanya informasi.</p>
+      <div class="code-chips" id="code-chips"></div>
+      <div id="review-filter"></div>
+      <div class="items" id="review-items"></div>
+    </div>
+
+    <div class="panel" id="panel-styles" role="tabpanel" hidden>
+      <div class="controls">
+        <input type="search" id="q-styles" placeholder="Cari style, nomor, TAG, warna…">
+        <select id="f-sheet" aria-label="Filter sheet"><option value="">Semua sheet</option></select>
+        <span class="shown" id="shown-styles"></span>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="styles" id="style-list"></div>
+    </div>
+
+    <div class="panel" id="panel-warnings" role="tabpanel" hidden>
+      <div class="warnings" id="warning-list"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = (sel) => document.querySelector(sel);
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const num = (n) => Number(n).toLocaleString("id-ID");
+  const GROUPS = [
+    ["color_above_black_line", "Di atas garis hitam", "g-top"],
+    ["color_between_black_and_red_line", "Antara garis hitam & merah", "g-black"],
+    ["color_below_red_line", "Di bawah garis merah", "g-red"],
+  ];
+  const FONT_DOT = {
+    "NEW COLOR": "#00B050", "REPEAT COLOR": "currentColor", "000 ONLY COLOR": "#FF00FF", "000 REPEAT COLOR": "#FF99FF",
+    "YR COLOR": "#9900FF", "HOLD COLOR FOR SY": "#FF0000", "DISCONTINUED COLOR FOR SY": "#0066FF",
+  };
+  const CODE_INFO = {
+    TAG_CONDITIONAL: "TAG bersyarat atau singkatan; aturannya belum ada",
+    TAG_CN_OUT_OF_RANGE: "TAG meminta Cn melebihi jumlah benang",
+    TAG_EMPTY: "TAG kosong",
+    WHS_CAPPED_BY_STYLE: "Info: WHS warna diturunkan oleh batas WHS style",
+    WHS_STYLE_UNKNOWN: "Background nomor tidak dikenali; dipakai WHS warna",
+    WHS_CONFLICT: "WHS style dan WHS warna tidak beririsan",
+    FONT_COLOR_NO_RULE: "Warna font belum punya aturan WHS",
+    COLOR_IS_DESCRIPTOR: "COLOR berupa deskripsi stripe/marl, bukan nama benang",
+    DUPLICATE_STYLE_ACROSS_SHEETS: "Style + colorway muncul lebih dari sekali",
+    TOO_MANY_YARNS: "Lebih dari 18 benang unik",
+    EXTRACTION_WARNING: "Warning saat membaca Excel",
+  };
+  const codeClass = (code) => code === "WHS_CAPPED_BY_STYLE" ? "info" : code === "EXTRACTION_WARNING" ? "neutral" : "warn";
+  const whsBadge = (v) => {
+    if (v === null || v === undefined) return '<span class="badge whs-null">null</span>';
+    const cls = v === "000" ? "whs-000" : v === "SY" ? "whs-sy" : "whs-both";
+    return `<span class="badge ${cls}">${esc(v)}</span>`;
+  };
+
+  const files = { matrix: null, im: null };
+  let data = null;
+  let reviewByRecord = new Map();
+  const reviewFilter = { code: null, record: null };
+
+  // ---------- pilih file ----------
+  function setupDrop(kind) {
+    const zone = $(`#drop-${kind}`), input = $(`#file-${kind}`);
+    zone.addEventListener("click", () => input.click());
+    zone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+    input.addEventListener("change", () => { if (input.files[0]) setFile(kind, input.files[0]); input.value = ""; });
+    ["dragenter", "dragover"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add("over"); }));
+    ["dragleave", "drop"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove("over"); }));
+    zone.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) setFile(kind, f); });
+  }
+  function setFile(kind, file) {
+    if (!/\.xls[xm]$/i.test(file.name)) { showError(`File "${file.name}" bukan file Excel .xlsx`); return; }
+    hideError();
+    files[kind] = file;
+    renderFiles();
+  }
+  function renderFiles() {
+    for (const kind of ["matrix", "im"]) {
+      const f = files[kind];
+      $(`#name-${kind}`).textContent = f ? `${f.name} · ${(f.size / 1048576).toFixed(1)} MB` : "";
+      $(`#drop-${kind}`).classList.toggle("has-file", Boolean(f));
+    }
+    $("#clear-im").hidden = !files.im;
+    $("#run").disabled = !files.matrix;
+  }
+  $("#clear-im").addEventListener("click", (e) => { e.stopPropagation(); files.im = null; renderFiles(); });
+  setupDrop("matrix");
+  setupDrop("im");
+
+  // ---------- proses ----------
+  function setStatus(text) { $("#status").textContent = text; }
+  function setProgress(fraction) {
+    const box = $("#progress");
+    box.hidden = fraction === undefined;
+    box.classList.toggle("indeterminate", fraction === null);
+    $("#bar").style.width = fraction === null || fraction === undefined ? "" : `${Math.round(fraction * 100)}%`;
+  }
+  function showError(msg) { const el = $("#error"); el.innerHTML = `<strong>Gagal</strong>${esc(msg)}`; el.hidden = false; }
+  function hideError() { $("#error").hidden = true; }
+
+  function uploadFile(kind, file, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `/api/upload/${kind}`);
+      xhr.setRequestHeader("X-Filename", encodeURIComponent(file.name));
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+      xhr.onload = () => {
+        let body = {};
+        try { body = JSON.parse(xhr.responseText); } catch { /* bukan JSON */ }
+        xhr.status === 200 ? resolve(body) : reject(new Error(body.error || `HTTP ${xhr.status}`));
+      };
+      xhr.onerror = () => reject(new Error("Koneksi ke server terputus. Pastikan `matrix2im ui` masih berjalan di terminal."));
+      xhr.send(file);
+    });
+  }
+
+  async function processFiles() {
+    hideError();
+    $("#run").disabled = true;
+    try {
+      const share = files.im ? 0.5 : 1;
+      setStatus("Mengunggah MATRIX MASTER…");
+      setProgress(0);
+      await uploadFile("matrix", files.matrix, (p) => setProgress(p * share));
+      if (files.im) {
+        setStatus("Mengunggah IM MASTER…");
+        await uploadFile("im", files.im, (p) => setProgress(share + p * share));
+      } else {
+        await fetch("/api/upload/im", { method: "DELETE" });
+      }
+      setStatus("Memproses: Tahap 1 (ekstraksi), Tahap 2 (transformasi), validasi…");
+      setProgress(null);
+      const resp = await fetch("/api/run", { method: "POST" });
+      const body = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(body.error || `HTTP ${resp.status}`);
+      data = body;
+      render();
+      setStatus(`Selesai dalam ${String(body.seconds).replace(".", ",")} detik`);
+    } catch (err) {
+      showError(err.message);
+      setStatus("");
+      $("#results").hidden = true;
+    } finally {
+      setProgress(undefined);
+      $("#run").disabled = !files.matrix;
+    }
+  }
+  $("#run").addEventListener("click", processFiles);
+
+  // ---------- render hasil ----------
+  function render() {
+    reviewByRecord = new Map();
+    data.final.needs_review.forEach((item, i) => {
+      const recs = Array.isArray(item.record) ? item.record : item.record === null ? [] : [item.record];
+      for (const r of recs) { if (!reviewByRecord.has(r)) reviewByRecord.set(r, []); reviewByRecord.get(r).push(i); }
+    });
+    reviewFilter.code = null;
+    reviewFilter.record = null;
+    renderValidation();
+    renderTiles();
+    renderRecords();
+    renderReview();
+    renderStyleFilters();
+    renderStyles();
+    renderWarnings();
+    $("#count-records").textContent = num(data.final.records.length);
+    $("#count-review").textContent = num(data.final.needs_review.length);
+    $("#count-styles").textContent = num(data.raw.styles.length);
+    $("#count-warnings").textContent = num(data.raw.warnings.length);
+    $("#results").hidden = false;
+    selectTab(currentTab);
+  }
+
+  function renderValidation() {
+    const f = data.files;
+    const filesLine = `<div class="files">MATRIX: ${esc(f.matrix)}${f.im ? ` · IM MASTER: ${esc(f.im)}` : ""}</div>`;
+    if (data.validation_errors.length) {
+      $("#validation").innerHTML = `<div class="alert error"><strong>Validasi gagal (${data.validation_errors.length})</strong>
+        Di CLI, final.json tidak akan ditulis sampai masalah ini beres.
+        <ul>${data.validation_errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>${filesLine}</div>`;
+    } else {
+      const im = data.im_checked ? "termasuk nama kolom IM MASTER (header baris 54)"
+        : "tanpa cek nama kolom IM; upload IM MASTER untuk mencocokkannya";
+      $("#validation").innerHTML = `<div class="alert ok"><strong>Validasi lolos</strong>${esc(im)}.${filesLine}</div>`;
+    }
+  }
+
+  function renderTiles() {
+    const raw = data.raw, s = data.final.summary;
+    const counts = GROUPS.map(([key]) => raw.styles.reduce((n, st) => n + st[key].length, 0));
+    const whs = s.WHS;
+    const whsKeys = ["000", "000 & SY", "SY", ...Object.keys(whs).filter((k) => !["000", "000 & SY", "SY"].includes(k))];
+    $("#tiles").innerHTML = `
+      <div class="tile"><div class="label">Kartu style</div><div class="value">${num(raw.total_styles)}</div>
+        <div class="sub">${num(s.total_styles)} nama unik</div></div>
+      <div class="tile"><div class="label">Record (colorway)</div><div class="value">${num(s.total_records)}</div>
+        <div class="sub">${counts.map(num).join(" / ")} (atas hitam / antara / bawah merah)</div></div>
+      <div class="tile"><div class="label">WHS final</div><div class="split">
+        ${whsKeys.filter((k) => k in whs).map((k) => `<div><b>${num(whs[k])}</b><span class="sub">${esc(k)}</span></div>`).join("")}
+      </div></div>
+      <div class="tile"><div class="label">WS TAG COLOR</div><div class="split">
+        <div><b>${num(s.WS_TAG_COLOR_filled)}</b><span class="sub">terisi</span></div>
+        <div><b>${num(s.WS_TAG_COLOR_null)}</b><span class="sub">null</span></div></div></div>
+      <div class="tile"><div class="label">needs_review</div><div class="value">${num(s.needs_review_items)}</div>
+        <div class="sub">${Object.keys(s.needs_review_by_issue).length} jenis masalah</div></div>
+      <div class="tile"><div class="label">Warning ekstraksi</div><div class="value">${num(raw.warnings.length)}</div>
+        <div class="sub">masalah saat membaca Excel</div></div>`;
+  }
+
+  // ---------- records ----------
+  function colorKeys(rec) { return Object.keys(rec).filter((k) => k.startsWith("COLOR")); }
+  function renderRecords() {
+    const q = $("#q-records").value.trim().toLowerCase();
+    const whsFilter = $("#f-whs").value;
+    const onlyReview = $("#f-review").checked;
+    const exact = /^#(\d+)$/.exec(q);
+    const rows = [];
+    let shown = 0;
+    data.final.records.forEach((rec, i) => {
+      if (exact && Number(exact[1]) !== i) return;
+      if (whsFilter && (whsFilter === "null" ? rec.WHS !== null : rec.WHS !== whsFilter)) return;
+      const reviews = reviewByRecord.get(i) || [];
+      if (onlyReview && !reviews.length) return;
+      const colors = colorKeys(rec).map((k) => rec[k]);
+      if (q && !exact) {
+        const hay = [rec.DESCRIPTION, ...colors, rec["WS TAG COLOR"], rec._ref].join(" ").toLowerCase();
+        if (!hay.includes(q)) return;
+      }
+      shown++;
+      const codes = reviews.map((j) => data.final.needs_review[j].code);
+      const onlyInfo = codes.length && codes.every((c) => c === "WHS_CAPPED_BY_STYLE");
+      rows.push(`<tr>
+        <td class="num">${i}</td>
+        <td class="desc">${esc(rec.DESCRIPTION)}</td>
+        <td><div class="chips">${colorKeys(rec).map((k) => `<span class="chip" title="${esc(k)}">${esc(rec[k])}</span>`).join("")}</div></td>
+        <td>${rec["WS TAG COLOR"] === null ? '<span class="null">null</span>' : esc(rec["WS TAG COLOR"])}</td>
+        <td>${whsBadge(rec.WHS)}</td>
+        <td>${codes.length ? `<button class="revbtn ${onlyInfo ? "info" : ""}" data-rec="${i}" title="${esc(codes.join(", "))}">${codes.length}</button>` : ""}</td>
+        <td class="ref">${esc(rec._ref)}</td></tr>`);
+    });
+    $("#tbody-records").innerHTML = rows.join("") ||
+      '<tr><td colspan="7" class="null" style="text-align:center;padding:24px">Tidak ada record yang cocok</td></tr>';
+    $("#shown-records").textContent = `Menampilkan ${num(shown)} dari ${num(data.final.records.length)}`;
+  }
+  $("#q-records").addEventListener("input", () => data && renderRecords());
+  $("#f-whs").addEventListener("change", () => data && renderRecords());
+  $("#f-review").addEventListener("change", () => data && renderRecords());
+  $("#tbody-records").addEventListener("click", (e) => {
+    const btn = e.target.closest(".revbtn");
+    if (!btn) return;
+    reviewFilter.record = Number(btn.dataset.rec);
+    reviewFilter.code = null;
+    renderReview();
+    selectTab("review");
+  });
+
+  // ---------- needs review ----------
+  function renderReview() {
+    const items = data.final.needs_review;
+    const byCode = data.final.summary.needs_review_by_issue;
+    const chip = (code, label, count) =>
+      `<button class="code-chip" data-code="${esc(code)}" aria-pressed="${reviewFilter.code === code}" title="${esc(CODE_INFO[code] || "")}">${esc(label)}<b>${num(count)}</b></button>`;
+    $("#code-chips").innerHTML = chip("", "Semua", items.length) +
+      Object.entries(byCode).map(([code, n]) => chip(code, code, n)).join("");
+    $("#code-chips").querySelector('[data-code=""]').setAttribute("aria-pressed", String(!reviewFilter.code));
+    $("#review-filter").innerHTML = reviewFilter.record === null ? "" :
+      `<p><span class="pill">Record #${reviewFilter.record} <button type="button" id="clear-rec" aria-label="Hapus filter">×</button></span></p>`;
+    const list = items.map((it, i) => [it, i]).filter(([it]) => {
+      if (reviewFilter.code && it.code !== reviewFilter.code) return false;
+      if (reviewFilter.record !== null) {
+        const recs = Array.isArray(it.record) ? it.record : [it.record];
+        if (!recs.includes(reviewFilter.record)) return false;
+      }
+      return true;
+    });
+    $("#review-items").innerHTML = list.map(([it]) => {
+      const recs = Array.isArray(it.record) ? it.record : it.record === null ? [] : [it.record];
+      const recLinks = recs.length ? recs.map((r) => `<button class="reclink" data-rec="${r}">record #${r}</button>`).join(", ")
+        : '<span class="null">tanpa record</span>';
+      const rows = [];
+      if (it.colorway !== undefined) rows.push(["Colorway", esc(it.colorway)]);
+      rows.push(["Masalah", esc(it.issue)]);
+      if (it.tag_instruction !== undefined) rows.push(["Instruksi TAG", `<span class="mono">${esc(it.tag_instruction)}</span>`]);
+      if (it.whs_values !== undefined) rows.push(["WHS", it.whs_values.map(whsBadge).join(" ")]);
+      if (it.comment_di_matrix !== undefined) rows.push(["Comment MATRIX",
+        it.comment_di_matrix === null ? '<span class="null">tidak ada</span>' : `<pre class="comment">${esc(it.comment_di_matrix)}</pre>`]);
+      if (it._ref !== undefined) rows.push(["_ref", `<span class="mono">${(Array.isArray(it._ref) ? it._ref : [it._ref]).map(esc).join("<br>")}</span>`]);
+      return `<article class="item">
+        <div class="item-head"><span class="code ${codeClass(it.code)}" title="${esc(CODE_INFO[it.code] || "")}">${esc(it.code)}</span>
+          ${recLinks}${it.DESCRIPTION ? `<strong>${esc(it.DESCRIPTION)}</strong>` : ""}</div>
+        <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></article>`;
+    }).join("") || '<div class="empty-state">Tidak ada item</div>';
+  }
+  $("#code-chips").addEventListener("click", (e) => {
+    const btn = e.target.closest(".code-chip");
+    if (!btn) return;
+    reviewFilter.code = btn.dataset.code || null;
+    renderReview();
+  });
+  $("#review-filter").addEventListener("click", (e) => {
+    if (e.target.id === "clear-rec") { reviewFilter.record = null; renderReview(); }
+  });
+  $("#review-items").addEventListener("click", (e) => {
+    const btn = e.target.closest(".reclink");
+    if (!btn) return;
+    $("#q-records").value = `#${btn.dataset.rec}`;
+    $("#f-whs").value = "";
+    $("#f-review").checked = false;
+    renderRecords();
+    selectTab("records");
+  });
+
+  // ---------- per style ----------
+  function renderStyleFilters() {
+    const sheets = [...new Set(data.raw.styles.map((s) => s.sheet))];
+    $("#f-sheet").innerHTML = '<option value="">Semua sheet</option>' + sheets.map((s) => `<option>${esc(s)}</option>`).join("");
+    $("#legend").innerHTML = Object.entries(FONT_DOT)
+      .map(([label, color]) => `<span><i class="dot" style="background:${color}"></i>${esc(label)}</span>`).join("");
+  }
+  function renderStyles() {
+    const q = $("#q-styles").value.trim().toLowerCase();
+    const sheet = $("#f-sheet").value;
+    const cards = [];
+    for (const st of data.raw.styles) {
+      if (sheet && st.sheet !== sheet) continue;
+      if (q) {
+        const hay = [st.style, st.sheet, st.section, `no.${st.no}`, st.tag,
+          ...GROUPS.flatMap(([key]) => st[key].map((c) => `${c.colorway} ${c.cell}`))].join(" ").toLowerCase();
+        if (!hay.includes(q)) continue;
+      }
+      const groups = GROUPS.map(([key, label, cls]) => {
+        const list = st[key];
+        const items = list.map((c) => `<li><i class="dot" style="background:${FONT_DOT[c.font_color] || "#9aa4b2"}"></i>
+          <span>${esc(c.colorway)}${c.comment ? ` <span title="${esc(c.comment)}">💬</span>` : ""}
+          <small>${esc(c.cell)} · ${esc(c.font_color)}</small></span></li>`).join("");
+        return `<div class="group"><h4 class="${cls}"><span>${label}</span><span>${list.length}</span></h4>
+          ${list.length ? `<ul>${items}</ul>` : '<div class="empty">kosong</div>'}</div>`;
+      }).join("");
+      cards.push(`<article class="style">
+        <header><div><div class="meta">${esc(st.sheet)}${st.section ? ` · ${esc(st.section)}` : ""} · No.${esc(st.no)}</div>
+          <h3>${esc(st.style)}</h3></div>
+          <div title="WHS style dari background sel nomor">${st.style_whs === null ? '<span class="badge whs-null">WHS style tidak diketahui</span>' : whsBadge(st.style_whs)}</div></header>
+        <div class="tagline">${st.tag ? esc(st.tag) : "tidak ada TAG"}</div>
+        <div class="groups">${groups}</div></article>`);
+    }
+    $("#style-list").innerHTML = cards.join("") || '<div class="empty-state">Tidak ada style yang cocok</div>';
+    $("#shown-styles").textContent = `Menampilkan ${num(cards.length)} dari ${num(data.raw.styles.length)}`;
+  }
+  $("#q-styles").addEventListener("input", () => data && renderStyles());
+  $("#f-sheet").addEventListener("change", () => data && renderStyles());
+
+  // ---------- warnings ----------
+  function renderWarnings() {
+    const w = data.raw.warnings;
+    $("#warning-list").innerHTML = w.length ? w.map((x) => `<div class="warning">${esc(x)}</div>`).join("")
+      : '<div class="empty-state">Tidak ada warning</div>';
+  }
+
+  // ---------- tab ----------
+  let currentTab = "records";
+  function selectTab(name) {
+    currentTab = name;
+    document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === name)));
+    document.querySelectorAll(".panel").forEach((p) => { p.hidden = p.id !== `panel-${name}`; });
+  }
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => selectTab(t.dataset.tab)));
+})();
+</script>
+</body>
+</html>

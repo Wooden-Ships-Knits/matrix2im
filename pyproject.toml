@@ -18,6 +18,9 @@ matrix2im = "matrix_to_im.cli:main"
 [tool.setuptools]
 packages = ["matrix_to_im"]
 
+[tool.setuptools.package-data]
+matrix_to_im = ["ui/*.html"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["regression: dijalankan terhadap file data F27 asli dan golden"]

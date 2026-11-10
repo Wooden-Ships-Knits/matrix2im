@@ -1,4 +1,4 @@
-"""Antarmuka command line `matrix2im`: extract, transform, run."""
+"""Antarmuka command line `matrix2im`: extract, transform, run, ui."""
 from __future__ import annotations
 
 import argparse
@@ -11,6 +11,7 @@ from .errors import Matrix2ImError
 from .extract import extract
 from .io_utils import read_json, write_json
 from .transform import transform
+from .ui_server import serve
 from .validate import read_im_header, validate
 
 log = logging.getLogger("matrix2im")
@@ -117,6 +118,11 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return _finish(raw, final, args.strict)
 
 
+def _cmd_ui(args: argparse.Namespace) -> int:
+    serve(port=args.port, open_browser=not args.no_browser)
+    return 0
+
+
 # Pesan argparse yang paling sering muncul, diterjemahkan agar pesan salah pakai tetap Indonesia.
 _ARGPARSE_ID = (("the following arguments are required", "argumen wajib belum diisi"),
                 ("unrecognized arguments", "argumen tidak dikenal"),
@@ -159,6 +165,11 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("-o", "--output", type=Path, required=True, help="folder output")
     p.add_argument("--strict", action="store_true", help="exit 2 bila needs_review tidak kosong")
     p.set_defaults(func=_cmd_run)
+
+    p = sub.add_parser("ui", help="buka UI web lokal untuk upload Excel dan melihat hasil")
+    p.add_argument("--port", type=int, default=8765, help="port lokal (default 8765)")
+    p.add_argument("--no-browser", action="store_true", help="jangan buka browser otomatis")
+    p.set_defaults(func=_cmd_ui)
     return parser
 
 

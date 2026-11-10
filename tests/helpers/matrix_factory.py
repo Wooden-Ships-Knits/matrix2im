@@ -86,3 +86,20 @@ def build_no_pages(path: Path) -> Path:
     ws["A2"] = "hanya teks biasa"
     wb.save(path)
     return path
+
+
+IM_KEYS = ["DESCRIPTION", "COLOR1", "COLOR2", "COLOR3", "COLOR 4", *[f"COLOR{i}" for i in range(5, 19)],
+           "WS TAG COLOR\n(Note - isi sesuai instruksi TAG)", "WHS"]
+
+
+def build_im(path: Path, drop: str | None = None) -> Path:
+    """IM MASTER sintetis: sheet F27 dengan header baris 54 (opsional tanpa satu key)."""
+    from matrix_to_im.legend_config import IM_HEADER_ROW
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "F27"
+    for col, key in enumerate([k for k in IM_KEYS if k != drop], 1):
+        ws.cell(row=IM_HEADER_ROW, column=col, value=key)
+    wb.save(path)
+    return path
