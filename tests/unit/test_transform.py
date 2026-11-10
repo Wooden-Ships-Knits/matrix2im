@@ -1,0 +1,161 @@
+import json
+
+import pytest
+
+from matrix_to_im.errors import Matrix2ImError
+from matrix_to_im.io_utils import read_json, write_json
+from matrix_to_im.transform import transform
+
+
+def cw(yarns, cell="A1", font="NEW COLOR", comment=None):
+    return {"colorway": "/".join(yarns), "yarns": yarns, "font_color": font, "cell": cell, "comment": comment}
+
+
+def style(name="STYLE X", sheet="S1", section=None, no=1, whs="000 & SY", tag="TAG: C1/C2",
+          above=(), between=(), below=()):
+    return {"no": no, "style": name, "style_whs": whs, "tag": tag, "sheet": sheet, "section": section,
+            "color_above_black_line": list(above), "color_between_black_and_red_line": list(between),
+            "color_below_red_line": list(below)}
+
+
+def raw_of(*styles, warnings=()):
+    return {"source": "x", "styles": list(styles), "warnings": list(warnings)}
+
+
+def raw_one(yarns, **kw):
+    return raw_of(style(above=[cw(yarns, **kw)]))
+
+
+def by_code(doc, code):
+    return [x for x in doc["needs_review"] if x["code"] == code]
+
+
+def test_record_keys_and_slots():
+    rec = transform(raw_one(yarns=["A", "B", "C", "D"]))["records"][0]
+    assert list(rec) == ["DESCRIPTION", "COLOR1", "COLOR2", "COLOR3", "COLOR 4", "WS TAG COLOR", "WHS", "_ref"]
+
+
+def test_top_level_key_order_and_generated():
+    doc = transform(raw_one(["A"]), generated="2026-01-02")
+    assert list(doc) == ["target", "source", "generated", "rules", "summary", "records", "needs_review"]
+    assert doc["generated"] == "2026-01-02"
+
+
+def test_ref_with_and_without_section():
+    raw = raw_of(style(sheet="LUXE", section="CHRISTMAS - COTTON", no=4, above=[cw(["A"], cell="D343")]),
+                 style(name="S2", sheet="ESSENTIALS GRASSY", no=21, between=[cw(["A"], cell="D166")]))
+    refs = [r["_ref"] for r in transform(raw)["records"]]
+    assert refs == ["LUXE (CHRISTMAS - COTTON) No.4 | D343 | above_black",
+                    "ESSENTIALS GRASSY No.21 | D166 | between_black_red"]
+
+
+def test_stripe_yarns_written_once():
+    rec = transform(raw_one(["A", "B", "a", "B"]))["records"][0]
+    assert rec["COLOR1"] == "A" and rec["COLOR2"] == "B" and "COLOR3" not in rec
+
+
+def test_too_many_yarns():
+    yarns = [f"Y{i}" for i in range(1, 20)]
+    doc = transform(raw_one(yarns))
+    assert doc["records"][0]["COLOR18"] == "Y18" and "COLOR19" not in doc["records"][0]
+    item = by_code(doc, "TOO_MANY_YARNS")[0]
+    assert item["issue"] == "19 benang unik, slot COLOR hanya 18"
+    assert item["colorway"].endswith("/Y18")
+
+
+def test_descriptor_review_carries_comment():
+    doc = transform(raw_one(["KHAKI STRIPE"], comment="Dev: X"))
+    item = by_code(doc, "COLOR_IS_DESCRIPTOR")[0]
+    assert item["comment_di_matrix"] == "Dev: X"
+    assert item["issue"] == "COLOR berisi deskripsi, bukan nama benang: ['KHAKI STRIPE']"
+    assert "tag_instruction" not in item
+    assert list(item) == ["record", "code", "DESCRIPTION", "colorway", "issue", "comment_di_matrix", "_ref"]
+
+
+def test_duplicate_across_sheets_with_whs_values():
+    raw = raw_of(style(sheet="S1", whs="000", between=[cw(["A", "B"], font="REPEAT COLOR")]),
+                 style(sheet="S2", whs="000 & SY", between=[cw(["A", "B"], font="REPEAT COLOR")]))
+    doc = transform(raw)
+    item = by_code(doc, "DUPLICATE_STYLE_ACROSS_SHEETS")[0]
+    assert item["record"] == [0, 1] and item["whs_values"] == ["000", "000 & SY"] and "WHS beda" in item["issue"]
+    assert item["_ref"] == [r["_ref"] for r in doc["records"]]
+    assert list(item)[-2:] == ["whs_values", "_ref"]
+
+
+def test_duplicate_same_whs_and_none_whs_do_not_crash():
+    same = raw_of(style(sheet="S1", above=[cw(["A"])]), style(sheet="S2", above=[cw(["A"])]))
+    item = by_code(transform(same), "DUPLICATE_STYLE_ACROSS_SHEETS")[0]
+    assert item["whs_values"] == ["000 & SY"] and "WHS beda" not in item["issue"]
+    mixed = raw_of(style(sheet="S1", above=[cw(["A"])]), style(sheet="S2", above=[cw(["A"], font="YR COLOR")]))
+    item = by_code(transform(mixed), "DUPLICATE_STYLE_ACROSS_SHEETS")[0]
+    assert item["whs_values"] == ["000 & SY", None] and "WHS beda" in item["issue"]
+
+
+def test_null_values_always_have_review():
+    doc = transform(raw_of(style(tag="TAG for solids: C1 | for marl: C1", above=[cw(["A"], font="YR COLOR")])))
+    rec = doc["records"][0]
+    assert rec["WS TAG COLOR"] is None and rec["WHS"] is None
+    codes = [x["code"] for x in doc["needs_review"]]
+    assert codes == ["TAG_CONDITIONAL", "FONT_COLOR_NO_RULE"]
+    assert all("tag_instruction" in x for x in doc["needs_review"])
+    assert list(doc["needs_review"][0]) == ["record", "code", "DESCRIPTION", "colorway", "issue",
+                                            "tag_instruction", "_ref"]
+
+
+def test_capped_item_has_no_tag_instruction():
+    doc = transform(raw_of(style(whs="000", above=[cw(["A"])])))
+    item = by_code(doc, "WHS_CAPPED_BY_STYLE")[0]
+    assert doc["records"][0]["WHS"] == "000" and "tag_instruction" not in item
+
+
+def test_extraction_warnings_last_with_null_record():
+    raw = raw_of(style(above=[cw(["A"], font="YR COLOR")]), warnings=["w1", "w2"])
+    items = transform(raw)["needs_review"]
+    assert [x["code"] for x in items][-2:] == ["EXTRACTION_WARNING"] * 2
+    assert items[-1] == {"record": None, "code": "EXTRACTION_WARNING", "issue": "warning ekstraksi: w2"}
+
+
+def test_review_sorted_by_record():
+    raw = raw_of(style(name="S1", above=[cw(["A"], font="YR COLOR")]),
+                 style(name="S2", above=[cw(["B"], font="YR COLOR")]),
+                 style(name="S1", sheet="Z", above=[cw(["A"], font="YR COLOR")]), warnings=["w"])
+    recs = [x["record"] for x in transform(raw)["needs_review"]]
+    key = lambda r: r if isinstance(r, int) else (r[0] if isinstance(r, list) else 10**6)
+    assert [key(r) for r in recs] == sorted(key(r) for r in recs)
+    assert recs[-1] is None
+
+
+def test_summary_counts_by_code():
+    raw = raw_of(style(name="S1", tag="TAG: C1", above=[cw(["A"], font="YR COLOR"), cw(["B"])]),
+                 style(name="S2", tag="TAG: C1", below=[cw(["C STRIPE"])]), warnings=["w"])
+    s = transform(raw)["summary"]
+    assert s["total_records"] == 3 and s["total_styles"] == 2
+    assert s["WHS"] == {None: 1, "000 & SY": 1, "SY": 1}
+    assert (s["WS_TAG_COLOR_filled"], s["WS_TAG_COLOR_null"]) == (3, 0)
+    assert s["needs_review_by_issue"] == {"FONT_COLOR_NO_RULE": 1, "COLOR_IS_DESCRIPTOR": 1,
+                                          "EXTRACTION_WARNING": 1}
+    assert s["needs_review_items"] == 3
+
+
+def test_bad_raw_raises():
+    with pytest.raises(Matrix2ImError):
+        transform({"source": "x"})
+    with pytest.raises(Matrix2ImError):
+        transform({"styles": "x"})
+
+
+def test_write_json_creates_parent_and_utf8(tmp_path):
+    path = tmp_path / "a" / "b" / "o.json"
+    write_json(path, {"k": "é"})
+    text = path.read_text(encoding="utf-8")
+    assert "é" in text and text.startswith('{\n  "k"')
+    assert read_json(path) == {"k": "é"}
+
+
+def test_read_json_errors(tmp_path):
+    with pytest.raises(Matrix2ImError):
+        read_json(tmp_path / "missing.json")
+    bad = tmp_path / "bad.json"
+    bad.write_text("{oops", encoding="utf-8")
+    with pytest.raises(Matrix2ImError):
+        read_json(bad)
