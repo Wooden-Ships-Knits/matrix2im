@@ -64,9 +64,16 @@ def _cell_xml(ref: bytes, style: bytes | None, text: str | None) -> bytes:
             + escape(text).encode("utf-8") + b"</t></is></c>")
 
 
-def _find_row(data: bytes, row: int) -> tuple[int, int, bool]:
-    """(awal tag, akhir tag pembuka, self-closing) untuk <row r="row">; atribut r tak harus pertama."""
-    pos = data.find(b'<row r="%d"' % row)
+def _find_row(data: bytes, row: int, frm: int = 0) -> tuple[int, int, bool]:
+    """(awal tag, akhir tag pembuka, self-closing) untuk <row r="row">; atribut r tak harus pertama.
+
+    Pencarian mulai dari frm (akhir baris sebelumnya) agar total biaya linear; bila tak ketemu
+    di sana, ulang dari awal dan terakhir lewat regex.
+    """
+    needle = b'<row r="%d"' % row
+    pos = data.find(needle, frm)
+    if pos < 0 and frm:
+        pos = data.find(needle)
     if pos < 0:
         m = re.search(rb'<row\b[^>]*?(?<![\w:])r="%d"' % row, data)
         if m is None:
@@ -93,8 +100,8 @@ def _split_cells(inner: bytes) -> list[tuple[int, bytes]]:
         pos = end
 
 
-def _rewrite_row(data: bytes, row: int, edits: dict[int, str | None]) -> tuple[int, int, bytes]:
-    start, open_end, selfclosing = _find_row(data, row)
+def _rewrite_row(data: bytes, row: int, edits: dict[int, str | None], frm: int = 0) -> tuple[int, int, bytes]:
+    start, open_end, selfclosing = _find_row(data, row, frm)
     tag = data[start:open_end]
     if selfclosing:
         end, inner, tag = open_end, b"", tag[:-2] + b">"
@@ -127,7 +134,8 @@ def _set_full_calc(xml: bytes) -> bytes:
             tag = tag.replace(b"<calcPr", b'<calcPr fullCalcOnLoad="1"', 1)
         return xml[:m.start()] + tag + xml[m.end():]
     new = b'<calcPr fullCalcOnLoad="1"/>'
-    hits = [i for i in (xml.find(t) for t in _AFTER_CALC) if i >= 0]
+    base = max(xml.find(b"</sheets>"), xml.rfind(b"</definedNames>"), 0)   # abaikan extLst di bookViews
+    hits = [i for i in (xml.find(t, base) for t in _AFTER_CALC) if i >= 0]
     at = min(hits) if hits else xml.rindex(b"</workbook>")
     return xml[:at] + new + xml[at:]
 
@@ -140,7 +148,12 @@ def apply_cell_values(src: Path, dst: Path, sheet_name: str, changes: Iterable[C
     with zipfile.ZipFile(src) as zin:
         sheet_path = sheet_xml_path(zin, sheet_name)
         data = zin.read(sheet_path)
-        patches = sorted(_rewrite_row(data, r, edits) for r, edits in by_row.items())
+        patches, cursor = [], 0
+        for r in sorted(by_row):
+            patch = _rewrite_row(data, r, by_row[r], cursor)
+            patches.append(patch)
+            cursor = patch[1]
+        patches.sort()
         parts, pos = [], 0
         for start, end, new in patches:
             parts += [data[pos:start], new]

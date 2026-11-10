@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 import zipfile
+from xml.etree import ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -172,3 +173,44 @@ def test_shared_string_and_empty_styled_and_attr_order(tmp_path):
     apply_cell_values(hacked, dst, IM_SHEET, [CellChange(1, 1, "shared", "n1"), CellChange(1, 2, None, "n2")])
     ws = load_workbook(dst)[IM_SHEET]
     assert (ws["A1"].value, ws["B1"].value) == ("n1", "n2")
+
+
+def test_full_calc_not_placed_inside_bookviews_extlst(tmp_path):
+    p = tmp_path / "x.xlsx"
+    wb = Workbook()
+    wb.active.title = IM_SHEET
+    wb.active["A1"] = "a"
+    wb.save(p)
+    hacked = tmp_path / "h.xlsx"
+    with zipfile.ZipFile(p) as a, zipfile.ZipFile(hacked, "w", zipfile.ZIP_DEFLATED) as b:
+        for i in a.infolist():
+            d = a.read(i.filename)
+            if i.filename == "xl/workbook.xml":
+                d = re.sub(rb"<calcPr[^>]*/>", b"", d)
+                d = re.sub(rb"<workbookView([^>]*)/>", rb"<workbookView\1><extLst><ext uri='x'/></extLst></workbookView>", d)
+                assert b"<extLst>" in d
+            b.writestr(i, d)
+    dst = tmp_path / "out.xlsx"
+    apply_cell_values(hacked, dst, IM_SHEET, [CellChange(1, 1, "a", "b")])
+    with zipfile.ZipFile(dst) as zf:
+        wbxml = zf.read("xl/workbook.xml").decode()
+    assert wbxml.index("</bookViews>") < wbxml.index("<calcPr")
+    ET.fromstring(wbxml)
+
+
+def test_row_search_is_linear(tmp_path):
+    """Banyak baris berubah: tiap pencarian <row> mulai dari baris sebelumnya, bukan dari awal."""
+    n = 5000
+    wb = Workbook()
+    ws = wb.active
+    ws.title = IM_SHEET
+    for r in range(1, n + 1):
+        ws.cell(r, 1, "x")
+    p = tmp_path / "x.xlsx"
+    wb.save(p)
+    import time
+    t0 = time.perf_counter()
+    apply_cell_values(p, tmp_path / "o.xlsx", IM_SHEET,
+                      [CellChange(r, c, None, "v") for r in range(1, n + 1) for c in (2, 3, 4)])
+    assert time.perf_counter() - t0 < 10
+    assert load_workbook(tmp_path / "o.xlsx")[IM_SHEET].cell(n, 4).value == "v"
