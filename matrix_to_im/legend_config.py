@@ -59,3 +59,5 @@ OWNER_FILE_PREFIX = "~$"                   # file kunci Excel di folder yang sam
 OWNER_FILE_TRUNCATE = 2                    # Excel kadang memotong 2 huruf pertama nama pada file pemilik
 OWNER_NAME_MAX_LEN = 53                    # byte pertama file pemilik = panjang nama (maks 53)
 OWNER_NAME_FALLBACK = "seseorang"
+EXCEL_APP = "/Applications/Microsoft Excel.app"
+EXCEL_TIMEOUT_S = 900

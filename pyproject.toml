@@ -23,4 +23,7 @@ matrix_to_im = ["ui/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["regression: dijalankan terhadap file data F27 asli dan golden"]
+markers = [
+    "regression: dijalankan terhadap file data F27 asli dan golden",
+    "excel: menjalankan Microsoft Excel sungguhan (butuh MATRIX2IM_EXCEL_TESTS=1)",
+]
