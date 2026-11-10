@@ -25,7 +25,7 @@ def test_numbers_section_style_whs(synthetic):
     a, b, c, d = synthetic.cards
     assert (a.no, a.style_whs, a.section) == (1, "000", "WINTER BEACH")
     assert (b.no, b.style_whs) == (2, "000 & SY")
-    assert (c.no, c.style_whs, c.no_fill) == ("S2 - A", None, None)
+    assert (c.no, c.style_whs, c.no_fill) == ("S2 - A", "000 & SY", None)    # tanpa fill = putih (keputusan 5)
     assert (d.no, d.style_whs, d.section) == (1, "SY", None)
 
 
@@ -61,8 +61,8 @@ def test_red_line_on_first_colour_row_puts_all_below(synthetic):
 
 def test_warnings(synthetic):
     w = "\n".join(synthetic.warnings)
-    assert 'TEST A19: karakter "." di area warna diabaikan' in w
-    assert "TEST C9 No.S2 - A STRIPE CARDI: background nomor tidak dikenali (None)" in w
+    assert "A19" not in w and "karakter" not in w                 # tanda baca dibuang tanpa warning (keputusan 8)
+    assert "C9" not in w and "background nomor" not in w         # tanpa fill = 000 & SY (keputusan 5)
     assert "C17" in w and "TAG" in w                          # D10
     assert "A37" in w and "FF123456" in w                     # D9
     assert "garis hitam tidak ditemukan" in w                 # kartu B dan C
@@ -202,3 +202,36 @@ def test_six_digit_colours_written_by_openpyxl(tmp_path):   # F8: alpha "00" buk
     assert (a.no_fill, a.style_whs) == ("00FF66FF", "000")
     assert a.above_black[0].font_color == "NEW COLOR"
     assert a.red_line_row == 18 and [x.cell for x in a.below_red] == ["A18"]
+
+
+
+def _fill_variant(tmp_path, name, ref, rgb, value="keep"):
+    """Salinan workbook sintetis dengan warna background satu sel diganti (rgb None = tanpa fill)."""
+    wb = load_workbook(build_matrix(tmp_path / "m.xlsx"))
+    cell = wb["TEST"][ref]
+    cell.fill = PatternFill(fill_type="solid", fgColor=rgb) if rgb else PatternFill(fill_type=None)
+    if value != "keep":
+        cell.value = value
+    wb.save(tmp_path / name)
+    return tmp_path / name
+
+
+def test_white_number_background_is_000_and_sy(tmp_path):                   # keputusan 5
+    result = extract_workbook(_fill_variant(tmp_path, "putih.xlsx", "A9", "FFFFFFFF"))
+    assert result.cards[0].style_whs == "000 & SY"
+    assert not [w for w in result.warnings if "A9" in w]
+
+
+def test_unknown_number_background_still_null_with_warning(tmp_path):
+    result = extract_workbook(_fill_variant(tmp_path, "hijau.xlsx", "A9", "FF00B050"))
+    assert result.cards[0].style_whs is None
+    assert "TEST A9 No.1 NEWPORT CREW: background nomor tidak dikenali (FF00B050), WHS style tidak bisa ditentukan" \
+        in result.warnings
+
+
+def test_missing_number_without_fill_stays_unknown(tmp_path):
+    # Aturan putih/tanpa fill hanya untuk sel nomor yang benar-benar ada isinya.
+    result = extract_workbook(_fill_variant(tmp_path, "c9_kosong.xlsx", "C9", None, value=None))
+    c = result.cards[2]
+    assert (c.no, c.style_whs) == (None, None)
+    assert "TEST C9 STRIPE CARDI: nomor style tidak ditemukan, WHS style tidak bisa ditentukan" in result.warnings

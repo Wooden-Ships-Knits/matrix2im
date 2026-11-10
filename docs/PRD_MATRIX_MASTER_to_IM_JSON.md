@@ -1,6 +1,6 @@
 # PRD: MATRIX MASTER → JSON untuk IM MASTER
 
-Tanggal: 9 November 2026 · AI Team
+Tanggal: 9 November 2026 · AI Team · Revisi: 10 November 2026 (hasil review `needs_review`, lihat Riwayat perubahan)
 
 ## Ringkasan
 
@@ -17,7 +17,7 @@ Tujuan versi ini:
 1. Membaca semua kartu style di semua sheet MATRIX MASTER tanpa bergantung pada nomor baris tetap, karena layout tiap halaman berbeda.
 2. Menghasilkan raw JSON per style: No, Style, WHS style, TAG, dan colorway yang dikelompokkan menurut posisi garis hitam dan merah.
 3. Menghasilkan final JSON per colorway dengan key yang sama persis dengan nama kolom IM MASTER.
-4. Tidak menulis nilai tebakan: setiap data yang tidak bisa diputuskan aturan dikosongkan (null) dan masuk antrian review.
+4. Tidak menulis nilai tebakan: setiap data yang tidak bisa diputuskan aturan dikosongkan (null) atau, untuk WS TAG COLOR, diisi `Need Review`, dan masuk antrian review.
 
 Di luar scope versi ini:
 
@@ -36,7 +36,7 @@ flowchart TD
     D --> E["Tahap 2 · Transformasi<br/>DESCRIPTION, COLOR1–COLOR18, WS TAG COLOR<br/>WHS = irisan WHS style dan WHS warna"]
     E --> F{"Aturan bisa<br/>memutuskan?"}
     F -- ya --> G["Nilai ditulis<br/>ke record final"]
-    F -- tidak --> H["Nilai null<br/>masuk needs_review + alasan"]
+    F -- tidak --> H["Nilai null / Need Review<br/>masuk needs_review + alasan"]
     G --> I["Output: final JSON<br/>records: key = nama kolom IM MASTER<br/>needs_review: item tanpa aturan, dicek tim"]
     H --> I
     I -.-> J["Fase berikutnya: tulis ke IM MASTER<br/>di luar scope versi ini"]
@@ -44,7 +44,7 @@ flowchart TD
     style J stroke-dasharray: 5 4
 ```
 
-Sistem mulai bekerja setelah automation Image → MATRIX MASTER selesai memperbarui file Excel. Nilai yang tidak bisa diputuskan aturan tidak ditebak: nilainya dibiarkan null dan dicatat di `needs_review`.
+Sistem mulai bekerja setelah automation Image → MATRIX MASTER selesai memperbarui file Excel. Nilai yang tidak bisa diputuskan aturan tidak ditebak: nilainya dibiarkan null (WS TAG COLOR diisi `Need Review`) dan dicatat di `needs_review`.
 
 ## Input: file MATRIX MASTER
 
@@ -82,11 +82,11 @@ Tahap ini membaca setiap kartu style dan menyalin isinya apa adanya, ditambah ar
 | `no` | nilai hasil formula di baris nomor; angka, atau teks seperti S1, S2 - A, 1A |
 | `section` | teks kolom A tepat di atas baris nomor; null bila tidak ada |
 | `style` | sel tepat di atas baris yang isinya persis NEW / EXACT REPEAT / REPEAT / UPDATE / REPEAT WITH UPDATE. Harus cocok persis, supaya nama seperti "NEWPORT …" tidak terbaca sebagai label |
-| `style_whs` | warna background sel nomor: ungu (FF66FF) → 000; abu (theme −15% atau D9D9D9) → 000 & SY; merah (FF0000) → SY; warna lain atau kosong → null + warning |
+| `style_whs` | warna background sel nomor: ungu (FF66FF) → 000; abu (theme −15% atau D9D9D9), putih (FFFFFF / theme putih), atau tanpa warna → 000 & SY; merah (FF0000) → SY; warna lain → null + warning. Kartu yang sel nomornya tidak ditemukan → null + warning |
 | `tag` | sel di bawah nama style yang berawalan "TAG". TAG beberapa baris digabung dengan " \| ". Sel "TAG …" yang ada di area warna tidak dihitung sebagai colorway |
 | garis hitam | border tebal (medium/thick) berwarna auto, indexed 64, theme 1, atau hitam |
 | garis merah | border tebal berwarna merah (FF0000, E40500, C00000); kalau tidak ditemukan di kartu itu, dipakai baris garis merah mayoritas di halaman |
-| colorway | setiap sel tidak kosong setelah baris TAG sampai sebelum baris "L: … cm". Sel yang hanya berisi tanda baca diabaikan + warning |
+| colorway | setiap sel tidak kosong setelah baris TAG sampai sebelum baris "L: … cm". Sel yang hanya berisi tanda baca (mis. `.`, `` ` ``, `*`) diabaikan tanpa warning |
 | `yarns` | teks colorway dipecah dengan "/" dan enter, urutan dipertahankan |
 | `font_color` | arti warna font sesuai legend (lihat Lampiran) |
 | `comment` | isi comment sel; sering berisi override tag atau daftar benang stripe |
@@ -123,7 +123,7 @@ Setiap colorway menjadi satu record. Key record sama persis dengan header IM MAS
 | --- | --- |
 | DESCRIPTION | nama style apa adanya, tanpa size; berlaku untuk semua size di IM |
 | COLOR1 … COLOR18 | 1 benang = 1 kolom, nilai persis seperti di MATRIX. Benang yang berulang (stripe) ditulis sekali, sesuai urutan kemunculan pertama. Slot tanpa benang tidak dicantumkan |
-| WS TAG COLOR | TAG tanpa awalan "TAG:", setiap Cn diganti nama warna benang ke-n (tanpa prefix YCA/YST/YTX/BJ/YP/POODLE dan tanpa kode). Alias BLACK B → BLACK; STRIPED → STRIPE; akhiran dobel dibuang. TAG bersyarat atau singkatan, atau Cn melebihi jumlah benang → null + review |
+| WS TAG COLOR | TAG tanpa awalan "TAG:", setiap Cn diganti nama warna benang ke-n (tanpa prefix YCA/YST/YTX/BJ/YP/POODLE dan tanpa kode). Alias BLACK B → BLACK; STRIPED → STRIPE; akhiran dobel dibuang. Diisi teks `Need Review` + review bila: TAG bersyarat atau singkatan; Cn melebihi jumlah benang; TAG kosong; TAG masih berisi instruksi yang belum diterjemahkan (`C(…)` tanpa nomor atau kata COLOR); atau COLOR colorway berupa deskripsi stripe/marl |
 | WHS (kolom CE) | irisan WHS style dan WHS warna (tabel di bawah) |
 
 WHS warna ditentukan dari posisi colorway dan warna fontnya. Garis hitam tidak memengaruhi WHS.
@@ -135,7 +135,7 @@ WHS warna ditentukan dari posisi colorway dan warna fontnya. Garis hitam tidak m
 | di atas garis merah | hijau (NEW COLOR) atau hitam (REPEAT COLOR) | 000 & SY |
 | apa pun | YR COLOR, HOLD COLOR FOR SY, DISCONTINUED COLOR FOR SY | null + review |
 
-WHS final = irisan WHS style dan WHS warna, karena warna tidak bisa dijual di WHS tempat style-nya tidak dijual. Contoh: style 000 + warna 000 & SY → 000. Kalau irisannya kosong → null + review. Kalau WHS style tidak diketahui → dipakai WHS warna + review.
+WHS final = irisan WHS style dan WHS warna, karena warna tidak bisa dijual di WHS tempat style-nya tidak dijual. Contoh: style 000 + warna 000 & SY → 000 (bukan masalah, tidak masuk review). Kalau irisannya kosong → null + review. Kalau WHS style tidak diketahui (warna background di luar legend) → dipakai WHS warna + review.
 
 Struktur final JSON:
 
@@ -144,7 +144,7 @@ Struktur final JSON:
   "target": "F27 IM MASTER (sheet F27, header baris 54)",
   "source": "F27 MATRIX MASTER",
   "rules": {"...": "ringkasan aturan di bagian ini"},
-  "summary": {"total_records": 724, "WHS": {"...": 0}, "needs_review_items": 115},
+  "summary": {"total_records": 724, "WHS": {"...": 0}, "WS_TAG_COLOR_filled": 633, "WS_TAG_COLOR_need_review": 91, "WS_TAG_COLOR_null": 0, "needs_review_items": 91},
   "records": [
     {
       "DESCRIPTION": "JUDE T NECK CHUNKY",
@@ -155,12 +155,12 @@ Struktur final JSON:
     }
   ],
   "needs_review": [
-    {"record": 61, "DESCRIPTION": "ARIA V CHUNKY COTTON", "issue": "TAG kondisional / singkatan: perlu aturan khusus", "_ref": "..."}
+    {"record": 61, "code": "TAG_CONDITIONAL", "DESCRIPTION": "ARIA V CHUNKY COTTON", "issue": "TAG kondisional / singkatan: perlu aturan khusus", "_ref": "..."}
   ]
 }
 ```
 
-Key yang diawali "_" adalah metadata. `_ref` menunjuk asal record di MATRIX (sheet, nomor, sel, posisi garis) dan tidak pernah ditulis ke IM. Nilai null berarti tidak ditulis.
+Key yang diawali "_" adalah metadata. `_ref` menunjuk asal record di MATRIX (sheet, nomor, sel, posisi garis) dan tidak pernah ditulis ke IM. Nilai null berarti tidak ditulis. Teks `Need Review` di WS TAG COLOR sengaja ditulis ke IM supaya tim melihat kolom itu perlu dicek. Style yang muncul di dua sheet (mis. HUTTON di ESSENTIALS GRASSY dan LUXE) adalah kondisi normal: record tiap sheet dicatat terpisah dengan WHS masing-masing.
 
 ## Validasi dan antrian review
 
@@ -172,18 +172,25 @@ Pemeriksaan otomatis:
 - WHS hanya berisi "000", "SY", atau "000 & SY".
 - Jumlah colorway di raw JSON sama dengan jumlah record di final JSON.
 - Setiap kartu punya nomor, nama, TAG, dan minimal satu colorway; kalau tidak, masuk `warnings`.
+- Setiap WS TAG COLOR berisi `Need Review` punya item `needs_review` dengan kode TAG_* atau COLOR_IS_DESCRIPTOR.
+- Setiap nilai record berupa null atau teks tidak kosong tanpa spasi di tepi yang tidak diawali `=`.
 
 Jenis item `needs_review` dan jumlahnya pada file F27:
 
-| Jenis masalah | F27 | Penanganan |
+| Jenis masalah (kode) | F27 | Penanganan |
 | --- | --- | --- |
-| TAG bersyarat atau pakai singkatan | 57 record | WS TAG COLOR null; aturan belum ada (open issue) |
-| TAG meminta Cn melebihi jumlah benang | 21 record | WS TAG COLOR null; dicek tim |
-| WHS warna diturunkan oleh batas WHS style | 17 record | sudah ditulis; hanya informasi |
-| Style muncul di dua sheet (record dobel) | 8 record HUTTON, 2 dengan WHS berbeda | dua-duanya dipertahankan; open issue |
-| COLOR berisi deskripsi, bukan nama benang (mis. "BLUSH CHAMPAGNE STRIPE") | 6 record | ditulis apa adanya; comment MATRIX disertakan |
-| WHS style tidak diketahui | 2 record (MERRY STRIPED CREW COTTON) | dipakai WHS warna |
-| Warning ekstraksi | 4 | karakter nyasar dan background nomor kosong |
+| TAG bersyarat atau pakai singkatan (`TAG_CONDITIONAL`) | 57 record | WS TAG COLOR `Need Review`; aturan definitif belum ada |
+| TAG meminta Cn melebihi jumlah benang (`TAG_CN_OUT_OF_RANGE`) | 21 record | WS TAG COLOR `Need Review`; dicek tim |
+| TAG masih berisi instruksi belum diterjemahkan, mis. `C(car)`, `GONDOLA color` (`TAG_UNRESOLVED`) | 7 record | WS TAG COLOR `Need Review`; dicek tim |
+| COLOR berisi deskripsi, bukan nama benang, mis. "BLUSH CHAMPAGNE STRIPE" (`COLOR_IS_DESCRIPTOR`) | 6 record | COLOR ditulis apa adanya, WS TAG COLOR `Need Review`; comment MATRIX disertakan |
+| TAG kosong (`TAG_EMPTY`) | 0 | WS TAG COLOR `Need Review` |
+| WHS style tidak diketahui: warna background di luar legend (`WHS_STYLE_UNKNOWN`) | 0 | dipakai WHS warna |
+| Irisan WHS style dan WHS warna kosong (`WHS_CONFLICT`) | 0 | WHS null |
+| Warna font tanpa aturan WHS (`FONT_COLOR_NO_RULE`) | 0 | WHS null |
+| Benang unik lebih dari 18 (`TOO_MANY_YARNS`) | 0 | 18 benang pertama ditulis |
+| Warning ekstraksi (`EXTRACTION_WARNING`) | 0 | dicek tim |
+
+Tidak lagi masuk review sejak revisi 10 November 2026: WHS warna yang diturunkan oleh batas WHS style (17 record di F27, nilai WHS tetap mengikuti style), dan style yang muncul di dua sheet (8 item HUTTON, record tiap sheet dicatat terpisah).
 
 ## Kebutuhan non-fungsional
 
@@ -223,19 +230,21 @@ Catatan teknis: fungsi sisip baris di openpyxl tidak menggeser referensi formula
 
 Semua item ini sudah ditandai di `needs_review`, jadi sistem tetap bisa berjalan sambil menunggu keputusannya.
 
-- [ ] Aturan WS TAG COLOR untuk TAG bersyarat dan singkatan (57 record). Contoh: HUTTON "C1 (For Solid) | SNOW MARL (For PURE SNOW/ALMOND BUTTER)", ARIA "TAG for Heathered: C1 HEATHERED / For solids: C1".
-- [ ] TAG yang meminta Cn melebihi jumlah benang (21 record): dikosongkan, pakai benang terakhir, atau diperbaiki di MATRIX?
-- [ ] Style yang muncul di dua sheet (HUTTON MOCK T NECK CHUNKY di ESSENTIALS GRASSY No. 20 dan LUXE No. 11): sheet mana yang dipakai kalau WHS-nya berbeda (GLASGOW, FAWN)?
-- [ ] COLOR berupa deskripsi stripe atau marl: ambil daftar benang dari comment sel, atau tunggu automation pelengkap benang?
-- [ ] Background nomor kosong (LUXE No. 4 MERRY STRIPED CREW COTTON): diperbaiki di MATRIX, atau diberi nilai default?
+- [ ] Aturan definitif WS TAG COLOR untuk TAG bersyarat dan singkatan (57 record, sementara `Need Review`). Contoh: HUTTON "C1 (For Solid) | SNOW MARL (For PURE SNOW/ALMOND BUTTER)", ARIA "TAG for Heathered: C1 HEATHERED / For solids: C1".
+- [ ] TAG yang meminta Cn melebihi jumlah benang (21 record, sementara `Need Review`): diperbaiki di MATRIX atau diberi aturan?
+- [ ] TAG yang masih berisi instruksi belum diterjemahkan (7 record, sementara `Need Review`): TREE FARM `C1/C(car)`, TELLURIDE `C1/GONDOLA color`.
+- [ ] COLOR berupa deskripsi stripe atau marl (6 record, WS TAG COLOR sementara `Need Review`): ambil daftar benang dari comment sel, atau tunggu automation pelengkap benang?
 - [ ] Aturan WHS untuk warna font YR COLOR, HOLD COLOR FOR SY, dan DISCONTINUED COLOR FOR SY (belum ada di data F27).
 - [ ] Konfirmasi dua usulan penulisan IM: slot COLOR sisa dan aksesoris, serta label subtotal otomatis.
+- [ ] Fase 2: cara menulis record dari dua sheet untuk DESCRIPTION yang sama (mis. HUTTON) ke baris IM.
 - [ ] Cara memicu sistem setelah automation Image → MATRIX MASTER selesai.
 - [ ] Arti garis hitam. Garis ini tidak memengaruhi WHS, jadi saat ini hanya disimpan sebagai posisi di `_ref`.
 
+Sudah diputuskan (revisi 10 November 2026): style yang muncul di dua sheet dicatat terpisah; background nomor putih/tanpa warna = 000 & SY (MERRY STRIPED).
+
 ## Kriteria penerimaan
 
-Sistem dianggap siap kalau semua kriteria ini terpenuhi pada file F27, dan prototipe saat ini sudah memenuhinya:
+Sistem dianggap siap kalau semua kriteria ini terpenuhi pada file F27:
 
 1. Semua kartu style terbaca tanpa error pencarian label.
 2. Jumlah colorway di raw JSON sama dengan jumlah record di final JSON.
@@ -243,19 +252,22 @@ Sistem dianggap siap kalau semua kriteria ini terpenuhi pada file F27, dan proto
 4. WHS hanya berisi "000", "SY", atau "000 & SY".
 5. Pembagian garis untuk HUTTON MOCK T NECK CHUNKY (No. 20) dan JUDE T NECK CHUNKY (No. 21) sama dengan tampilan di MATRIX.
 6. 25 record yang dipilih acak cocok dengan sel aslinya di MATRIX.
-7. Setiap nilai yang tidak bisa diputuskan aturan bernilai null dan punya item di `needs_review`.
+7. Setiap nilai yang tidak bisa diputuskan aturan bernilai null (atau `Need Review` untuk WS TAG COLOR) dan punya item di `needs_review`.
 
-Baseline hasil prototipe pada F27:
+Baseline F27 (setelah revisi 10 November 2026):
 
 | Metrik | F27 |
 | --- | --- |
 | Kartu style | 215 (211 nama unik) |
 | Colorway | 724: 158 di atas garis hitam, 390 di antara garis, 176 di bawah garis merah |
-| WHS style | 85 "000 & SY", 70 "000", 59 "SY", 1 tidak diketahui |
+| WHS style | 86 "000 & SY", 70 "000", 59 "SY", 0 tidak diketahui |
+| Warning ekstraksi | 0 |
 | WHS final per record | 354 "000", 194 "000 & SY", 176 "SY" |
-| WS TAG COLOR terisi | 646 dari 724 (89%) |
-| Selisih pada spot check 25 record | 0 |
-| Waktu proses | sekitar 7 detik |
+| WS TAG COLOR | 633 terisi, 91 `Need Review`, 0 null |
+| needs_review | 91: 57 TAG_CONDITIONAL, 21 TAG_CN_OUT_OF_RANGE, 7 TAG_UNRESOLVED, 6 COLOR_IS_DESCRIPTOR |
+| Waktu proses | sekitar 1,5 detik |
+
+Baseline awal prototipe (9 November 2026): WHS style 85 / 70 / 59 / 1 tidak diketahui; 4 warning; WS TAG COLOR 646 terisi dari 724; needs_review 115.
 
 ## Lampiran: legend warna yang dipakai sistem
 
@@ -264,7 +276,7 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 | Tempat | Warna | Arti di legend | Dipakai sistem untuk |
 | --- | --- | --- | --- |
 | Background sel nomor | ungu (FF66FF) | 000 ONLY STYLE | WHS style = 000 |
-| Background sel nomor | abu (theme −15% / D9D9D9) | tanpa penanda | WHS style = 000 & SY |
+| Background sel nomor | abu (theme −15% / D9D9D9), putih, atau tanpa warna | tanpa penanda | WHS style = 000 & SY |
 | Background sel nomor | merah (FF0000) | SY ONLY | WHS style = SY |
 | Font colorway | hijau (00B050) | NEW COLOR | 000 & SY bila di atas garis merah |
 | Font colorway | hitam / otomatis | REPEAT COLOR | 000 & SY bila di atas garis merah |
@@ -275,3 +287,18 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 | Font colorway | biru (0066FF) | DISCONTINUED COLOR FOR SY | review (belum ada aturan) |
 | Border | garis hitam tebal | — | pemisah posisi; tidak memengaruhi WHS |
 | Border | garis merah tebal | — | colorway di bawahnya = SY |
+
+## Riwayat perubahan
+
+### 10 November 2026: hasil review `needs_review`
+
+1. Style yang muncul di dua sheet adalah kondisi normal. Record tiap sheet dicatat terpisah, dan item `DUPLICATE_STYLE_ACROSS_SHEETS` dihapus (−8 item di F27).
+2. WHS warna yang diturunkan oleh batas WHS style bukan masalah, jadi item `WHS_CAPPED_BY_STYLE` dihapus (−17 item). Nilai WHS tidak berubah.
+3. TAG bersyarat atau singkatan: WS TAG COLOR diisi `Need Review` (57 record), dan item review tetap.
+4. TAG yang meminta Cn melebihi jumlah benang: WS TAG COLOR diisi `Need Review` (21 record). Hal yang sama berlaku untuk TAG kosong.
+5. Background nomor putih atau tanpa warna = WHS style 000 & SY (MERRY STRIPED). Warning dan item `WHS_STYLE_UNKNOWN` untuk kasus ini hilang.
+6. COLOR berupa deskripsi: COLOR ditulis apa adanya, WS TAG COLOR diisi `Need Review` (6 record), dan item review tetap.
+7. Aturan baru `TAG_UNRESOLVED`: TAG yang setelah substitusi Cn masih berisi `C(…)` atau kata COLOR (instruksi belum diterjemahkan). WS TAG COLOR diisi `Need Review` (7 record). Kasus ini sebelumnya lolos tanpa review.
+8. Sel yang hanya berisi tanda baca diabaikan tanpa warning (−3 warning).
+
+Detail dampak tiap keputusan ada di `docs/catatan-keputusan-review.md`.

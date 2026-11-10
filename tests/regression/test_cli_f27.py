@@ -27,9 +27,7 @@ def test_run_f27_matches_golden(tmp_path, matrix_path, im_path, golden_raw, gold
     raw, final = load(tmp_path / "raw.json"), load(tmp_path / "final.json")
     assert raw["styles"] == golden_raw["styles"]
     assert final["records"] == golden_final["records"]
-    # golden dari prototipe belum punya field tambahan `code` dan `whs_values` (D12); selebihnya harus sama.
-    without_code = [{k: v for k, v in item.items() if k not in ("code", "whs_values")} for item in final["needs_review"]]
-    assert without_code == golden_final["needs_review"]
+    assert final["needs_review"] == golden_final["needs_review"]
     out = capsys.readouterr().out
     assert "needs_review" in out and str(raw["total_styles"]) in out
     assert (sha(matrix_path), sha(im_path)) == before

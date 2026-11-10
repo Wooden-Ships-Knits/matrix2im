@@ -14,7 +14,10 @@ SECTION_EXCLUDE_WORDS = ("COLOR", "STYLE", "ORDER")
 LEGEND_LABELS = ("000 ONLY STYLE", "SY ONLY", "NEW COLOR", "REPEAT COLOR", "000 ONLY COLOR",
                  "000 REPEAT COLOR", "YR COLOR", "HOLD COLOR FOR SY", "DISCONTINUED COLOR FOR SY")
 # Kode rgb dibandingkan tanpa byte alpha (excel_reader.rgb6): openpyxl menulis "00", Excel "FF".
-STYLE_WHS_BY_FILL = {"FFFF66FF": "000", "theme0-0.15": "000 & SY", "FFD9D9D9": "000 & SY", "FFFF0000": "SY"}
+# Putih / tanpa fill = abu = 000 & SY (keputusan review 10 Nov 2026, kasus MERRY STRIPED).
+STYLE_WHS_BY_FILL = {"FFFF66FF": "000", "theme0-0.15": "000 & SY", "FFD9D9D9": "000 & SY", "FFFF0000": "SY",
+                     "FFFFFFFF": "000 & SY", "theme0+0.00": "000 & SY"}
+STYLE_WHS_NO_FILL = "000 & SY"             # sel nomor berisi tapi tanpa fill (tampil putih)
 FONT_MEANING = {"FF00B050": "NEW COLOR", "FFFF00FF": "000 ONLY COLOR", "FFFF99FF": "000 REPEAT COLOR",
                 "FF9900FF": "YR COLOR", "FFFF0000": "HOLD COLOR FOR SY", "FF0066FF": "DISCONTINUED COLOR FOR SY"}
 DEFAULT_FONT_MEANING = "REPEAT COLOR"      # tanpa warna / FF000000 / theme / indexed
@@ -29,6 +32,10 @@ YARN_CODE_SUFFIX_RE = r"\s*-\s*\d+\s*[A-Z]?$"
 TAG_ALIAS = {"BLACK B": "BLACK"}
 TAG_CONDITIONAL_MARKERS = ("|", "FOR SOLID", "FOR HEATHER", "FOR MARL", "ABBREVIAT")
 TAG_DOUBLE_SUFFIX_RE = r"\b(STRIPE|MARL|MULTI|HEATHERED)( \1\b)+"
+# Instruksi TAG yang belum diterjemahkan: Cn tanpa nomor ("C(car)") atau kata COLOR ("GONDOLA color").
+TAG_UNRESOLVED_RE = r"\bC\(|\bCOLOU?R\b"
+# Teks WS TAG COLOR bila aturan tidak bisa memutuskan; sengaja ditulis ke IM agar terlihat tim.
+NEED_REVIEW = "Need Review"
 DESCRIPTOR_RE = r"\b(STRIPE|STRIPED|MARL|MULTI)$"
 IM_COLOR_KEYS = ("COLOR1", "COLOR2", "COLOR3", "COLOR 4") + tuple(f"COLOR{i}" for i in range(5, 19))
 WHS_VALUES = ("000", "SY", "000 & SY")

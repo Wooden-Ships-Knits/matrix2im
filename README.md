@@ -65,22 +65,22 @@ Server hanya bisa diakses dari komputer ini (127.0.0.1). File yang diupload disi
 
 **final.json**: `target`, `source`, `generated`, `rules`, `summary`, `records`, `needs_review`.
 
-- `records`: satu per colorway, key persis kolom IM: `DESCRIPTION`, `COLOR1`..`COLOR18` (di IM kolom ke-4 bernama `COLOR 4`), `WS TAG COLOR`, `WHS`. `_ref` berisi asal di MATRIX (sheet, No., sel, posisi terhadap garis); tidak ditulis ke IM. Nilai yang tidak bisa diputuskan aturan adalah `null`.
-- `needs_review`: item `{record, code, DESCRIPTION, colorway, issue, _ref, ...}`; `record` berupa index record (atau list index, atau `null`).
+- `records`: satu per colorway, key persis kolom IM: `DESCRIPTION`, `COLOR1`..`COLOR18` (di IM kolom ke-4 bernama `COLOR 4`), `WS TAG COLOR`, `WHS`. `_ref` berisi asal di MATRIX (sheet, No., sel, posisi terhadap garis); tidak ditulis ke IM. WS TAG COLOR yang tidak bisa diputuskan aturan diisi teks `Need Review` (ikut ditulis ke IM supaya terlihat tim); WHS yang tidak bisa diputuskan bernilai `null` (tidak ditulis). Style yang muncul di dua sheet dicatat sebagai record terpisah.
+- `needs_review`: item `{record, code, DESCRIPTION, colorway, issue, _ref, ...}`; `record` berupa index record, atau `null` untuk warning ekstraksi.
+- `summary`: `total_records`, `total_styles`, `WHS` per nilai, `WS_TAG_COLOR_filled` / `WS_TAG_COLOR_need_review` / `WS_TAG_COLOR_null`, `needs_review_items`, `needs_review_by_issue`.
 
 Kode `needs_review`:
 
 | Kode | Arti |
 | --- | --- |
-| `TAG_CONDITIONAL` | TAG bersyarat atau singkatan; WS TAG COLOR `null` |
-| `TAG_CN_OUT_OF_RANGE` | TAG meminta Cn melebihi jumlah benang |
-| `TAG_EMPTY` | TAG kosong |
-| `WHS_CAPPED_BY_STYLE` | info: WHS colorway dibatasi WHS style |
-| `WHS_STYLE_UNKNOWN` | WHS style tidak diketahui (background No kosong/tak dikenal) |
+| `TAG_CONDITIONAL` | TAG bersyarat atau singkatan; WS TAG COLOR `Need Review` |
+| `TAG_CN_OUT_OF_RANGE` | TAG meminta Cn melebihi jumlah benang; WS TAG COLOR `Need Review` |
+| `TAG_EMPTY` | TAG kosong; WS TAG COLOR `Need Review` |
+| `TAG_UNRESOLVED` | TAG masih berisi instruksi belum diterjemahkan (`C(car)`, `GONDOLA color`); WS TAG COLOR `Need Review` |
+| `WHS_STYLE_UNKNOWN` | warna background nomor di luar legend; dipakai WHS warna (putih/tanpa warna = `000 & SY`, bukan masalah) |
 | `WHS_CONFLICT` | WHS colorway dan style tidak beririsan; WHS `null` |
 | `FONT_COLOR_NO_RULE` | warna font (mis. YR / HOLD / DISCONTINUED) belum punya aturan WHS; WHS `null` |
-| `COLOR_IS_DESCRIPTOR` | COLOR berupa deskripsi (STRIPE/MARL/MULTI); benang asli ada di comment sel |
-| `DUPLICATE_STYLE_ACROSS_SHEETS` | style + colorway sama muncul di dua sheet (`record` = list index; `whs_values` bila WHS beda) |
+| `COLOR_IS_DESCRIPTOR` | COLOR berupa deskripsi (STRIPE/MARL/MULTI), ditulis apa adanya; WS TAG COLOR `Need Review`; benang asli ada di comment sel |
 | `TOO_MANY_YARNS` | benang unik lebih dari 18 slot COLOR |
 | `EXTRACTION_WARNING` | warning dari Tahap 1 (`record` = `null`) |
 
@@ -102,12 +102,13 @@ MATRIX2IM_MATRIX=/path/MATRIX.xlsx MATRIX2IM_IM=/path/IM.xlsx .venv/bin/pytest -
 
 ## Open issues (belum diputuskan)
 
-Kasus berikut sengaja tetap `null` dan/atau masuk `needs_review`; tidak ada aturan yang ditebak:
+Kasus berikut sengaja tetap `Need Review` / `null` dan masuk `needs_review`; tidak ada aturan yang ditebak:
 
-- WS TAG COLOR untuk TAG bersyarat atau singkatan.
+- Aturan definitif WS TAG COLOR untuk TAG bersyarat atau singkatan.
 - TAG yang meminta Cn melebihi jumlah benang.
-- Style yang muncul di dua sheet (HUTTON di ESSENTIALS GRASSY No. 20 dan LUXE No. 11) dengan WHS berbeda.
+- TAG yang masih berisi instruksi belum diterjemahkan (TREE FARM `C1/C(car)`, TELLURIDE `C1/GONDOLA color`).
 - COLOR berupa deskripsi stripe/marl (benang asli ada di comment sel).
-- Background nomor kosong (MERRY STRIPED).
 - Aturan WHS untuk font YR / HOLD / DISCONTINUED.
 - Arti garis hitam (tidak memengaruhi WHS).
+
+Sudah diputuskan pada review 10 November 2026 (lihat Riwayat perubahan di PRD): style di dua sheet dicatat terpisah; WHS yang dibatasi style bukan masalah; background nomor putih/kosong = `000 & SY`; karakter nyasar dibuang tanpa warning.

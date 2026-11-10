@@ -18,8 +18,8 @@ from .excel_reader import (fill_key, font_rgb, is_black_line, is_red_line, line_
                            open_workbooks, rgb6)
 from .legend_config import (BLACK_FONT_RGB, DEFAULT_FONT_MEANING, FONT_MEANING, LEGEND_LABELS,
                             NEW_REPEAT_LABELS, NUMBER_RE, PAGE_MARKER, PUNCTUATION_ONLY_RE,
-                            SECTION_EXCLUDE_WORDS, SOURCE_NAME, STYLE_WHS_BY_FILL, TAG_PREFIX,
-                            WIDTH_LABEL, YARN_SPLIT_RE)
+                            SECTION_EXCLUDE_WORDS, SOURCE_NAME, STYLE_WHS_BY_FILL, STYLE_WHS_NO_FILL,
+                            TAG_PREFIX, WIDTH_LABEL, YARN_SPLIT_RE)
 
 _NUMBER = re.compile(NUMBER_RE)
 _YARN_SPLIT = re.compile(YARN_SPLIT_RE)
@@ -285,8 +285,7 @@ def _read_colorway(ws: Worksheet, values: Worksheet, row: int, col: int,
         warnings.append(f'{where}: sel "{flat}" di area warna tidak dihitung sebagai colorway, '
                         "periksa manual")
         return None
-    if is_punctuation_only(text):
-        warnings.append(f'{where}: karakter "{text}" di area warna diabaikan')
+    if is_punctuation_only(text):   # karakter nyasar (".", "`", "*"): dibuang tanpa warning (keputusan 8)
         return None
     rgb = font_rgb(cell)
     meaning, known = font_meaning(rgb)
@@ -347,6 +346,10 @@ def _read_card(page: _Page, col: int, warnings: list[str]) -> Card | None:
         no_cell, no_fill = number_cell.coordinate, fill_key(number_cell)
     # WHS style = warna background sel nomor; kode rgb tanpa alpha, kunci theme apa adanya.
     style_whs = _STYLE_WHS_BY_FILL.get(rgb6(no_fill) or no_fill)
+    if style_whs is None and no_fill is None and no is not None:
+        # Nomor ada tapi sel tanpa fill = tampil putih = 000 & SY (keputusan review 10 Nov 2026).
+        # Tanpa nomor, tidak ada sel kartu yang bisa dibaca warnanya: tetap tidak diketahui (D8).
+        style_whs = STYLE_WHS_NO_FILL
 
     name_ref = f"{ws.title} {name_cell} {style}"
     if no is None:   # D8; sel nomor kosong yang ber-background tetap memberi WHS style

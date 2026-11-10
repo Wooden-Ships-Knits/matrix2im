@@ -186,8 +186,10 @@ def test_output_parent_created(tmp_path, matrix, im):
 def test_format_summary_contents():
     raw = {"total_styles": 4}
     final = {"summary": {"total_records": 7, "total_styles": 4, "WHS": {"SY": 3, None: 1},
-                         "WS_TAG_COLOR_filled": 5, "WS_TAG_COLOR_null": 2, "needs_review_items": 3,
+                         "WS_TAG_COLOR_filled": 4, "WS_TAG_COLOR_need_review": 2, "WS_TAG_COLOR_null": 1,
+                         "needs_review_items": 3,
                          "needs_review_by_issue": {"TAG_CONDITIONAL": 2, "TAG_EMPTY": 1}}}
     text = format_summary(raw, final)
+    assert "WS TAG COLOR: 4 terisi, 2 Need Review, 1 null" in text
     for needle in ("4", "7", "SY", "null", "terisi", "TAG_CONDITIONAL", "TAG_EMPTY", "needs_review"):
         assert needle in text

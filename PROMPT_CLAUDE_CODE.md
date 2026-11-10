@@ -92,12 +92,13 @@ Struktur MATRIX dijelaskan di PRD bagian "Input". **Tidak boleh ada nomor baris 
 6. **WHS style (`style_whs`)** dari warna background sel nomor:
    - `FFFF66FF` (ungu) → `"000"`
    - abu → `"000 & SY"`. Abu tersimpan dalam dua bentuk: theme 0 dengan tint ≈ −0.15 (bandingkan setelah dibulatkan 2 desimal) dan `FFD9D9D9`.
+   - putih (`FFFFFFFF` / theme putih) atau tanpa fill → `"000 & SY"` (revisi 10 Nov 2026), asalkan sel nomornya ada
    - `FFFF0000` (merah) → `"SY"`
-   - lainnya atau tanpa fill → `null` + warning
+   - lainnya → `null` + warning
 7. **TAG**: per kartu, sel pertama di bawah baris NEW/REPEAT yang berawalan `TAG`. Kalau sel-sel di bawahnya juga berawalan `TAG`, gabungkan dengan ` | `. Sel berawalan `TAG` yang muncul terpisah di area warna tidak dihitung sebagai colorway dan tidak masuk raw JSON (di F27 tidak ada kasus ini).
 8. **Garis merah**: border medium/thick/double berwarna `FFFF0000`, `FFE40500`, atau `FFC00000`, baik sebagai border atas sel maupun border bawah sel di atasnya. Deteksi **per kartu**; kalau kartu itu tidak punya garis merah, pakai baris garis merah mayoritas di halaman.
 9. **Garis hitam**: border medium/thick/double yang warnanya `None`, auto, indexed 8 atau 64, theme 1, atau `FF000000`. Deteksi **per kartu**, hanya di atas garis merah. Di halaman EXACT REPEAT garis merah ada di baris warna pertama dan tidak ada garis hitam, sehingga semua warna masuk kelompok "di bawah garis merah".
-10. **Colorway**: setiap sel tidak kosong setelah baris TAG terakhir sampai sebelum baris `- LEBAR/WIDTH`. Sel yang hanya berisi tanda baca (`.`, `` ` ``, `*`) diabaikan + warning. Kelompokkan:
+10. **Colorway**: setiap sel tidak kosong setelah baris TAG terakhir sampai sebelum baris `- LEBAR/WIDTH`. Sel yang hanya berisi tanda baca (`.`, `` ` ``, `*`) diabaikan tanpa warning (revisi 10 Nov 2026). Kelompokkan:
     - `color_above_black_line`: baris < garis hitam
     - `color_between_black_and_red_line`: garis hitam ≤ baris < garis merah
     - `color_below_red_line`: baris ≥ garis merah
@@ -156,15 +157,20 @@ Setiap colorway menjadi satu record, dengan urutan: style sesuai raw JSON, lalu 
 - Lebih dari 18 benang unik → tulis 18 pertama + review.
 
 **WS TAG COLOR**:
-1. TAG mengandung ` | `, `FOR SOLID`, `FOR HEATHER`, `FOR MARL`, atau `ABBREVIAT` → `null` + review (`TAG_CONDITIONAL`).
+Nilai yang tidak bisa diputuskan diisi teks **`Need Review`** (bukan `null`) + item review (revisi 10 Nov 2026). TAG kosong → `Need Review` (`TAG_EMPTY`).
+
+1. TAG mengandung ` | `, `FOR SOLID`, `FOR HEATHER`, `FOR MARL`, atau `ABBREVIAT` → `Need Review` + review (`TAG_CONDITIONAL`).
 2. Buang awalan `^TAG\s*:?\s*`.
-3. Kalau ada `Cn` dengan n > jumlah benang unik → `null` + review (`TAG_CN_OUT_OF_RANGE`).
+3. Kalau ada `Cn` dengan n > jumlah benang unik atau n < 1 → `Need Review` + review (`TAG_CN_OUT_OF_RANGE`).
+   Kalau teks TAG masih berisi `C(` (Cn tanpa nomor) atau kata `COLOR`/`COLOUR` → `Need Review` + review (`TAG_UNRESOLVED`).
 4. Ganti setiap `\bC(\d+)\b` dengan nama warna benang ke-n. Nama warna = uppercase, buang prefix `^(YCA|YST|YTX|YP|BJ|POODLE)\s+`, buang kode di akhir `\s*-\s*\d+\s*[A-Z]?$`, lalu terapkan alias (`BLACK B` → `BLACK`).
 5. `STRIPED` → `STRIPE` (catatan di header IM: "STRIPE tanpa D").
 6. Akhiran dobel dipadatkan: `(STRIPE|MARL|MULTI|HEATHERED)( \1)+` → `\1`. Contoh: `BLUSH CHAMPAGNE STRIPE STRIPE` → `BLUSH CHAMPAGNE STRIPE`.
 7. Rapikan spasi di sekitar `/`.
 
 Contoh: TAG `C1/C2 MARL` + benang `YCA KHAKI - 749`, `YCA BLUSH CHAMPAGNE - 645` → `KHAKI/BLUSH CHAMPAGNE MARL`.
+
+Colorway yang salah satu COLOR-nya berupa deskripsi (`COLOR_IS_DESCRIPTOR`) → WS TAG COLOR `Need Review`; slot COLOR tetap apa adanya.
 
 **WHS** (key `WHS`, ditujukan ke kolom CE di IM; IM juga punya kolom G bernama "WHS", tapi itu bukan target):
 
@@ -175,7 +181,7 @@ Contoh: TAG `C1/C2 MARL` + benang `YCA KHAKI - 749`, `YCA BLUSH CHAMPAGNE - 645`
 | above_black / between | `NEW COLOR`, `REPEAT COLOR` | `000 & SY` |
 | apa pun | `YR COLOR`, `HOLD COLOR FOR SY`, `DISCONTINUED COLOR FOR SY`, tidak dikenal | `null` + review |
 
-WHS final = **irisan** himpunan WHS style dan WHS warna (`000` = {000}, `SY` = {SY}, `000 & SY` = {000, SY}). WHS style menjadi batas atas. Contoh: style `000` + warna `000 & SY` → `000`. Irisan kosong → `null` + review. `style_whs` null → pakai WHS warna + review. Nilai WHS hanya boleh `"000"`, `"SY"`, atau `"000 & SY"`.
+WHS final = **irisan** himpunan WHS style dan WHS warna (`000` = {000}, `SY` = {SY}, `000 & SY` = {000, SY}). WHS style menjadi batas atas. Contoh: style `000` + warna `000 & SY` → `000` (bukan masalah, tidak masuk review). Irisan kosong → `null` + review. `style_whs` null → pakai WHS warna + review. Nilai WHS hanya boleh `"000"`, `"SY"`, atau `"000 & SY"`.
 
 **`_ref`** = `"<sheet>[ (<section>)] No.<no> | <cell> | <above_black|between_black_red|below_red>"`. Key berawalan `_` adalah metadata dan tidak akan ditulis ke IM. Nilai `null` berarti "jangan ditulis".
 
@@ -187,7 +193,7 @@ WHS final = **irisan** himpunan WHS style dan WHS warna (`000` = {000}, `SY` = {
   "source": "F27 MATRIX MASTER",
   "generated": "YYYY-MM-DD",
   "rules": {"DESCRIPTION": "...", "COLOR1-COLOR18": "...", "WS TAG COLOR": "...", "WHS": "...", "_ref": "..."},
-  "summary": {"total_records": 724, "total_styles": 211, "WHS": {}, "WS_TAG_COLOR_filled": 646, "WS_TAG_COLOR_null": 78, "needs_review_items": 115, "needs_review_by_issue": {}},
+  "summary": {"total_records": 724, "total_styles": 211, "WHS": {}, "WS_TAG_COLOR_filled": 633, "WS_TAG_COLOR_need_review": 91, "WS_TAG_COLOR_null": 0, "needs_review_items": 91, "needs_review_by_issue": {}},
   "records": [
     {"DESCRIPTION": "JUDE T NECK CHUNKY", "COLOR1": "SIENNA", "WS TAG COLOR": "SIENNA", "WHS": "000", "_ref": "ESSENTIALS GRASSY No.21 | D166 | between_black_red"}
   ],
@@ -197,31 +203,34 @@ WHS final = **irisan** himpunan WHS style dan WHS warna (`000` = {000}, `SY` = {
 }
 ```
 
-Perbaikan dari prototipe: tambahkan field **`code`** yang bisa dibaca mesin di setiap item `needs_review`, di samping teks `issue`. Kode yang dipakai: `TAG_CONDITIONAL`, `TAG_CN_OUT_OF_RANGE`, `TAG_EMPTY`, `WHS_CAPPED_BY_STYLE` (info), `WHS_STYLE_UNKNOWN`, `WHS_CONFLICT`, `FONT_COLOR_NO_RULE`, `COLOR_IS_DESCRIPTOR` (benang berakhiran STRIPE/STRIPED/MARL/MULTI; sertakan comment sel MATRIX), `DUPLICATE_STYLE_ACROSS_SHEETS` (field `record` berisi list index; sebutkan kalau WHS berbeda), `TOO_MANY_YARNS`, `EXTRACTION_WARNING` (`record` = null).
+Perbaikan dari prototipe: tambahkan field **`code`** yang bisa dibaca mesin di setiap item `needs_review`, di samping teks `issue`. Kode yang dipakai: `TAG_CONDITIONAL`, `TAG_CN_OUT_OF_RANGE`, `TAG_EMPTY`, `TAG_UNRESOLVED`, `WHS_STYLE_UNKNOWN`, `WHS_CONFLICT`, `FONT_COLOR_NO_RULE`, `COLOR_IS_DESCRIPTOR` (benang berakhiran STRIPE/STRIPED/MARL/MULTI; sertakan comment sel MATRIX), `TOO_MANY_YARNS`, `EXTRACTION_WARNING` (`record` = null).
+
+Revisi 10 Nov 2026: `WHS_CAPPED_BY_STYLE` dan `DUPLICATE_STYLE_ACROSS_SHEETS` tidak dipakai lagi. WHS yang dibatasi style adalah aturan biasa, dan style yang muncul di dua sheet dicatat sebagai record terpisah.
 
 ## 8. Validasi otomatis (setiap kali dijalankan)
 
 - Jumlah colorway di raw JSON = jumlah record di final JSON.
 - Semua key record (selain yang berawalan `_`) ada di header IM MASTER baris 54. Header kolom WS TAG COLOR di IM terdiri dari dua baris (`WS TAG COLOR\n(Note - …)`), jadi cocokkan dengan baris pertamanya saja.
 - WHS hanya berisi tiga nilai di atas.
-- Tidak ada nilai tebakan: semua yang tidak bisa diputuskan aturan bernilai `null` dan punya item di `needs_review`.
+- Tidak ada nilai tebakan: semua yang tidak bisa diputuskan aturan bernilai `null` (WS TAG COLOR: `Need Review`) dan punya item di `needs_review`.
 
 ## 9. Test dan kriteria penerimaan
 
 **Regression (wajib lulus) pada `data/F27_MATRIX_MASTER.xlsx`:**
 
-- raw JSON: array `styles` identik dengan `reference/golden/F27_MATRIX_MASTER_extract.json`. `warnings` boleh berbeda kalimatnya, tapi jumlahnya harus 4 dan menunjuk sel/kartu yang sama.
+- raw JSON: array `styles` identik dengan `reference/golden/F27_MATRIX_MASTER_extract.json`. `warnings` harus kosong (revisi 10 Nov 2026; sebelumnya 4).
 - final JSON: array `records` identik dengan `reference/golden/F27_IM_MASTER_final.json`. Untuk `needs_review`, setiap item golden harus punya padanan dengan `record` yang sama dan jenis masalah yang sama; teks `issue` dan `rules` boleh berbeda.
 - Angka baseline:
 
-| Metrik | Nilai F27 |
+| Metrik | Nilai F27 (revisi 10 Nov 2026) |
 | --- | --- |
 | Kartu style | 215 (211 nama unik) |
 | Colorway | 724: 158 above_black, 390 between, 176 below_red |
-| `style_whs` | 85 `000 & SY`, 70 `000`, 59 `SY`, 1 null |
+| `style_whs` | 86 `000 & SY`, 70 `000`, 59 `SY`, 0 null |
+| Warning ekstraksi | 0 |
 | WHS final | 354 `000`, 194 `000 & SY`, 176 `SY` |
-| WS TAG COLOR | 646 terisi, 78 null |
-| `needs_review` | 115 item: 57 TAG_CONDITIONAL, 21 TAG_CN_OUT_OF_RANGE, 17 WHS_CAPPED_BY_STYLE, 8 DUPLICATE_STYLE_ACROSS_SHEETS (2 di antaranya WHS berbeda), 6 COLOR_IS_DESCRIPTOR, 2 WHS_STYLE_UNKNOWN, 4 EXTRACTION_WARNING |
+| WS TAG COLOR | 633 terisi, 91 `Need Review`, 0 null |
+| `needs_review` | 91 item: 57 TAG_CONDITIONAL, 21 TAG_CN_OUT_OF_RANGE, 7 TAG_UNRESOLVED, 6 COLOR_IS_DESCRIPTOR |
 
 Kalau file `data/` tidak ada, test regression di-skip dengan pesan yang jelas (jangan gagal).
 
@@ -233,9 +242,10 @@ Kalau file `data/` tidak ada, test regression di-skip dengan pesan yang jelas (j
 - FALL halaman 5 (10 kartu): garis merah ada di baris warna pertama, jadi ke-12 colorway-nya masuk below_red dan tidak ada yang masuk above_black/between.
 - LUXE halaman 7 hanya berisi 1 kartu (No. `S1`, CHRISTMAS TREE CREW COTTON) dan nomornya tetap terbaca. Nomor teks seperti `S2 - A` juga terbaca.
 - LUXE, CHRISTMAS - GRASSY, No. `S3` FA LA LA FAIR ISLE CREW CHUNKY: TAG dua baris menjadi `TAG: BLACK/LATTE/ RED | TAG: RED PAPRIKA/SHADLE/ KALE`.
-- ESSENTIALS COTTON No. 31 SLOANE TOP COTTON: WHS warna `000 & SY` diturunkan menjadi `000` oleh style `000`.
-- ESSENTIALS COTTON, WINTER BEACH, No. 1 RIHANNA STRIPED CARDI CHUNKY COTTON: WS TAG COLOR `BLUSH CHAMPAGNE STRIPE` (tanpa akhiran dobel).
-- LUXE, CHRISTMAS - COTTON, No. 4 MERRY STRIPED CREW COTTON: `style_whs` null + warning.
+- ESSENTIALS COTTON No. 31 SLOANE TOP COTTON: WHS warna `000 & SY` diturunkan menjadi `000` oleh style `000`, tanpa item review.
+- ESSENTIALS COTTON, WINTER BEACH, No. 1 RIHANNA STRIPED CARDI CHUNKY COTTON: COLOR1 `BLUSH CHAMPAGNE STRIPE` adalah deskripsi, jadi WS TAG COLOR `Need Review` + `COLOR_IS_DESCRIPTOR`. Aturan akhiran dobel (`… STRIPE STRIPE` → `… STRIPE`) tetap diuji di unit test.
+- LUXE, CHRISTMAS - COTTON, No. 4 MERRY STRIPED CREW COTTON: background nomor tanpa warna → `style_whs` `000 & SY`, tanpa warning.
+- LUXE TREE FARM CREW CHUNKY (`TAG: C1/C(car)`) dan TELLURIDE CREW CHUNKY (`TAG: C1/GONDOLA color`): WS TAG COLOR `Need Review` + `TAG_UNRESOLVED` (7 record).
 
 **Unit test** untuk fungsi murni: pemecahan yarns, nama warna dari kode benang, pembentukan WS TAG COLOR (semua cabang), WHS warna, irisan WHS, deteksi warna (rgb, theme+tint, indexed, auto), dan regex label NEW/REPEAT.
 
@@ -249,15 +259,16 @@ Kalau file `data/` tidak ada, test regression di-skip dengan pesan yang jelas (j
 
 ## 11. Open issues: jangan diputuskan sendiri
 
-Semua kasus ini harus tetap menghasilkan `null` dan/atau item `needs_review`. Jangan menambah aturan baru untuk kasus-kasus ini tanpa persetujuan saya:
+Semua kasus ini harus tetap menghasilkan `null` / `Need Review` dan/atau item `needs_review`. Jangan menambah aturan baru untuk kasus-kasus ini tanpa persetujuan saya:
 
-- WS TAG COLOR untuk TAG bersyarat atau singkatan.
-- TAG yang meminta Cn melebihi jumlah benang.
-- Style yang muncul di dua sheet (HUTTON di ESSENTIALS GRASSY No. 20 dan LUXE No. 11) dengan WHS berbeda.
-- COLOR berupa deskripsi stripe/marl (benang aslinya ada di comment sel).
-- Background nomor kosong (MERRY STRIPED).
+- Aturan definitif WS TAG COLOR untuk TAG bersyarat atau singkatan (sementara `Need Review`).
+- TAG yang meminta Cn melebihi jumlah benang (sementara `Need Review`).
+- TAG yang masih berisi instruksi belum diterjemahkan, mis. `C(car)`, `GONDOLA color` (sementara `Need Review`).
+- COLOR berupa deskripsi stripe/marl (benang aslinya ada di comment sel; WS TAG COLOR sementara `Need Review`).
 - Aturan WHS untuk font YR / HOLD / DISCONTINUED.
 - Arti garis hitam (tidak memengaruhi WHS).
+
+Sudah diputuskan pada 10 Nov 2026: style di dua sheet dicatat sebagai record terpisah; background nomor putih/kosong = `000 & SY`.
 
 ## 12. Cara kerja
 

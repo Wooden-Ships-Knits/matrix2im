@@ -42,7 +42,8 @@ def format_summary(raw: dict, final: dict) -> str:
         f"  Jumlah style (kartu MATRIX): {raw.get('total_styles', s['total_styles'])}",
         f"  Jumlah record (colorway): {s['total_records']}",
         f"  WHS per nilai: {whs}",
-        f"  WS TAG COLOR: {s['WS_TAG_COLOR_filled']} terisi, {s['WS_TAG_COLOR_null']} null",
+        f"  WS TAG COLOR: {s['WS_TAG_COLOR_filled']} terisi, {s.get('WS_TAG_COLOR_need_review', 0)} Need Review, "
+        f"{s['WS_TAG_COLOR_null']} null",
         f"  needs_review: {s['needs_review_items']} item",
     ]
     for code, count in s["needs_review_by_issue"].items():

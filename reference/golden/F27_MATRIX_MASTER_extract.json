@@ -9303,7 +9303,7 @@
     {
       "no": 4,
       "style": "MERRY STRIPED CREW COTTON",
-      "style_whs": null,
+      "style_whs": "000 & SY",
       "tag": "TAG: C1/C2/C3",
       "color_above_black_line": [
         {
@@ -10237,10 +10237,5 @@
       "section": "SKI & SNOW"
     }
   ],
-  "warnings": [
-    "ESSENTIALS GRASSY G169: karakter \".\" di area warna diabaikan",
-    "FALL E227: karakter \"`\" di area warna diabaikan",
-    "FALL D345: karakter \"*\" di area warna diabaikan",
-    "LUXE D324 No.4 MERRY STRIPED CREW COTTON: background nomor tidak dikenali (None), WHS style tidak bisa ditentukan"
-  ]
+  "warnings": []
 }

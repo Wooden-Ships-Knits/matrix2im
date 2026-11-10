@@ -72,29 +72,18 @@ def test_descriptor_review_carries_comment():
     assert list(item) == ["record", "code", "DESCRIPTION", "colorway", "issue", "comment_di_matrix", "_ref"]
 
 
-def test_duplicate_across_sheets_with_whs_values():
+def test_style_in_two_sheets_are_separate_records_without_review():      # keputusan 1
     raw = raw_of(style(sheet="S1", whs="000", between=[cw(["A", "B"], font="REPEAT COLOR")]),
                  style(sheet="S2", whs="000 & SY", between=[cw(["A", "B"], font="REPEAT COLOR")]))
     doc = transform(raw)
-    item = by_code(doc, "DUPLICATE_STYLE_ACROSS_SHEETS")[0]
-    assert item["record"] == [0, 1] and item["whs_values"] == ["000", "000 & SY"] and "WHS beda" in item["issue"]
-    assert item["_ref"] == [r["_ref"] for r in doc["records"]]
-    assert list(item)[-2:] == ["whs_values", "_ref"]
+    assert [(r["WHS"], r["_ref"].split(" ")[0]) for r in doc["records"]] == [("000", "S1"), ("000 & SY", "S2")]
+    assert doc["needs_review"] == []
 
 
-def test_duplicate_same_whs_and_none_whs_do_not_crash():
-    same = raw_of(style(sheet="S1", above=[cw(["A"])]), style(sheet="S2", above=[cw(["A"])]))
-    item = by_code(transform(same), "DUPLICATE_STYLE_ACROSS_SHEETS")[0]
-    assert item["whs_values"] == ["000 & SY"] and "WHS beda" not in item["issue"]
-    mixed = raw_of(style(sheet="S1", above=[cw(["A"])]), style(sheet="S2", above=[cw(["A"], font="YR COLOR")]))
-    item = by_code(transform(mixed), "DUPLICATE_STYLE_ACROSS_SHEETS")[0]
-    assert item["whs_values"] == ["000 & SY", None] and "WHS beda" in item["issue"]
-
-
-def test_null_values_always_have_review():
+def test_undecided_values_are_marked_and_reviewed():
     doc = transform(raw_of(style(tag="TAG for solids: C1 | for marl: C1", above=[cw(["A"], font="YR COLOR")])))
     rec = doc["records"][0]
-    assert rec["WS TAG COLOR"] is None and rec["WHS"] is None
+    assert rec["WS TAG COLOR"] == "Need Review" and rec["WHS"] is None
     codes = [x["code"] for x in doc["needs_review"]]
     assert codes == ["TAG_CONDITIONAL", "FONT_COLOR_NO_RULE"]
     assert all("tag_instruction" in x for x in doc["needs_review"])
@@ -102,10 +91,9 @@ def test_null_values_always_have_review():
                                             "tag_instruction", "_ref"]
 
 
-def test_capped_item_has_no_tag_instruction():
-    doc = transform(raw_of(style(whs="000", above=[cw(["A"])])))
-    item = by_code(doc, "WHS_CAPPED_BY_STYLE")[0]
-    assert doc["records"][0]["WHS"] == "000" and "tag_instruction" not in item
+def test_whs_capped_by_style_is_not_reviewed():                          # keputusan 2
+    doc = transform(raw_of(style(whs="000", tag="TAG: C1", above=[cw(["A"])])))
+    assert doc["records"][0]["WHS"] == "000" and doc["needs_review"] == []
 
 
 def test_extraction_warnings_last_with_null_record():
@@ -131,7 +119,7 @@ def test_summary_counts_by_code():
     s = transform(raw)["summary"]
     assert s["total_records"] == 3 and s["total_styles"] == 2
     assert s["WHS"] == {None: 1, "000 & SY": 1, "SY": 1}
-    assert (s["WS_TAG_COLOR_filled"], s["WS_TAG_COLOR_null"]) == (3, 0)
+    assert (s["WS_TAG_COLOR_filled"], s["WS_TAG_COLOR_need_review"], s["WS_TAG_COLOR_null"]) == (2, 1, 0)
     assert s["needs_review_by_issue"] == {"FONT_COLOR_NO_RULE": 1, "COLOR_IS_DESCRIPTOR": 1,
                                           "EXTRACTION_WARNING": 1}
     assert s["needs_review_items"] == 3
@@ -206,8 +194,26 @@ def test_warnings_not_a_list_raises():
         transform(raw)
 
 
-def test_tag_prefix_only_gives_null_and_tag_empty_with_instruction():   # F1
+def test_tag_prefix_only_gives_need_review_and_tag_empty_with_instruction():   # F1 + revisi 10 Nov
     doc = transform(raw_of(style(tag="TAG:", above=[cw(["A"])])))
-    assert doc["records"][0]["WS TAG COLOR"] is None
+    assert doc["records"][0]["WS TAG COLOR"] == "Need Review"
     item = by_code(doc, "TAG_EMPTY")[0]
     assert item["record"] == 0 and item["tag_instruction"] == "TAG:" and item["issue"] == "TAG kosong"
+
+
+@pytest.mark.parametrize("tag,yarns,code", [
+    ("TAG: C1 (For Solid) | TAG: SNOW MARL", ["A"], "TAG_CONDITIONAL"),                    # keputusan 3
+    ("TAG: C1/C2/C3", ["A", "B"], "TAG_CN_OUT_OF_RANGE"),                                   # keputusan 4
+    ("TAG:", ["A"], "TAG_EMPTY"),
+    ("TAG: C1/GONDOLA color", ["A"], "TAG_UNRESOLVED")])                                    # keputusan 7
+def test_tag_problems_write_need_review(tag, yarns, code):
+    doc = transform(raw_of(style(tag=tag, above=[cw(yarns)])))
+    assert doc["records"][0]["WS TAG COLOR"] == "Need Review"
+    assert [x["code"] for x in doc["needs_review"]] == [code]
+
+
+def test_descriptor_writes_need_review_but_keeps_colors():                   # keputusan 6
+    doc = transform(raw_of(style(tag="TAG: C1", above=[cw(["SILVERSTONE", "BREAKER WHITE MARL"])])))
+    rec = doc["records"][0]
+    assert (rec["COLOR1"], rec["COLOR2"], rec["WS TAG COLOR"]) == ("SILVERSTONE", "BREAKER WHITE MARL", "Need Review")
+    assert [x["code"] for x in doc["needs_review"]] == ["COLOR_IS_DESCRIPTOR"]

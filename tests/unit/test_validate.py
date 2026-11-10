@@ -103,3 +103,20 @@ def test_validate_rejects_empty_whitespace_formula_values(key, value):     # F6
 def test_validate_accepts_valid_values_and_ignores_underscore_keys():
     ok = rec(COLOR2="PURE SNOW/ALMOND", _ref=" =bebas ")
     assert validate(raw_n(1), final_of([ok]), HEADER) == []
+
+
+def test_need_review_without_item_is_rejected():
+    msgs = validate(raw_n(1), final_of([rec(**{"WS TAG COLOR": "Need Review"})]), HEADER)
+    assert msgs == ["record 0: WS TAG COLOR 'Need Review' tanpa item needs_review kode TAG_* atau COLOR_IS_DESCRIPTOR"]
+
+
+@pytest.mark.parametrize("code", ["TAG_CONDITIONAL", "TAG_CN_OUT_OF_RANGE", "TAG_EMPTY", "TAG_UNRESOLVED",
+                                  "COLOR_IS_DESCRIPTOR"])
+def test_need_review_with_matching_item_ok(code):
+    items = [{"record": 0, "code": code}]
+    assert validate(raw_n(1), final_of([rec(**{"WS TAG COLOR": "Need Review"})], items), HEADER) == []
+
+
+def test_need_review_with_unrelated_item_is_rejected():
+    items = [{"record": 0, "code": "WHS_CONFLICT"}]
+    assert len(validate(raw_n(1), final_of([rec(**{"WS TAG COLOR": "Need Review"})], items), HEADER)) == 1

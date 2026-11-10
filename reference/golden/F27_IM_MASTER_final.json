@@ -1,13 +1,14 @@
 {
   "target": "F27 IM MASTER (sheet F27, header baris 54)",
   "source": "F27 MATRIX MASTER",
-  "generated": "2026-11-09",
+  "generated": "2026-11-10",
   "rules": {
     "DESCRIPTION": "nama style dari MATRIX (tanpa size); berlaku untuk semua size di IM",
-    "COLOR1-COLOR18": "1 benang = 1 kolom, nilai apa adanya dari MATRIX; benang berulang (stripe) ditulis sekali; slot tanpa benang tidak dicantumkan (tidak ditulis ke IM)",
-    "WS TAG COLOR": "instruksi TAG, C1/C2/... diganti nama warna benang (tanpa prefix YCA/YST dan kode); STRIPED -> STRIPE; null = belum ada aturan, tidak ditulis",
-    "WHS": "kolom CE. Warna: di bawah garis merah = SY; di atas garis merah = 000 & SY, kecuali font ungu/pink = 000. Style (background No): ungu 000, abu 000 & SY, merah SY. WHS style = batas atas (irisan)",
-    "_ref": "asal di MATRIX: sheet (sub-koleksi) No | sel | posisi terhadap garis; tidak ditulis ke IM"
+    "COLOR1-COLOR18": "1 benang = 1 kolom, nilai apa adanya dari MATRIX; benang berulang (stripe) ditulis sekali; slot tanpa benang tidak dicantumkan (tidak ditulis ke IM); benang yang sama dianggap sama tanpa membedakan huruf besar/kecil",
+    "WS TAG COLOR": "instruksi TAG, C1/C2/... diganti nama warna benang (tanpa prefix YCA/YST dan kode); STRIPED -> STRIPE; alias nama (mis. BLACK B -> BLACK); akhiran dobel (STRIPE STRIPE) dijadikan satu; 'Need Review' bila TAG bersyarat/singkatan, Cn di luar jumlah benang, TAG kosong, TAG belum diterjemahkan, atau COLOR berupa deskripsi (lihat needs_review)",
+    "WHS": "kolom CE. Warna: di bawah garis merah = SY; di atas garis merah = 000 & SY, kecuali font ungu/pink = 000. Style (background No): ungu 000, abu/putih/tanpa warna 000 & SY, merah SY. WHS style = batas atas (irisan); null = belum ada aturan, tidak ditulis",
+    "_ref": "asal di MATRIX: sheet (sub-koleksi) No | sel | posisi terhadap garis; tidak ditulis ke IM",
+    "needs_review.code": "kode mesin: TAG_CONDITIONAL, TAG_CN_OUT_OF_RANGE, TAG_EMPTY, TAG_UNRESOLVED, WHS_STYLE_UNKNOWN, WHS_CONFLICT, FONT_COLOR_NO_RULE, COLOR_IS_DESCRIPTOR, TOO_MANY_YARNS, EXTRACTION_WARNING"
   },
   "summary": {
     "total_records": 724,
@@ -17,20 +18,15 @@
       "000": 354,
       "SY": 176
     },
-    "WS_TAG_COLOR_filled": 646,
-    "WS_TAG_COLOR_null": 78,
-    "needs_review_items": 115,
+    "WS_TAG_COLOR_filled": 633,
+    "WS_TAG_COLOR_need_review": 91,
+    "WS_TAG_COLOR_null": 0,
+    "needs_review_items": 91,
     "needs_review_by_issue": {
-      "TAG kondisional / singkatan": 57,
-      "info": 17,
-      "COLOR berisi deskripsi, bukan nama benang": 6,
-      "TAG minta C2 tapi colorway hanya punya 1 benang": 1,
-      "style muncul di 2 sheet MATRIX, record dobel": 6,
-      "style muncul di 2 sheet MATRIX, record dobel dan WHS beda": 2,
-      "TAG minta C3 tapi colorway hanya punya 2 benang": 16,
-      "WHS style tidak diketahui": 2,
-      "TAG minta C4 tapi colorway hanya punya 3 benang": 4,
-      "warning ekstraksi": 4
+      "TAG_CONDITIONAL": 57,
+      "COLOR_IS_DESCRIPTOR": 6,
+      "TAG_CN_OUT_OF_RANGE": 21,
+      "TAG_UNRESOLVED": 7
     }
   },
   "records": [
@@ -477,7 +473,7 @@
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA ALMOND BUTTER - 872",
       "COLOR2": "YCA CHOCOLATE ALE - 609",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS COTTON No.15 | G98 | above_black"
     },
@@ -485,7 +481,7 @@
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA DARKEST INDIGO - 583",
       "COLOR2": "YCA SILVERSTONE - 887",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS COTTON No.15 | G99 | between_black_red"
     },
@@ -493,7 +489,7 @@
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA SILVERSTONE - 887",
       "COLOR2": "YCA BREAKER WHITE - 658",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS COTTON No.15 | G100 | between_black_red"
     },
@@ -501,14 +497,14 @@
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA DARK DUSK - 899",
       "COLOR2": "BJ BLUE FIRE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS COTTON No.15 | G105 | below_red"
     },
     {
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA SILVER PELT - 873",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS COTTON No.15 | G106 | below_red"
     },
@@ -1247,7 +1243,7 @@
     {
       "DESCRIPTION": "RIHANNA STRIPED CARDI CHUNKY COTTON",
       "COLOR1": "BLUSH CHAMPAGNE STRIPE",
-      "WS TAG COLOR": "BLUSH CHAMPAGNE STRIPE",
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS COTTON (WINTER BEACH) No.1 | A370 | above_black"
     },
@@ -1403,14 +1399,14 @@
     {
       "DESCRIPTION": "KEY WEST CREW CHUNKY COTTON",
       "COLOR1": "INDIGO COAST HEATHER STRIPE",
-      "WS TAG COLOR": "INDIGO COAST HEATHER STRIPE",
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS COTTON No.S1 | A440 | below_red"
     },
     {
       "DESCRIPTION": "KEY WEST CREW CHUNKY COTTON",
       "COLOR1": "KHAKI STRIPE",
-      "WS TAG COLOR": "KHAKI STRIPE",
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS COTTON No.S1 | A441 | below_red"
     },
@@ -1530,7 +1526,7 @@
       "DESCRIPTION": "PARK BUTTON CARDI CHUNKY COTTON",
       "COLOR1": "SILVERSTONE",
       "COLOR2": "BREAKER WHITE MARL",
-      "WS TAG COLOR": "SILVERSTONE",
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS COTTON No.S5 | F435 | below_red"
     },
@@ -1538,7 +1534,7 @@
       "DESCRIPTION": "PARK BUTTON CARDI CHUNKY COTTON",
       "COLOR1": "AZURE SLATE",
       "COLOR2": "ARCTIC BLUE MARL",
-      "WS TAG COLOR": "AZURE SLATE",
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS COTTON No.S5 | F436 | below_red"
     },
@@ -2037,7 +2033,7 @@
     {
       "DESCRIPTION": "MIXX V CHUNKY",
       "COLOR1": "TWILIGHT SKY",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.14 | E97 | between_black_red"
     },
@@ -2176,7 +2172,7 @@
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "NIGHT NAVY",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.20 | C163 | above_black"
     },
@@ -2184,49 +2180,49 @@
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.20 | C164 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "GLASGOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.20 | C165 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "FAWN",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.20 | C166 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "RED CHILE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.20 | C167 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "BLACK",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.20 | C171 | below_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "DARK ROAST",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.20 | C172 | below_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "SCANDIA BLUE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.20 | C173 | below_red"
     },
@@ -2359,7 +2355,7 @@
     {
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "COLOR1": "BLACK",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.25 | H163 | above_black"
     },
@@ -2367,28 +2363,28 @@
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.25 | H164 | above_black"
     },
     {
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "COLOR1": "RED GINGER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.25 | H165 | between_black_red"
     },
     {
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "COLOR1": "DARK CEDAR",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.25 | H166 | between_black_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "FLAX SAND",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.26 | I163 | above_black"
     },
@@ -2396,42 +2392,42 @@
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.26 | I164 | between_black_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "ARCTIC NAVY",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.26 | I165 | between_black_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "CEMENT",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.26 | I166 | between_black_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "CREAM",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.26 | I171 | below_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "PEACH ICE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.26 | I172 | below_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "PHANTOM INK",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.26 | I173 | below_red"
     },
@@ -2511,7 +2507,7 @@
     {
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "FAWN",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.30 | D231 | above_black"
     },
@@ -2519,28 +2515,28 @@
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.30 | D232 | between_black_red"
     },
     {
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "MOSS OLIVE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.30 | D233 | between_black_red"
     },
     {
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "RAVEN GRAY",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.30 | D234 | between_black_red"
     },
     {
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "DARK ROAST",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.30 | D235 | between_black_red"
     },
@@ -2568,7 +2564,7 @@
     {
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "ALASKA NIGHT",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.32 | F231 | above_black"
     },
@@ -2576,28 +2572,28 @@
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.32 | F232 | between_black_red"
     },
     {
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "DARK ROAST",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "ESSENTIALS GRASSY No.32 | F233 | between_black_red"
     },
     {
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "DARK CEDAR",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.32 | F240 | below_red"
     },
     {
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "ALMOND BUTTER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.32 | F241 | below_red"
     },
@@ -2785,7 +2781,7 @@
       "DESCRIPTION": "SYLVAN MARLED CARDI CHUNKY",
       "COLOR1": "OYSTER",
       "COLOR2": "PURE SNOW MARL",
-      "WS TAG COLOR": "OYSTER/PURE SNOW MARL",
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.S5 | E297 | below_red"
     },
@@ -3394,7 +3390,7 @@
       "DESCRIPTION": "PEBBLE STITCH MARLED RAGLAN SWEATSHIRT CHUNKY",
       "COLOR1": "BLACK",
       "COLOR2": "BROWN BRICK",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.1 | A29 | above_black"
     },
@@ -3402,7 +3398,7 @@
       "DESCRIPTION": "PEBBLE STITCH MARLED RAGLAN SWEATSHIRT CHUNKY",
       "COLOR1": "OAT HEATHER",
       "COLOR2": "PURE SNOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.1 | A30 | between_black_red"
     },
@@ -3410,7 +3406,7 @@
       "DESCRIPTION": "PEBBLE STITCH MARLED RAGLAN SWEATSHIRT CHUNKY",
       "COLOR1": "GLASGOW",
       "COLOR2": "WAXED LODEN",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.1 | A31 | between_black_red"
     },
@@ -3418,7 +3414,7 @@
       "DESCRIPTION": "PEBBLE STITCH MARLED RAGLAN SWEATSHIRT CHUNKY",
       "COLOR1": "PHANTOM INK",
       "COLOR2": "AVIATOR BLUE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.1 | A32 | between_black_red"
     },
@@ -3710,7 +3706,7 @@
       "DESCRIPTION": "TATUM CREW CHUNKY",
       "COLOR1": "BROWN BRICK",
       "COLOR2": "TWILIGHT SKY",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.12 | E93 | above_black"
     },
@@ -3718,7 +3714,7 @@
       "DESCRIPTION": "TATUM CREW CHUNKY",
       "COLOR1": "DARK CEDAR",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.12 | E94 | between_black_red"
     },
@@ -3726,7 +3722,7 @@
       "DESCRIPTION": "TATUM CREW CHUNKY",
       "COLOR1": "AUTUMN BLUE",
       "COLOR2": "PURE SNOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.12 | E95 | between_black_red"
     },
@@ -3762,7 +3758,7 @@
       "DESCRIPTION": "SAGE CREW CHUNKY",
       "COLOR1": "NIGHT NAVY",
       "COLOR2": "PURE SNOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "FALL No.14 | G93 | above_black"
     },
@@ -3770,7 +3766,7 @@
       "DESCRIPTION": "SAGE CREW CHUNKY",
       "COLOR1": "DARK DUSK",
       "COLOR2": "HALF MOON",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "FALL No.14 | G94 | between_black_red"
     },
@@ -3778,7 +3774,7 @@
       "DESCRIPTION": "SAGE CREW CHUNKY",
       "COLOR1": "OAT HEATHER",
       "COLOR2": "CREAM",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.14 | G95 | between_black_red"
     },
@@ -3786,7 +3782,7 @@
       "DESCRIPTION": "SAGE CREW CHUNKY",
       "COLOR1": "OLIVIATA",
       "COLOR2": "PURE SNOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.14 | G96 | between_black_red"
     },
@@ -4080,21 +4076,21 @@
     {
       "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
       "COLOR1": "PURE SNOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.26 | E221 | above_black"
     },
     {
       "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
       "COLOR1": "WINTER COAL",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.26 | E222 | between_black_red"
     },
     {
       "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
       "COLOR1": "FAWN",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "FALL No.26 | E223 | between_black_red"
     },
@@ -4581,7 +4577,7 @@
       "COLOR6": "ALMOND BUTTER",
       "COLOR7": "BOLD INK",
       "COLOR8": "CEMENT",
-      "WS TAG COLOR": "FAWN/C(CAR)",
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE (CHRISTMAS - GRASSY) No.7 | H27 | above_black"
     },
@@ -4594,7 +4590,7 @@
       "COLOR5": "PRETTY PINK",
       "COLOR6": "BOLD INK",
       "COLOR7": "CEMENT",
-      "WS TAG COLOR": "ALMOND BUTTER/C(CAR)",
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE (CHRISTMAS - GRASSY) No.7 | H28 | between_black_red"
     },
@@ -4689,14 +4685,14 @@
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "RED CHILE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.11 | D94 | above_black"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "NIGHT NAVY",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.11 | D95 | between_black_red"
     },
@@ -4704,42 +4700,42 @@
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.11 | D96 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "GLASGOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.11 | D97 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "FAWN",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.11 | D98 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "BLACK",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE No.11 | D99 | below_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "DARK ROAST",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE No.11 | D100 | below_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "SCANDIA BLUE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE No.11 | D101 | below_red"
     },
@@ -4972,7 +4968,7 @@
       "COLOR1": "RED CHILE",
       "COLOR2": "PURE RED",
       "COLOR3": "ALMOND BUTTER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.18 | C162 | above_black"
     },
@@ -4981,7 +4977,7 @@
       "COLOR1": "ARCTIC PINK",
       "COLOR2": "RED GINGER",
       "COLOR3": "PURE SNOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.18 | C163 | between_black_red"
     },
@@ -4990,7 +4986,7 @@
       "COLOR1": "PURE SNOW",
       "COLOR2": "RED GINGER",
       "COLOR3": "PRETTY PINK",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE No.18 | C166 | below_red"
     },
@@ -4999,7 +4995,7 @@
       "COLOR1": "HALF MOON",
       "COLOR2": "PURE SNOW",
       "COLOR3": "ARCTIC PINK",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "LUXE No.19 | D162 | above_black"
     },
@@ -5008,7 +5004,7 @@
       "COLOR1": "PURE SNOW",
       "COLOR2": "PRETTY PINK",
       "COLOR3": "ARCTIC PINK",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.19 | D163 | between_black_red"
     },
@@ -5018,7 +5014,7 @@
       "COLOR2": "PURE SNOW",
       "COLOR3": "ARCTIC PINK",
       "COLOR 4": "PRETTY PINK",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE No.19 | D166 | below_red"
     },
@@ -5027,7 +5023,7 @@
       "COLOR1": "GLASGOW",
       "COLOR2": "RED GINGER",
       "COLOR3": "HALF MOON",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.20 | E162 | above_black"
     },
@@ -5036,7 +5032,7 @@
       "COLOR1": "ALMOND BUTTER",
       "COLOR2": "RED GINGER",
       "COLOR3": "KALE GREEN",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "LUXE No.20 | E163 | between_black_red"
     },
@@ -5045,7 +5041,7 @@
       "COLOR1": "ARCTIC PINK",
       "COLOR2": "RED CHILE",
       "COLOR3": "ANCIENT FOREST",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.20 | E164 | between_black_red"
     },
@@ -5054,7 +5050,7 @@
       "COLOR1": "HALF MOON",
       "COLOR2": "RED GINGER",
       "COLOR3": "KALE GREEN",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE No.20 | E166 | below_red"
     },
@@ -5114,7 +5110,7 @@
       "DESCRIPTION": "NOEL TREE CARDI CHUNKY",
       "COLOR1": "NIGHT NAVY",
       "COLOR2": "RED GINGER",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "LUXE No.23 | H162 | above_black"
     },
@@ -5122,7 +5118,7 @@
       "DESCRIPTION": "NOEL TREE CARDI CHUNKY",
       "COLOR1": "WAXED LODEN",
       "COLOR2": "PURE SNOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE No.23 | H163 | between_black_red"
     },
@@ -5160,7 +5156,7 @@
       "COLOR3": "RED CHILE",
       "COLOR 4": "GUNMETAL",
       "COLOR5": "PURE SNOW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE (CHRISTMAS - GRASSY) No.S3 | C225 | below_red"
     },
@@ -5171,7 +5167,7 @@
       "COLOR3": "KALE GREEN",
       "COLOR 4": "ARCTIC PINK",
       "COLOR5": "SILVER MOON",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE (CHRISTMAS - GRASSY) No.S3 | C226 | below_red"
     },
@@ -5345,7 +5341,7 @@
       "DESCRIPTION": "NOEL TREE CREW CHUNKY COTTON",
       "COLOR1": "KHAKI",
       "COLOR2": "BREAKER WHITE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "LUXE (CHRISTMAS - COTTON) No.3 | C343 | above_black"
     },
@@ -5353,7 +5349,7 @@
       "DESCRIPTION": "NOEL TREE CREW CHUNKY COTTON",
       "COLOR1": "REAL RED",
       "COLOR2": "PINK WHIM",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE (CHRISTMAS - COTTON) No.3 | C344 | between_black_red"
     },
@@ -5361,7 +5357,7 @@
       "DESCRIPTION": "NOEL TREE CREW CHUNKY COTTON",
       "COLOR1": "TWILIGHT SKY",
       "COLOR2": "REAL RED",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE (CHRISTMAS - COTTON) No.3 | C345 | between_black_red"
     },
@@ -5634,7 +5630,7 @@
       "COLOR1": "ALMOND BUTTER",
       "COLOR2": "PURE SNOW",
       "COLOR3": "CHINA BLUE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE (SKI & SNOW) No.7 | A526 | above_black"
     },
@@ -5643,7 +5639,7 @@
       "COLOR1": "ALMOND BUTTER",
       "COLOR2": "PURE SNOW",
       "COLOR3": "SILVER DEW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "LUXE (SKI & SNOW) No.7 | A527 | between_black_red"
     },
@@ -5708,7 +5704,7 @@
       "COLOR3": "PURE RED",
       "COLOR 4": "BLACK",
       "COLOR5": "ALMOND BUTTER",
-      "WS TAG COLOR": "SILVER MOON/GONDOLA COLOR",
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "LUXE (SKI & SNOW) No.11 | E526 | above_black"
     },
@@ -5719,7 +5715,7 @@
       "COLOR3": "RED CHILE",
       "COLOR 4": "BLACK",
       "COLOR5": "PURE SNOW",
-      "WS TAG COLOR": "ALMOND BUTTER/GONDOLA COLOR",
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "LUXE (SKI & SNOW) No.11 | E527 | between_black_red"
     },
@@ -5729,7 +5725,7 @@
       "COLOR2": "JUNIPER",
       "COLOR3": "RED GINGER",
       "COLOR 4": "PURE SNOW",
-      "WS TAG COLOR": "BLACK/GONDOLA COLOR",
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE (SKI & SNOW) No.11 | E530 | below_red"
     },
@@ -5740,7 +5736,7 @@
       "COLOR3": "RED GINGER",
       "COLOR 4": "BLACK",
       "COLOR5": "SLIPSTREAM",
-      "WS TAG COLOR": "PURE SNOW/GONDOLA COLOR",
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE (SKI & SNOW) No.11 | E531 | below_red"
     },
@@ -5750,7 +5746,7 @@
       "COLOR2": "CEMENT",
       "COLOR3": "PURE SNOW",
       "COLOR 4": "GUNMETAL",
-      "WS TAG COLOR": "CHINA BLUE/GONDOLA COLOR",
+      "WS TAG COLOR": "Need Review",
       "WHS": "SY",
       "_ref": "LUXE (SKI & SNOW) No.11 | E532 | below_red"
     },
@@ -5759,7 +5755,7 @@
       "COLOR1": "ALMOND BUTTER",
       "COLOR2": "PURE SNOW",
       "COLOR3": "SILVER DEW",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000 & SY",
       "_ref": "LUXE (SKI & SNOW) No.12 | F526 | above_black"
     },
@@ -5768,7 +5764,7 @@
       "COLOR1": "ALMOND BUTTER",
       "COLOR2": "PURE SNOW",
       "COLOR3": "CHINA BLUE",
-      "WS TAG COLOR": null,
+      "WS TAG COLOR": "Need Review",
       "WHS": "000",
       "_ref": "LUXE (SKI & SNOW) No.12 | F527 | between_black_red"
     },
@@ -5864,6 +5860,7 @@
   "needs_review": [
     {
       "record": 61,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "colorway": "YCA ALMOND BUTTER - 872/YCA CHOCOLATE ALE - 609",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -5872,6 +5869,7 @@
     },
     {
       "record": 62,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "colorway": "YCA DARKEST INDIGO - 583/YCA SILVERSTONE - 887",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -5880,6 +5878,7 @@
     },
     {
       "record": 63,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "colorway": "YCA SILVERSTONE - 887/YCA BREAKER WHITE - 658",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -5888,6 +5887,7 @@
     },
     {
       "record": 64,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "colorway": "YCA DARK DUSK - 899/BJ BLUE FIRE",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -5896,6 +5896,7 @@
     },
     {
       "record": 65,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "colorway": "YCA SILVER PELT - 873",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -5903,42 +5904,8 @@
       "_ref": "ESSENTIALS COTTON No.15 | G106 | below_red"
     },
     {
-      "record": 130,
-      "DESCRIPTION": "SLOANE TOP COTTON",
-      "colorway": "BLUSH CHAMPAGNE",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "ESSENTIALS COTTON No.31 | G235 | above_black"
-    },
-    {
-      "record": 131,
-      "DESCRIPTION": "SLOANE TOP COTTON",
-      "colorway": "BLUE GLEN",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "ESSENTIALS COTTON No.31 | G236 | between_black_red"
-    },
-    {
-      "record": 132,
-      "DESCRIPTION": "SLOANE TOP COTTON",
-      "colorway": "OLIVE",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "ESSENTIALS COTTON No.31 | G237 | between_black_red"
-    },
-    {
-      "record": 133,
-      "DESCRIPTION": "SLOANE TOP COTTON",
-      "colorway": "RED CHILE",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "ESSENTIALS COTTON No.31 | G238 | between_black_red"
-    },
-    {
-      "record": 134,
-      "DESCRIPTION": "SLOANE TOP COTTON",
-      "colorway": "DARK DUSK",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "ESSENTIALS COTTON No.31 | G239 | between_black_red"
-    },
-    {
       "record": 167,
+      "code": "COLOR_IS_DESCRIPTOR",
       "DESCRIPTION": "RIHANNA STRIPED CARDI CHUNKY COTTON",
       "colorway": "BLUSH CHAMPAGNE STRIPE",
       "issue": "COLOR berisi deskripsi, bukan nama benang: ['BLUSH CHAMPAGNE STRIPE']",
@@ -5947,6 +5914,7 @@
     },
     {
       "record": 188,
+      "code": "COLOR_IS_DESCRIPTOR",
       "DESCRIPTION": "KEY WEST CREW CHUNKY COTTON",
       "colorway": "INDIGO COAST HEATHER STRIPE",
       "issue": "COLOR berisi deskripsi, bukan nama benang: ['INDIGO COAST HEATHER STRIPE']",
@@ -5955,6 +5923,7 @@
     },
     {
       "record": 189,
+      "code": "COLOR_IS_DESCRIPTOR",
       "DESCRIPTION": "KEY WEST CREW CHUNKY COTTON",
       "colorway": "KHAKI STRIPE",
       "issue": "COLOR berisi deskripsi, bukan nama benang: ['KHAKI STRIPE']",
@@ -5963,6 +5932,7 @@
     },
     {
       "record": 206,
+      "code": "COLOR_IS_DESCRIPTOR",
       "DESCRIPTION": "PARK BUTTON CARDI CHUNKY COTTON",
       "colorway": "SILVERSTONE/BREAKER WHITE MARL",
       "issue": "COLOR berisi deskripsi, bukan nama benang: ['BREAKER WHITE MARL']",
@@ -5971,6 +5941,7 @@
     },
     {
       "record": 207,
+      "code": "COLOR_IS_DESCRIPTOR",
       "DESCRIPTION": "PARK BUTTON CARDI CHUNKY COTTON",
       "colorway": "AZURE SLATE/ARCTIC BLUE MARL",
       "issue": "COLOR berisi deskripsi, bukan nama benang: ['ARCTIC BLUE MARL']",
@@ -5979,6 +5950,7 @@
     },
     {
       "record": 276,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "MIXX V CHUNKY",
       "colorway": "TWILIGHT SKY",
       "issue": "TAG minta C2 tapi colorway hanya punya 1 benang",
@@ -5987,6 +5959,7 @@
     },
     {
       "record": 294,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "NIGHT NAVY",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -5994,20 +5967,8 @@
       "_ref": "ESSENTIALS GRASSY No.20 | C163 | above_black"
     },
     {
-      "record": [
-        294,
-        598
-      ],
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "NIGHT NAVY",
-      "issue": "style muncul di 2 sheet MATRIX, record dobel",
-      "_ref": [
-        "ESSENTIALS GRASSY No.20 | C163 | above_black",
-        "LUXE No.11 | D95 | between_black_red"
-      ]
-    },
-    {
       "record": 295,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "PURE SNOW/ALMOND BUTTER",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6015,20 +5976,8 @@
       "_ref": "ESSENTIALS GRASSY No.20 | C164 | between_black_red"
     },
     {
-      "record": [
-        295,
-        599
-      ],
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "PURE SNOW/ALMOND BUTTER",
-      "issue": "style muncul di 2 sheet MATRIX, record dobel",
-      "_ref": [
-        "ESSENTIALS GRASSY No.20 | C164 | between_black_red",
-        "LUXE No.11 | D96 | between_black_red"
-      ]
-    },
-    {
       "record": 296,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "GLASGOW",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6036,20 +5985,8 @@
       "_ref": "ESSENTIALS GRASSY No.20 | C165 | between_black_red"
     },
     {
-      "record": [
-        296,
-        600
-      ],
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "GLASGOW",
-      "issue": "style muncul di 2 sheet MATRIX, record dobel dan WHS beda: ['000', '000 & SY']",
-      "_ref": [
-        "ESSENTIALS GRASSY No.20 | C165 | between_black_red",
-        "LUXE No.11 | D97 | between_black_red"
-      ]
-    },
-    {
       "record": 297,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "FAWN",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6057,20 +5994,8 @@
       "_ref": "ESSENTIALS GRASSY No.20 | C166 | between_black_red"
     },
     {
-      "record": [
-        297,
-        601
-      ],
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "FAWN",
-      "issue": "style muncul di 2 sheet MATRIX, record dobel dan WHS beda: ['000', '000 & SY']",
-      "_ref": [
-        "ESSENTIALS GRASSY No.20 | C166 | between_black_red",
-        "LUXE No.11 | D98 | between_black_red"
-      ]
-    },
-    {
       "record": 298,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "RED CHILE",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6078,20 +6003,8 @@
       "_ref": "ESSENTIALS GRASSY No.20 | C167 | between_black_red"
     },
     {
-      "record": [
-        298,
-        597
-      ],
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "RED CHILE",
-      "issue": "style muncul di 2 sheet MATRIX, record dobel",
-      "_ref": [
-        "ESSENTIALS GRASSY No.20 | C167 | between_black_red",
-        "LUXE No.11 | D94 | above_black"
-      ]
-    },
-    {
       "record": 299,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "BLACK",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6099,20 +6012,8 @@
       "_ref": "ESSENTIALS GRASSY No.20 | C171 | below_red"
     },
     {
-      "record": [
-        299,
-        602
-      ],
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "BLACK",
-      "issue": "style muncul di 2 sheet MATRIX, record dobel",
-      "_ref": [
-        "ESSENTIALS GRASSY No.20 | C171 | below_red",
-        "LUXE No.11 | D99 | below_red"
-      ]
-    },
-    {
       "record": 300,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "DARK ROAST",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6120,20 +6021,8 @@
       "_ref": "ESSENTIALS GRASSY No.20 | C172 | below_red"
     },
     {
-      "record": [
-        300,
-        603
-      ],
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "DARK ROAST",
-      "issue": "style muncul di 2 sheet MATRIX, record dobel",
-      "_ref": [
-        "ESSENTIALS GRASSY No.20 | C172 | below_red",
-        "LUXE No.11 | D100 | below_red"
-      ]
-    },
-    {
       "record": 301,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "SCANDIA BLUE",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6141,20 +6030,8 @@
       "_ref": "ESSENTIALS GRASSY No.20 | C173 | below_red"
     },
     {
-      "record": [
-        301,
-        604
-      ],
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "SCANDIA BLUE",
-      "issue": "style muncul di 2 sheet MATRIX, record dobel",
-      "_ref": [
-        "ESSENTIALS GRASSY No.20 | C173 | below_red",
-        "LUXE No.11 | D101 | below_red"
-      ]
-    },
-    {
       "record": 320,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "colorway": "BLACK",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6163,6 +6040,7 @@
     },
     {
       "record": 321,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "colorway": "PURE SNOW/ALMOND BUTTER",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6171,6 +6049,7 @@
     },
     {
       "record": 322,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "colorway": "RED GINGER",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6179,6 +6058,7 @@
     },
     {
       "record": 323,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "colorway": "DARK CEDAR",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6187,6 +6067,7 @@
     },
     {
       "record": 324,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "colorway": "FLAX SAND",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6195,6 +6076,7 @@
     },
     {
       "record": 325,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "colorway": "PURE SNOW/ALMOND BUTTER",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6203,6 +6085,7 @@
     },
     {
       "record": 326,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "colorway": "ARCTIC NAVY",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6211,6 +6094,7 @@
     },
     {
       "record": 327,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "colorway": "CEMENT",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6219,6 +6103,7 @@
     },
     {
       "record": 328,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "colorway": "CREAM",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6227,6 +6112,7 @@
     },
     {
       "record": 329,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "colorway": "PEACH ICE",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6235,6 +6121,7 @@
     },
     {
       "record": 330,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "colorway": "PHANTOM INK",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6243,6 +6130,7 @@
     },
     {
       "record": 341,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "colorway": "FAWN",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6251,6 +6139,7 @@
     },
     {
       "record": 342,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "colorway": "PURE SNOW/ALMOND BUTTER",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6259,6 +6148,7 @@
     },
     {
       "record": 343,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "colorway": "MOSS OLIVE",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6267,6 +6157,7 @@
     },
     {
       "record": 344,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "colorway": "RAVEN GRAY",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6275,6 +6166,7 @@
     },
     {
       "record": 345,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "colorway": "DARK ROAST",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6283,6 +6175,7 @@
     },
     {
       "record": 349,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "colorway": "ALASKA NIGHT",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6291,6 +6184,7 @@
     },
     {
       "record": 350,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "colorway": "PURE SNOW/ALMOND BUTTER",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6299,6 +6193,7 @@
     },
     {
       "record": 351,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "colorway": "DARK ROAST",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6307,6 +6202,7 @@
     },
     {
       "record": 352,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "colorway": "DARK CEDAR",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6315,6 +6211,7 @@
     },
     {
       "record": 353,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "colorway": "ALMOND BUTTER",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6323,6 +6220,7 @@
     },
     {
       "record": 379,
+      "code": "COLOR_IS_DESCRIPTOR",
       "DESCRIPTION": "SYLVAN MARLED CARDI CHUNKY",
       "colorway": "OYSTER/PURE SNOW MARL",
       "issue": "COLOR berisi deskripsi, bukan nama benang: ['PURE SNOW MARL']",
@@ -6330,63 +6228,8 @@
       "_ref": "ESSENTIALS GRASSY No.S5 | E297 | below_red"
     },
     {
-      "record": 391,
-      "DESCRIPTION": "PURL-KNIT GAME DAY CREW CHUNKY COTTON",
-      "colorway": "BLACK/BREAKER WHITE",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "GAME DAY No.2 | B28 | between_black_red"
-    },
-    {
-      "record": 392,
-      "DESCRIPTION": "PURL-KNIT GAME DAY CREW CHUNKY COTTON",
-      "colorway": "BREAKER WHITE/YST AMALFI",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "GAME DAY No.2 | B29 | between_black_red"
-    },
-    {
-      "record": 393,
-      "DESCRIPTION": "PURL-KNIT GAME DAY CREW CHUNKY COTTON",
-      "colorway": "RED MAPLE/BREAKER WHITE",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "GAME DAY No.2 | B30 | between_black_red"
-    },
-    {
-      "record": 394,
-      "DESCRIPTION": "PURL-KNIT GAME DAY CREW CHUNKY COTTON",
-      "colorway": "HIGHLINE BLUE/BREAKER WHITE",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "GAME DAY No.2 | B31 | between_black_red"
-    },
-    {
-      "record": 395,
-      "DESCRIPTION": "PURL-KNIT GAME DAY CREW CHUNKY COTTON",
-      "colorway": "KALE GREEN/BREAKER WHITE",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "GAME DAY No.2 | B32 | between_black_red"
-    },
-    {
-      "record": 396,
-      "DESCRIPTION": "PURL-KNIT GAME DAY CREW CHUNKY COTTON",
-      "colorway": "NIGHT SHADE PURPLE/BREAKER WHITE",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "GAME DAY No.2 | B33 | between_black_red"
-    },
-    {
-      "record": 397,
-      "DESCRIPTION": "PURL-KNIT GAME DAY CREW CHUNKY COTTON",
-      "colorway": "REAL RED/BREAKER WHITE",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "GAME DAY No.2 | B34 | between_black_red"
-    },
-    {
-      "record": 398,
-      "DESCRIPTION": "PURL-KNIT GAME DAY CREW CHUNKY COTTON",
-      "colorway": "DARK CEDAR/BLACK",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "GAME DAY No.2 | B36 | between_black_red"
-    },
-    {
       "record": 452,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "PEBBLE STITCH MARLED RAGLAN SWEATSHIRT CHUNKY",
       "colorway": "BLACK/BROWN BRICK",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6395,6 +6238,7 @@
     },
     {
       "record": 453,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "PEBBLE STITCH MARLED RAGLAN SWEATSHIRT CHUNKY",
       "colorway": "OAT HEATHER/PURE SNOW",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6403,6 +6247,7 @@
     },
     {
       "record": 454,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "PEBBLE STITCH MARLED RAGLAN SWEATSHIRT CHUNKY",
       "colorway": "GLASGOW/WAXED LODEN",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6411,6 +6256,7 @@
     },
     {
       "record": 455,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "PEBBLE STITCH MARLED RAGLAN SWEATSHIRT CHUNKY",
       "colorway": "PHANTOM INK/AVIATOR BLUE",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6418,21 +6264,8 @@
       "_ref": "FALL No.1 | A32 | between_black_red"
     },
     {
-      "record": 470,
-      "DESCRIPTION": "JOSEF MELANGE CREW CHUNKY",
-      "colorway": "BROWN BRICK/YTX 037",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "FALL No.5 | E31 | between_black_red"
-    },
-    {
-      "record": 471,
-      "DESCRIPTION": "JOSEF MELANGE CREW CHUNKY",
-      "colorway": "PURE SNOW/YTX 037",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "FALL No.5 | E32 | between_black_red"
-    },
-    {
       "record": 491,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "TATUM CREW CHUNKY",
       "colorway": "BROWN BRICK/TWILIGHT SKY",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6441,6 +6274,7 @@
     },
     {
       "record": 492,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "TATUM CREW CHUNKY",
       "colorway": "DARK CEDAR/ALMOND BUTTER",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6449,6 +6283,7 @@
     },
     {
       "record": 493,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "TATUM CREW CHUNKY",
       "colorway": "AUTUMN BLUE/PURE SNOW",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6457,6 +6292,7 @@
     },
     {
       "record": 498,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "SAGE CREW CHUNKY",
       "colorway": "NIGHT NAVY/PURE SNOW",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6465,6 +6301,7 @@
     },
     {
       "record": 499,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "SAGE CREW CHUNKY",
       "colorway": "DARK DUSK/HALF MOON",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6473,6 +6310,7 @@
     },
     {
       "record": 500,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "SAGE CREW CHUNKY",
       "colorway": "OAT HEATHER/CREAM",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6481,6 +6319,7 @@
     },
     {
       "record": 501,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "SAGE CREW CHUNKY",
       "colorway": "OLIVIATA/PURE SNOW",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6488,21 +6327,8 @@
       "_ref": "FALL No.14 | G96 | between_black_red"
     },
     {
-      "record": 503,
-      "DESCRIPTION": "TARA RAILS MARLED T NECK CHUNKY",
-      "colorway": "INDIGO COAST/BLUE VIOLET/PURE SNOW",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "FALL No.15 | A157 | between_black_red"
-    },
-    {
-      "record": 504,
-      "DESCRIPTION": "TARA RAILS MARLED T NECK CHUNKY",
-      "colorway": "BOLD INK/DARK CEDAR/ALMOND BUTTER",
-      "issue": "info: WHS warna 000 & SY diturunkan ke 000 (batas WHS style)",
-      "_ref": "FALL No.15 | A158 | between_black_red"
-    },
-    {
       "record": 534,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
       "colorway": "PURE SNOW",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6511,6 +6337,7 @@
     },
     {
       "record": 535,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
       "colorway": "WINTER COAL",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6519,6 +6346,7 @@
     },
     {
       "record": 536,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
       "colorway": "FAWN",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6526,7 +6354,26 @@
       "_ref": "FALL No.26 | E223 | between_black_red"
     },
     {
+      "record": 588,
+      "code": "TAG_UNRESOLVED",
+      "DESCRIPTION": "TREE FARM CREW CHUNKY",
+      "colorway": "FAWN/JUNIPER/ANCIENT FOREST/BROWN BRICK/PRETTY PINK/ALMOND BUTTER/BOLD INK/CEMENT",
+      "issue": "TAG masih berisi instruksi yang belum diterjemahkan: TAG: C1/C(car)",
+      "tag_instruction": "TAG: C1/C(car)",
+      "_ref": "LUXE (CHRISTMAS - GRASSY) No.7 | H27 | above_black"
+    },
+    {
+      "record": 589,
+      "code": "TAG_UNRESOLVED",
+      "DESCRIPTION": "TREE FARM CREW CHUNKY",
+      "colorway": "ALMOND BUTTER/JUNIPER/ANCIENT FOREST/BROWN BRICK/PRETTY PINK/BOLD INK/CEMENT",
+      "issue": "TAG masih berisi instruksi yang belum diterjemahkan: TAG: C1/C(car)",
+      "tag_instruction": "TAG: C1/C(car)",
+      "_ref": "LUXE (CHRISTMAS - GRASSY) No.7 | H28 | between_black_red"
+    },
+    {
       "record": 597,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "RED CHILE",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6535,6 +6382,7 @@
     },
     {
       "record": 598,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "NIGHT NAVY",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6543,6 +6391,7 @@
     },
     {
       "record": 599,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "PURE SNOW/ALMOND BUTTER",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6551,6 +6400,7 @@
     },
     {
       "record": 600,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "GLASGOW",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6559,6 +6409,7 @@
     },
     {
       "record": 601,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "FAWN",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6567,6 +6418,7 @@
     },
     {
       "record": 602,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "BLACK",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6575,6 +6427,7 @@
     },
     {
       "record": 603,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "DARK ROAST",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6583,6 +6436,7 @@
     },
     {
       "record": 604,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "colorway": "SCANDIA BLUE",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6591,6 +6445,7 @@
     },
     {
       "record": 624,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "CANDY CANES HEART CREW CHUNKY",
       "colorway": "RED CHILE/PURE RED/ALMOND BUTTER",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6599,6 +6454,7 @@
     },
     {
       "record": 625,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "CANDY CANES HEART CREW CHUNKY",
       "colorway": "ARCTIC PINK/RED GINGER/PURE SNOW",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6607,6 +6463,7 @@
     },
     {
       "record": 626,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "CANDY CANES HEART CREW CHUNKY",
       "colorway": "PURE SNOW/RED GINGER/PRETTY PINK",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6615,6 +6472,7 @@
     },
     {
       "record": 627,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "CHEERS COCKTAIL CREW CHUNKY",
       "colorway": "HALF MOON/PURE SNOW/ARCTIC PINK",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6623,6 +6481,7 @@
     },
     {
       "record": 628,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "CHEERS COCKTAIL CREW CHUNKY",
       "colorway": "PURE SNOW/PRETTY PINK/ARCTIC PINK",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6631,6 +6490,7 @@
     },
     {
       "record": 629,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "CHEERS COCKTAIL CREW CHUNKY",
       "colorway": "BLACK/PURE SNOW/ARCTIC PINK/PRETTY PINK",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6639,6 +6499,7 @@
     },
     {
       "record": 630,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "MERRY COCKTAIL CREW CHUNKY",
       "colorway": "GLASGOW/RED GINGER/HALF MOON",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6647,6 +6508,7 @@
     },
     {
       "record": 631,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "MERRY COCKTAIL CREW CHUNKY",
       "colorway": "ALMOND BUTTER/RED GINGER/KALE GREEN",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6655,6 +6517,7 @@
     },
     {
       "record": 632,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "MERRY COCKTAIL CREW CHUNKY",
       "colorway": "ARCTIC PINK/RED CHILE/ANCIENT FOREST",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6663,6 +6526,7 @@
     },
     {
       "record": 633,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "MERRY COCKTAIL CREW CHUNKY",
       "colorway": "HALF MOON/RED GINGER/KALE GREEN",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6671,6 +6535,7 @@
     },
     {
       "record": 640,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "NOEL TREE CARDI CHUNKY",
       "colorway": "NIGHT NAVY/RED GINGER",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6679,6 +6544,7 @@
     },
     {
       "record": 641,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "NOEL TREE CARDI CHUNKY",
       "colorway": "WAXED LODEN/PURE SNOW",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6687,6 +6553,7 @@
     },
     {
       "record": 645,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "FA LA LA FAIR ISLE CREW CHUNKY",
       "colorway": "BLACK/LATTE/RED CHILE/GUNMETAL/PURE SNOW",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6695,6 +6562,7 @@
     },
     {
       "record": 646,
+      "code": "TAG_CONDITIONAL",
       "DESCRIPTION": "FA LA LA FAIR ISLE CREW CHUNKY",
       "colorway": "RED PAPRIKA/SHADLE GREEN/KALE GREEN/ARCTIC PINK/SILVER MOON",
       "issue": "TAG kondisional / singkatan: perlu aturan khusus",
@@ -6703,6 +6571,7 @@
     },
     {
       "record": 665,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "NOEL TREE CREW CHUNKY COTTON",
       "colorway": "KHAKI/BREAKER WHITE",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6711,6 +6580,7 @@
     },
     {
       "record": 666,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "NOEL TREE CREW CHUNKY COTTON",
       "colorway": "REAL RED/PINK WHIM",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6719,6 +6589,7 @@
     },
     {
       "record": 667,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "NOEL TREE CREW CHUNKY COTTON",
       "colorway": "TWILIGHT SKY/REAL RED",
       "issue": "TAG minta C3 tapi colorway hanya punya 2 benang",
@@ -6726,23 +6597,8 @@
       "_ref": "LUXE (CHRISTMAS - COTTON) No.3 | C345 | between_black_red"
     },
     {
-      "record": 668,
-      "DESCRIPTION": "MERRY STRIPED CREW COTTON",
-      "colorway": "PINK WHIM/ALMOND BUTTER/REAL RED",
-      "issue": "WHS style tidak diketahui (background nomor kosong), dipakai WHS warna",
-      "tag_instruction": "TAG: C1/C2/C3",
-      "_ref": "LUXE (CHRISTMAS - COTTON) No.4 | D343 | above_black"
-    },
-    {
-      "record": 669,
-      "DESCRIPTION": "MERRY STRIPED CREW COTTON",
-      "colorway": "BREAKER WHITE/KHAKI/REAL RED",
-      "issue": "WHS style tidak diketahui (background nomor kosong), dipakai WHS warna",
-      "tag_instruction": "TAG: C1/C2/C3",
-      "_ref": "LUXE (CHRISTMAS - COTTON) No.4 | D344 | between_black_red"
-    },
-    {
       "record": 697,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "SKYE SHRUNKEN CREW CHUNKY",
       "colorway": "ALMOND BUTTER/PURE SNOW/CHINA BLUE",
       "issue": "TAG minta C4 tapi colorway hanya punya 3 benang",
@@ -6751,6 +6607,7 @@
     },
     {
       "record": 698,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "SKYE SHRUNKEN CREW CHUNKY",
       "colorway": "ALMOND BUTTER/PURE SNOW/SILVER DEW",
       "issue": "TAG minta C4 tapi colorway hanya punya 3 benang",
@@ -6758,7 +6615,53 @@
       "_ref": "LUXE (SKI & SNOW) No.7 | A527 | between_black_red"
     },
     {
+      "record": 706,
+      "code": "TAG_UNRESOLVED",
+      "DESCRIPTION": "TELLURIDE CREW CHUNKY",
+      "colorway": "SILVER MOON/PURE SNOW/PURE RED/BLACK/ALMOND BUTTER",
+      "issue": "TAG masih berisi instruksi yang belum diterjemahkan: TAG: C1/GONDOLA color",
+      "tag_instruction": "TAG: C1/GONDOLA color",
+      "_ref": "LUXE (SKI & SNOW) No.11 | E526 | above_black"
+    },
+    {
+      "record": 707,
+      "code": "TAG_UNRESOLVED",
+      "DESCRIPTION": "TELLURIDE CREW CHUNKY",
+      "colorway": "ALMOND BUTTER/GLASGOW/RED CHILE/BLACK/PURE SNOW",
+      "issue": "TAG masih berisi instruksi yang belum diterjemahkan: TAG: C1/GONDOLA color",
+      "tag_instruction": "TAG: C1/GONDOLA color",
+      "_ref": "LUXE (SKI & SNOW) No.11 | E527 | between_black_red"
+    },
+    {
+      "record": 708,
+      "code": "TAG_UNRESOLVED",
+      "DESCRIPTION": "TELLURIDE CREW CHUNKY",
+      "colorway": "BLACK/JUNIPER/RED GINGER/PURE SNOW",
+      "issue": "TAG masih berisi instruksi yang belum diterjemahkan: TAG: C1/GONDOLA color",
+      "tag_instruction": "TAG: C1/GONDOLA color",
+      "_ref": "LUXE (SKI & SNOW) No.11 | E530 | below_red"
+    },
+    {
+      "record": 709,
+      "code": "TAG_UNRESOLVED",
+      "DESCRIPTION": "TELLURIDE CREW CHUNKY",
+      "colorway": "PURE SNOW/JUNIPER/RED GINGER/BLACK/SLIPSTREAM",
+      "issue": "TAG masih berisi instruksi yang belum diterjemahkan: TAG: C1/GONDOLA color",
+      "tag_instruction": "TAG: C1/GONDOLA color",
+      "_ref": "LUXE (SKI & SNOW) No.11 | E531 | below_red"
+    },
+    {
+      "record": 710,
+      "code": "TAG_UNRESOLVED",
+      "DESCRIPTION": "TELLURIDE CREW CHUNKY",
+      "colorway": "CHINA BLUE/CEMENT/PURE SNOW/GUNMETAL",
+      "issue": "TAG masih berisi instruksi yang belum diterjemahkan: TAG: C1/GONDOLA color",
+      "tag_instruction": "TAG: C1/GONDOLA color",
+      "_ref": "LUXE (SKI & SNOW) No.11 | E532 | below_red"
+    },
+    {
       "record": 711,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "SKYE CARDI CHUNKY",
       "colorway": "ALMOND BUTTER/PURE SNOW/SILVER DEW",
       "issue": "TAG minta C4 tapi colorway hanya punya 3 benang",
@@ -6767,27 +6670,12 @@
     },
     {
       "record": 712,
+      "code": "TAG_CN_OUT_OF_RANGE",
       "DESCRIPTION": "SKYE CARDI CHUNKY",
       "colorway": "ALMOND BUTTER/PURE SNOW/CHINA BLUE",
       "issue": "TAG minta C4 tapi colorway hanya punya 3 benang",
       "tag_instruction": "TAG: SNOW MARL/C4",
       "_ref": "LUXE (SKI & SNOW) No.12 | F527 | between_black_red"
-    },
-    {
-      "record": null,
-      "issue": "warning ekstraksi: ESSENTIALS GRASSY G169: karakter \".\" di area warna diabaikan"
-    },
-    {
-      "record": null,
-      "issue": "warning ekstraksi: FALL E227: karakter \"`\" di area warna diabaikan"
-    },
-    {
-      "record": null,
-      "issue": "warning ekstraksi: FALL D345: karakter \"*\" di area warna diabaikan"
-    },
-    {
-      "record": null,
-      "issue": "warning ekstraksi: LUXE D324 No.4 MERRY STRIPED CREW COTTON: background nomor tidak dikenali (None), WHS style tidak bisa ditentukan"
     }
   ]
 }

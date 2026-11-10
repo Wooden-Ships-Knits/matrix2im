@@ -61,3 +61,16 @@ def test_tag_without_letters_or_digits_is_empty(tag):     # F1
 def test_tag_c0_out_of_range():                            # F2
     v, p = build_ws_tag_color("TAG: C0", ["A", "B"])
     assert v is None and p == Problem(Code.TAG_CN_OUT_OF_RANGE, "TAG minta C0 tapi colorway hanya punya 2 benang")
+
+
+@pytest.mark.parametrize("tag,yarns", [("TAG: C1/C(car)", ["FAWN"]), ("TAG: C1/GONDOLA color", ["SILVER MOON"]),
+                                       ("TAG: C1 colour", ["A"])])
+def test_tag_with_untranslated_instruction_is_unresolved(tag, yarns):
+    value, problem = build_ws_tag_color(tag, yarns)
+    assert value is None and problem.code is Code.TAG_UNRESOLVED
+    assert problem.issue.startswith("TAG masih berisi instruksi yang belum diterjemahkan")
+
+
+def test_yarn_name_containing_color_is_not_unresolved():
+    # Pengecekan dilakukan pada teks TAG sebelum Cn diganti, jadi nama benang tidak ikut diperiksa.
+    assert build_ws_tag_color("TAG: C1", ["MULTI COLOR"]) == ("MULTI COLOR", None)

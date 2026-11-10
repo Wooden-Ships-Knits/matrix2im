@@ -22,8 +22,8 @@ def test_color_whs_no_rule(group, font):
 def test_final_whs_intersection():
     assert final_whs("000 & SY", "000 & SY") == ("000 & SY", None)
     assert final_whs("SY", "SY") == ("SY", None)
-    v, p = final_whs("000", "000 & SY")
-    assert v == "000" and p.code is Code.WHS_CAPPED_BY_STYLE
+    assert final_whs("000", "000 & SY") == ("000", None)      # dibatasi style: aturan biasa, tanpa review
+    assert final_whs("SY", "000 & SY") == ("SY", None)
     v, p = final_whs("SY", "000")
     assert v is None and p.code is Code.WHS_CONFLICT
     v, p = final_whs(None, "000")

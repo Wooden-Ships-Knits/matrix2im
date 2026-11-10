@@ -8,11 +8,13 @@ import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 
 from .errors import Matrix2ImError
-from .legend_config import IM_HEADER_ROW, IM_SHEET, WHS_VALUES
+from .legend_config import IM_HEADER_ROW, IM_SHEET, NEED_REVIEW, WHS_VALUES
 from .review import Code
 from .transform import GROUPS
 
-_TAG_CODES = frozenset({Code.TAG_CONDITIONAL, Code.TAG_CN_OUT_OF_RANGE, Code.TAG_EMPTY})
+_TAG_CODES = frozenset({Code.TAG_CONDITIONAL, Code.TAG_CN_OUT_OF_RANGE, Code.TAG_EMPTY, Code.TAG_UNRESOLVED})
+# 'Need Review' di WS TAG COLOR hanya sah bila ada alasannya di needs_review.
+_NEED_REVIEW_CODES = _TAG_CODES | {Code.COLOR_IS_DESCRIPTOR}
 _WHS_NULL_CODES = frozenset({Code.WHS_CONFLICT, Code.FONT_COLOR_NO_RULE})
 
 
@@ -60,8 +62,8 @@ def _count_colorways(raw: dict) -> int:
 def validate(raw: dict, final: dict, im_header: set[str] | None = None) -> list[str]:
     """Kembalikan semua pesan error (kosong = lolos); tidak berhenti di error pertama.
 
-    Item DUPLICATE (record berupa list) sengaja tidak dihitung untuk pemeriksaan null:
-    duplikat tidak menjelaskan kenapa TAG/WHS kosong.
+    Hanya item dengan `record` berupa satu index yang menjelaskan nilai null / 'Need Review'
+    di record itu.
     """
     errors: list[str] = []
     records = final["records"]
@@ -89,6 +91,9 @@ def validate(raw: dict, final: dict, im_header: set[str] | None = None) -> list[
         codes = codes_by_record.get(i, set())
         if rec.get("WS TAG COLOR") is None and not codes & _TAG_CODES:
             errors.append(f"record {i}: WS TAG COLOR null tanpa item needs_review kode TAG_*")
+        if rec.get("WS TAG COLOR") == NEED_REVIEW and not codes & _NEED_REVIEW_CODES:
+            errors.append(f"record {i}: WS TAG COLOR '{NEED_REVIEW}' tanpa item needs_review "
+                          "kode TAG_* atau COLOR_IS_DESCRIPTOR")
         if whs is None and not codes & _WHS_NULL_CODES:
             errors.append(f"record {i}: WHS null tanpa item needs_review "
                           f"kode WHS_CONFLICT atau FONT_COLOR_NO_RULE")

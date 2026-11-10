@@ -2,7 +2,7 @@
 import re
 
 from .legend_config import (PUNCTUATION_ONLY_RE, TAG_ALIAS, TAG_CN_RE, TAG_CONDITIONAL_MARKERS,
-                            TAG_DOUBLE_SUFFIX_RE, TAG_PREFIX_RE, TAG_REPLACEMENTS,
+                            TAG_DOUBLE_SUFFIX_RE, TAG_PREFIX_RE, TAG_REPLACEMENTS, TAG_UNRESOLVED_RE,
                             YARN_CODE_SUFFIX_RE, YARN_PREFIX_RE)
 from .review import Code, Problem
 
@@ -10,6 +10,7 @@ _PREFIX = re.compile(TAG_PREFIX_RE)
 _CN = re.compile(TAG_CN_RE)
 _REPLACEMENTS = tuple((re.compile(pattern), repl) for pattern, repl in TAG_REPLACEMENTS)
 _PUNCTUATION_ONLY = re.compile(PUNCTUATION_ONLY_RE)
+_UNRESOLVED = re.compile(TAG_UNRESOLVED_RE, re.IGNORECASE)
 
 
 def color_name(yarn: str) -> str:
@@ -52,6 +53,9 @@ def build_ws_tag_color(tag: str | None, yarns: list[str]) -> tuple[str | None, P
     if missing:
         return None, Problem(Code.TAG_CN_OUT_OF_RANGE,
                              f"TAG minta C{missing[0]} tapi colorway hanya punya {len(yarns)} benang")
+    # Dicek pada teks TAG sebelum Cn diganti, supaya nama benang (mis. "MULTI COLOR") tidak ikut terdeteksi.
+    if _UNRESOLVED.search(body):
+        return None, Problem(Code.TAG_UNRESOLVED, f"TAG masih berisi instruksi yang belum diterjemahkan: {tag}")
     val = _CN.sub(lambda m: color_name(yarns[int(m.group(1)) - 1]), body)
     for pattern, repl in _REPLACEMENTS:   # mis. STRIPED -> STRIPE (catatan header IM)
         val = pattern.sub(repl, val)

@@ -28,8 +28,6 @@ def final_whs(style_whs: str | None, col_whs: str | None) -> tuple[str | None, P
     inter = WHS_SETS[style_whs] & WHS_SETS[col_whs]
     if not inter:
         return None, Problem(Code.WHS_CONFLICT, f"WHS style {style_whs} bertentangan dengan WHS warna {col_whs}")
-    result = "000 & SY" if inter == WHS_SETS["000 & SY"] else next(iter(inter))
-    if result != col_whs:
-        return result, Problem(Code.WHS_CAPPED_BY_STYLE,
-                               f"info: WHS warna {col_whs} diturunkan ke {result} (batas WHS style)")
-    return result, None
+    # Hasil yang lebih sempit dari WHS warna (mis. style 000 + warna 000 & SY -> 000) adalah aturan
+    # biasa, bukan masalah: tidak masuk review (keputusan review 10 Nov 2026).
+    return ("000 & SY" if inter == WHS_SETS["000 & SY"] else next(iter(inter))), None
