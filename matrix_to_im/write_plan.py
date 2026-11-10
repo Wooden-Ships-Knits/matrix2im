@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable
+
+from openpyxl.utils import get_column_letter
 
 from .errors import Matrix2ImError
 from .im_layout import ImGroup, ImLayout, normalize
-from .legend_config import IM_COLOR_KEYS, WHS_SETS
+from .legend_config import IM_ACCESSORY_RE, IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS
 
 _REF_RE = re.compile(r"^(?P<sheet>.+?)(?: \((?P<section>[^)]*)\))? No\.(?P<no>.+?) \| ")
 _WHS_BY_SET = {parts: name for name, parts in WHS_SETS.items()}
@@ -185,3 +187,81 @@ def project_layout(layout: ImLayout, ops: list[InsertOp]) -> ImLayout:
                 values[(new_row, c)] = v
     formulas = {shift(r): dict(f) for r, f in layout.subtotal_formulas.items()}
     return ImLayout(layout.columns, groups, values, formulas)
+
+
+_ACCESSORY = re.compile(IM_ACCESSORY_RE)
+
+
+@dataclass(frozen=True)
+class CellChange:
+    """Satu sel yang berubah; new=None berarti sel dikosongkan."""
+    row: int
+    col: int
+    old: object
+    new: str | None
+
+
+@dataclass
+class ValuePlan:
+    changes: list[CellChange] = field(default_factory=list)
+    changed_colorway_rows: list[int] = field(default_factory=list)
+    short_groups: list[str] = field(default_factory=list)
+    unmatched_im_styles: list[str] = field(default_factory=list)
+    missing_styles: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+def _blank(v: object) -> bool:
+    return v is None or str(v).strip() == ""
+
+
+def _is_formula(v: object) -> bool:
+    return isinstance(v, str) and v.startswith("=")
+
+
+def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> ValuePlan:
+    """Sel COLOR/WS TAG/WHS yang berubah per baris grup; rumus tidak pernah disentuh."""
+    plan = ValuePlan()
+    cols = layout.columns
+    matched: set[str] = set()
+    unmatched: set[str] = set()
+    for g in layout.groups:
+        style = match_style(g.description, colorways)
+        if style is None:
+            unmatched.add(g.description.split(" - ", 1)[0])
+            continue
+        matched.add(style)
+        cws = colorways[style]
+        n, r = len(cws), len(g.rows)
+        if r < n:
+            plan.short_groups.append(f"{g.description}: kurang {n - r} baris")
+        for i, row in enumerate(g.rows):
+            cw = cws[min(i, n - 1)]
+            yarns = cw.colors[:len(cols.colors)]
+
+            def put(col: int, new: str | None) -> None:
+                old = layout.values.get((row, col))
+                if _is_formula(old):
+                    plan.warnings.append(f"sel {get_column_letter(col)}{row} berisi rumus, tidak ditulis")
+                elif (None if _blank(old) else str(old)) != new and not (_blank(old) and new is None):
+                    plan.changes.append(CellChange(row, col, old, new))
+
+            old_yarns: list[str] = []
+            for j, col in enumerate(cols.colors):
+                old = layout.values.get((row, col))
+                if not _blank(old) and not _is_formula(old) and not _ACCESSORY.match(str(old)):
+                    old_yarns.append(normalize(old))
+                if j < len(yarns):
+                    put(col, yarns[j])
+                elif not _blank(old) and not _ACCESSORY.match(str(old)):
+                    put(col, None)
+            if tuple(old_yarns) != tuple(normalize(y) for y in yarns):
+                plan.changed_colorway_rows.append(row)
+            if cw.ws_tag is not None and not (
+                    cw.ws_tag == NEED_REVIEW and not _blank(layout.values.get((row, cols.ws_tag)))):
+                put(cols.ws_tag, cw.ws_tag)
+            if cw.whs is not None:
+                put(cols.whs, cw.whs)
+    plan.unmatched_im_styles = sorted(unmatched)
+    plan.missing_styles = [s for s in colorways if s not in matched]
+    return plan

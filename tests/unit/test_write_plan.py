@@ -177,3 +177,107 @@ def test_project_layout_shifts_rows_and_copies_values():
     assert out.values[(60, 2)] == "c" and out.values[(61, 2)] == "c"  # sisipan = salinan baris c
     assert out.values[(62, 2)] == "d"
     assert set(out.subtotal_formulas) == {59, 63}
+
+
+# --- plan_values -----------------------------------------------------------
+
+from matrix_to_im.write_plan import CellChange, plan_values  # noqa: E402
+
+_VCOLS = ImColumns(description=1, colors=tuple(range(2, 20)), ws_tag=20, whs=21, last=21)
+
+
+def _vlayout(groups, values=None):
+    return ImLayout(_VCOLS, groups, values or {}, {})
+
+
+def _grp(desc, rows):
+    return ImGroup(desc, tuple(rows), None)
+
+
+def _cw(colors, ws=None, whs=None):
+    return Colorway(tuple(colors), ws, whs)
+
+
+def _by_cell(plan):
+    return {(c.row, c.col): c for c in plan.changes}
+
+
+def test_rows_get_colorways_in_order_extra_rows_get_last():
+    lay = _vlayout([_grp("S - X/S", [5, 6, 7, 8])])
+    plan = plan_values(lay, {"S": [_cw(["A"]), _cw(["B"])]})
+    got = _by_cell(plan)
+    assert [got[(r, 2)].new for r in (5, 6, 7, 8)] == ["A", "B", "B", "B"]
+    assert plan.short_groups == []
+
+
+def test_color_slots_overwrite_clear_old_yarn_keep_accessory():
+    old = ["YCA BLACK B - 1708 B", "YCA CHOCOLATE ALE - 609", "XBP 729 2 CM-DARK ROAST", "YCA OLD - 1"]
+    lay = _vlayout([_grp("S - X/S", [5])], {(5, 2 + i): v for i, v in enumerate(old)})
+    got = _by_cell(plan_values(lay, {"S": [_cw(["YCA KHAKI - 749"])]}))
+    assert got[(5, 2)].new == "YCA KHAKI - 749"
+    assert got[(5, 3)].new is None and got[(5, 3)].old == old[1]
+    assert (5, 4) not in got
+    assert got[(5, 5)].new is None
+    got3 = _by_cell(plan_values(lay, {"S": [_cw(["A - 1", "B - 2", "C - 3"])]}))
+    assert got3[(5, 4)].new == "C - 3"
+
+
+def test_more_than_18_yarns_truncated():
+    lay = _vlayout([_grp("S - X/S", [5])])
+    got = _by_cell(plan_values(lay, {"S": [_cw([f"Y{i}" for i in range(20)])]}))
+    assert max(c for _, c in got) == 19 and got[(5, 19)].new == "Y17"
+
+
+def test_need_review_never_replaces_filled_ws_tag():
+    cws = {"S": [_cw(["A"], ws="Need Review")]}
+    lay = _vlayout([_grp("S - X/S", [5])], {(5, 20): "BLACK MARL"})
+    assert (5, 20) not in _by_cell(plan_values(lay, cws))
+    got = _by_cell(plan_values(_vlayout([_grp("S - X/S", [5])]), cws))
+    assert got[(5, 20)].new == "Need Review"
+
+
+def test_null_values_not_written():
+    lay = _vlayout([_grp("S - X/S", [5])], {(5, 20): "KEEP", (5, 21): "SY"})
+    got = _by_cell(plan_values(lay, {"S": [_cw(["A"])]}))
+    assert (5, 20) not in got and (5, 21) not in got
+
+
+def test_unchanged_values_produce_no_change():
+    lay = _vlayout([_grp("S - X/S", [5])], {(5, 2): "A", (5, 20): "T", (5, 21): "SY"})
+    plan = plan_values(lay, {"S": [_cw(["A"], "T", "SY")]})
+    assert plan.changes == [] and plan.changed_colorway_rows == []
+
+
+def test_formula_target_cell_untouched_with_warning():
+    lay = _vlayout([_grp("S - X/S", [5])], {(5, 2): "=B1"})
+    plan = plan_values(lay, {"S": [_cw(["A"])]})
+    assert plan.changes == []
+    assert plan.warnings == ["sel B5 berisi rumus, tidak ditulis"]
+
+
+def test_short_group_fills_existing_rows_and_reports():
+    lay = _vlayout([_grp("S - X/S", [5, 6])])
+    plan = plan_values(lay, {"S": [_cw(["A"]), _cw(["B"]), _cw(["C"]), _cw(["D"])]})
+    assert plan.short_groups == ["S - X/S: kurang 2 baris"]
+    got = _by_cell(plan)
+    assert [got[(r, 2)].new for r in (5, 6)] == ["A", "B"]
+
+
+def test_unmatched_and_missing_styles_reported():
+    lay = _vlayout([_grp("ZED - X/S", [5]), _grp("ZED - S/M", [6]), _grp("S - X/S", [7])])
+    plan = plan_values(lay, {"S": [_cw(["A"])], "GONE": [_cw(["B"])]})
+    assert plan.unmatched_im_styles == ["ZED"]
+    assert plan.missing_styles == ["GONE"]
+
+
+def test_changed_colorway_rows_listed():
+    lay = _vlayout([_grp("S - X/S", [5, 6])],
+                   {(5, 2): "a  - 1", (5, 3): "XZIP", (6, 2): "OLD - 2"})
+    plan = plan_values(lay, {"S": [_cw(["A - 1"]), _cw(["NEW - 3"])]})
+    assert plan.changed_colorway_rows == [6]
+
+
+def test_whs_000_is_string():
+    lay = _vlayout([_grp("S - X/S", [5])])
+    c = _by_cell(plan_values(lay, {"S": [_cw(["A"], whs="000")]}))[(5, 21)]
+    assert c.new == "000" and isinstance(c.new, str)

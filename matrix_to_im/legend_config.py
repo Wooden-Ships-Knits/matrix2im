@@ -37,6 +37,8 @@ TAG_UNRESOLVED_RE = r"\bC\(|\bCOLOU?R\b"
 # Teks WS TAG COLOR bila aturan tidak bisa memutuskan; sengaja ditulis ke IM agar terlihat tim.
 NEED_REVIEW = "Need Review"
 DESCRIPTOR_RE = r"\b(STRIPE|STRIPED|MARL|MULTI)$"
+# Aksesoris di slot COLOR (mis. "XBP 729 2 CM-DARK ROAST", "XZIP") tidak boleh dihapus.
+IM_ACCESSORY_RE = r"^X[A-Z]+(\s|$)"
 IM_COLOR_KEYS = ("COLOR1", "COLOR2", "COLOR3", "COLOR 4") + tuple(f"COLOR{i}" for i in range(5, 19))
 WHS_VALUES = ("000", "SY", "000 & SY")
 IM_SHEET = "F27"
