@@ -41,7 +41,7 @@ Pillow sengaja tidak dipasang. Tanpa Pillow, openpyxl melewati 220 foto di MATRI
 | Kode | Arti |
 | --- | --- |
 | 0 | Sukses (item `needs_review` tidak membuat gagal) |
-| 1 | Error fatal: file tidak terbaca, tidak ada halaman/kartu, raw JSON rusak/tidak lengkap, validasi gagal, error tak terduga. Tidak ada traceback; pesan di stderr |
+| 1 | Error fatal: argumen salah/kurang (mis. `run` tanpa `--im-master`), file tidak terbaca, tidak ada halaman/kartu, raw JSON rusak/tidak lengkap, validasi gagal, error tak terduga. Tidak ada traceback; pesan di stderr |
 | 2 | Hanya dengan `--strict` dan `needs_review` tidak kosong (file tetap ditulis) |
 
 ## Skema keluaran

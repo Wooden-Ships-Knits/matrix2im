@@ -68,7 +68,31 @@ def test_run_writes_both_and_prints_summary(tmp_path, matrix, im, capsys):
 def test_run_requires_im_master(tmp_path, matrix):
     with pytest.raises(SystemExit) as exc:
         main(["run", str(matrix), "-o", str(tmp_path / "out")])
-    assert exc.value.code == 2 and not (tmp_path / "out").exists()
+    assert exc.value.code == 1 and not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("argv", [[], ["run", "m.xlsx", "-o", "out"], ["extract", "m.xlsx"],
+                                  ["extract", "m.xlsx", "-o", "r.json", "--tidak-ada"], ["hapus"]])
+def test_usage_error_exits_1_with_indonesian_message(argv, capsys):    # F3: exit 2 hanya untuk --strict
+    with pytest.raises(SystemExit) as exc:
+        main(argv)
+    err = capsys.readouterr().err
+    assert exc.value.code == 1
+    assert "Argumen tidak valid:" in err and "-h' untuk bantuan." in err
+    assert "error:" not in err and "Traceback" not in err
+
+
+def test_required_argument_detail_in_indonesian(capsys):
+    with pytest.raises(SystemExit):
+        main(["run", "m.xlsx", "-o", "out"])
+    assert "argumen wajib belum diisi: --im-master" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("argv", [["-h"], ["run", "--help"]])
+def test_help_exits_0(argv, capsys):
+    with pytest.raises(SystemExit) as exc:
+        main(argv)
+    assert exc.value.code == 0 and "matrix2im" in capsys.readouterr().out
 
 
 def test_run_strict_with_review_returns_2(tmp_path, matrix, im):

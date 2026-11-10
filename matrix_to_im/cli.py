@@ -5,6 +5,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 from .errors import Matrix2ImError
 from .extract import extract
@@ -95,9 +96,29 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return _finish(raw, final, args.strict)
 
 
+# Pesan argparse yang paling sering muncul, diterjemahkan agar pesan salah pakai tetap Indonesia.
+_ARGPARSE_ID = (("the following arguments are required", "argumen wajib belum diisi"),
+                ("unrecognized arguments", "argumen tidak dikenal"),
+                ("expected one argument", "butuh satu nilai"),
+                ("invalid choice", "pilihan tidak valid"),
+                ("choose from", "pilih dari"),
+                ("argument ", "argumen "))
+
+
+class _Parser(argparse.ArgumentParser):
+    """argparse bawaan keluar dengan kode 2 saat argumen salah, padahal kode 2 khusus untuk
+    --strict (PROMPT §5); salah pakai diperlakukan sebagai error fatal biasa (exit 1)."""
+
+    def error(self, message: str) -> NoReturn:
+        for english, indonesian in _ARGPARSE_ID:
+            message = message.replace(english, indonesian)
+        self.exit(1, f"ERROR: Argumen tidak valid: {message}. "
+                     f"Jalankan '{self.prog} -h' untuk bantuan.\n")
+
+
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="matrix2im",
-                                     description="Ubah F27 MATRIX MASTER (Excel) menjadi JSON untuk IM MASTER.")
+    parser = _Parser(prog="matrix2im",
+                     description="Ubah F27 MATRIX MASTER (Excel) menjadi JSON untuk IM MASTER.")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("extract", help="Tahap 1: MATRIX .xlsx -> raw JSON")
@@ -121,7 +142,10 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Titik masuk CLI; tidak pernah menampilkan traceback (exit 0/1/2)."""
+    """Titik masuk CLI; tidak pernah menampilkan traceback (exit 0/1/2).
+
+    Salah pakai argumen keluar lewat SystemExit(1) dari _Parser; -h/--help keluar dengan 0.
+    """
     args = _parser().parse_args(argv)
     _setup_logging()
     try:
