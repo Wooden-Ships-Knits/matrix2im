@@ -44,6 +44,15 @@ def read_im_header(path: Path, sheet: str = IM_SHEET, row: int = IM_HEADER_ROW) 
     return header
 
 
+def _is_clean_value(value: object) -> bool:
+    """Nilai record yang boleh ditulis ke IM: null, atau teks tidak kosong tanpa spasi di tepi.
+
+    Teks berawalan '=' akan dibaca Excel sebagai formula, jadi juga ditolak.
+    """
+    return value is None or (isinstance(value, str) and value != "" and value == value.strip()
+                             and not value.startswith("="))
+
+
 def _count_colorways(raw: dict) -> int:
     return sum(len(style[key]) for style in raw["styles"] for key, _ in GROUPS)
 
@@ -70,6 +79,10 @@ def validate(raw: dict, final: dict, im_header: set[str] | None = None) -> list[
             for key in rec:
                 if not key.startswith("_") and key not in im_header:
                     errors.append(f"record {i}: key '{key}' tidak ada di header IM MASTER")
+        for key, value in rec.items():
+            if not key.startswith("_") and not _is_clean_value(value):
+                errors.append(f"record {i}: nilai '{key}' tidak valid ({value!r}); harus null atau teks "
+                              "tidak kosong tanpa spasi di awal/akhir dan tidak diawali '='")
         whs = rec.get("WHS")
         if whs is not None and whs not in WHS_VALUES:
             errors.append(f"record {i}: WHS '{whs}' bukan salah satu dari {list(WHS_VALUES)}")

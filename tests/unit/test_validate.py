@@ -90,3 +90,16 @@ def test_duplicate_item_does_not_satisfy_null():
     items = [{"record": [0, 1], "code": "TAG_EMPTY"}]
     msgs = validate(raw_n(1), final_of([rec(**{"WS TAG COLOR": None})], items), HEADER)
     assert len(msgs) == 1
+
+
+@pytest.mark.parametrize("key,value", [("COLOR1", ""), ("COLOR1", " A"), ("DESCRIPTION", "S "),
+                                       ("WS TAG COLOR", "=C1"), ("COLOR2", 5)])
+def test_validate_rejects_empty_whitespace_formula_values(key, value):     # F6
+    msgs = validate(raw_n(1), final_of([rec(**{key: value})]), HEADER)
+    assert msgs == [f"record 0: nilai '{key}' tidak valid ({value!r}); harus null atau teks tidak kosong "
+                    "tanpa spasi di awal/akhir dan tidak diawali '='"]
+
+
+def test_validate_accepts_valid_values_and_ignores_underscore_keys():
+    ok = rec(COLOR2="PURE SNOW/ALMOND", _ref=" =bebas ")
+    assert validate(raw_n(1), final_of([ok]), HEADER) == []
