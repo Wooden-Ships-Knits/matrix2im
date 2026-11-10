@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Iterable
 
 from .errors import Matrix2ImError
-from .im_layout import normalize
+from .im_layout import ImGroup, ImLayout, normalize
 from .legend_config import IM_COLOR_KEYS, WHS_SETS
 
 _REF_RE = re.compile(r"^(?P<sheet>.+?)(?: \((?P<section>[^)]*)\))? No\.(?P<no>.+?) \| ")
@@ -94,3 +95,93 @@ def style_colorways(final: dict) -> tuple[dict[str, list[Colorway]], list[Skip]]
         else:
             result[style] = merged
     return result, skips
+
+
+@dataclass(frozen=True)
+class InsertOp:
+    """Satu sisipan baris di dalam grup; at_row/fill_* dalam koordinat sebelum sisipan op ini."""
+    description: str
+    at_row: int
+    count: int
+    fill_from: int
+    fill_to: int
+    subtotal_row_after: int | None
+    formula_fixes: dict[int, str]
+
+
+def match_style(description: str, styles: Iterable[str]) -> str | None:
+    """Style terpanjang yang menjadi awalan 'STYLE - ' dari DESCRIPTION grup."""
+    best: str | None = None
+    for s in styles:
+        if description.startswith(s + " - ") and (best is None or len(s) > len(best)):
+            best = s
+    return best
+
+
+_REF = r"(\$?[A-Z]{1,3}\$?)"
+
+
+def _widen(formula: str, r: int, k: int) -> str:
+    """Perlebar rujukan sel tunggal / range satu-baris di baris r menjadi r..r+k."""
+    rng = re.compile(rf"(?<![A-Za-z$:]){_REF}{r}:{_REF}{r}(?!\d)")
+    one = re.compile(rf"(?<![A-Za-z$:]){_REF}{r}(?![\d:])")
+    formula = rng.sub(lambda m: f"{m.group(1)}{r}:{m.group(2)}{r + k}", formula)
+    return one.sub(lambda m: f"{m.group(1)}{r}:{m.group(1)}{r + k}", formula)
+
+
+def plan_inserts(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> list[InsertOp]:
+    """Sisipan agar tiap grup punya baris sebanyak colorway; urut at_row menurun (eksekusi bawah ke atas)."""
+    ops: list[InsertOp] = []
+    for g in layout.groups:
+        style = match_style(g.description, colorways)
+        if style is None:
+            continue
+        r, n = len(g.rows), len(colorways[style])
+        if n <= r:
+            continue
+        k = n - r
+        if r >= 2:
+            last = g.rows[-1]
+            ops.append(InsertOp(g.description, last, k, last - 1, last + k - 1, None, {}))
+            continue
+        row = g.rows[0]
+        fixes: dict[int, str] = {}
+        after = None
+        if g.subtotal_row is not None:
+            after = g.subtotal_row + k
+            for col, f in layout.subtotal_formulas.get(g.subtotal_row, {}).items():
+                if isinstance(f, str):
+                    new = _widen(f, row, k)
+                    if new != f:
+                        fixes[col] = new
+        ops.append(InsertOp(g.description, row + 1, k, row, row + k, after, fixes))
+    return sorted(ops, key=lambda o: o.at_row, reverse=True)
+
+
+def project_layout(layout: ImLayout, ops: list[InsertOp]) -> ImLayout:
+    """Tata letak setelah semua op dijalankan, dihitung murni di Python (pembanding hasil Excel)."""
+    def shift(x: int) -> int:
+        return x + sum(o.count for o in ops if o.at_row <= x)
+
+    inserted: dict[int, int] = {}  # baris sisipan baru -> baris sumber (terproyeksi)
+    group_new: dict[int, list[int]] = {}
+    for idx, g in enumerate(layout.groups):
+        for o in ops:
+            if o.description == g.description and g.rows[0] <= o.at_row <= g.rows[-1] + 1:
+                start = o.at_row + sum(p.count for p in ops if p.at_row < o.at_row)
+                new = list(range(start, start + o.count))
+                group_new.setdefault(idx, []).extend(new)
+                for row in new:
+                    inserted[row] = shift(o.fill_from)
+    groups = [
+        ImGroup(g.description, tuple(sorted([shift(x) for x in g.rows] + group_new.get(i, []))),
+                None if g.subtotal_row is None else shift(g.subtotal_row))
+        for i, g in enumerate(layout.groups)
+    ]
+    values = {(shift(r), c): v for (r, c), v in layout.values.items()}
+    for new_row, src in inserted.items():
+        for (r, c), v in list(values.items()):
+            if r == src:
+                values[(new_row, c)] = v
+    formulas = {shift(r): dict(f) for r, f in layout.subtotal_formulas.items()}
+    return ImLayout(layout.columns, groups, values, formulas)
