@@ -82,3 +82,8 @@ def test_colorway_count_equals_records(f27_raw, f27_final):
     n = sum(len(s[g]) for s in f27_raw["styles"] for g in
             ("color_above_black_line", "color_between_black_and_red_line", "color_below_red_line"))
     assert n == len(f27_final["records"])
+
+
+def test_validate_f27_against_im_header(f27_raw, f27_final, im_path):
+    from matrix_to_im.validate import read_im_header, validate
+    assert validate(f27_raw, f27_final, read_im_header(im_path)) == []
