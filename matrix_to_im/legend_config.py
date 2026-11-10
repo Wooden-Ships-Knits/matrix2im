@@ -41,6 +41,10 @@ IM_COLOR_KEYS = ("COLOR1", "COLOR2", "COLOR3", "COLOR 4") + tuple(f"COLOR{i}" fo
 WHS_VALUES = ("000", "SY", "000 & SY")
 IM_SHEET = "F27"
 IM_HEADER_ROW = 54
+IM_DESCRIPTION_KEY = "DESCRIPTION"
+IM_WS_TAG_KEY = "WS TAG COLOR"
+IM_WHS_KEY = "WHS"                      # yang ditulis: kolom tepat di kanan WS TAG COLOR (PRD aturan 6)
+IM_SUBTOTAL_RE = r" - (BOTH WHS|000 ONLY|SHOPIFY ONLY)\b"
 SOURCE_NAME = "F27 MATRIX MASTER"
 TARGET_NAME = "F27 IM MASTER (sheet F27, header baris 54)"
 # Arti font -> WHS warna di atas garis merah; di bawah garis merah selalu "SY".
