@@ -4,7 +4,7 @@ from openpyxl.styles import Border, Color, Font, PatternFill, Side
 
 from matrix_to_im.errors import Matrix2ImError
 from matrix_to_im.excel_reader import (fill_key, font_rgb, is_black_line, is_red_line,
-                                       line_above, norm, open_workbooks)
+                                       line_above, norm, open_workbooks, rgb6)
 
 
 def _cell():
@@ -90,3 +90,16 @@ def test_open_workbooks_returns_normal_and_data_only(tmp_path):
 
 def test_norm_collapses_spaces_keeps_newline():
     assert norm("TAG  for\xa0Heathered:\nC1 ") == "TAG for Heathered:\nC1"
+
+
+def test_rgb6_drops_alpha_byte():                          # F8
+    assert rgb6("FF00B050") == rgb6("0000B050") == rgb6("00b050") == "00B050"
+    assert rgb6(None) is None and rgb6("theme0-0.15") is None and rgb6("indexed64") is None
+
+
+def test_lines_with_openpyxl_00_alpha():
+    assert Side(style="medium", color="FF0000").color.rgb == "00FF0000"
+    assert is_red_line(Side(style="medium", color="00FF0000"))
+    assert is_red_line(Side(style="thick", color="C00000"))
+    assert is_black_line(Side(style="medium", color="000000"))
+    assert not is_red_line(Side(style="thin", color="00FF0000"))

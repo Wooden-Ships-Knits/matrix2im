@@ -15,17 +15,24 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from .errors import Matrix2ImError
 from .excel_reader import (fill_key, font_rgb, is_black_line, is_red_line, line_above, norm,
-                           open_workbooks)
+                           open_workbooks, rgb6)
 from .legend_config import (BLACK_FONT_RGB, DEFAULT_FONT_MEANING, FONT_MEANING, LEGEND_LABELS,
-                            NEW_REPEAT_LABELS, NUMBER_RE, PAGE_MARKER, SECTION_EXCLUDE_WORDS,
-                            SOURCE_NAME, STYLE_WHS_BY_FILL, TAG_PREFIX, WIDTH_LABEL)
+                            NEW_REPEAT_LABELS, NUMBER_RE, PAGE_MARKER, PUNCTUATION_ONLY_RE,
+                            SECTION_EXCLUDE_WORDS, SOURCE_NAME, STYLE_WHS_BY_FILL, TAG_PREFIX,
+                            WIDTH_LABEL, YARN_SPLIT_RE)
 
 _NUMBER = re.compile(NUMBER_RE)
+_YARN_SPLIT = re.compile(YARN_SPLIT_RE)
+_PUNCTUATION_ONLY = re.compile(PUNCTUATION_ONLY_RE)
+# Tabel warna legend dengan kunci tanpa byte alpha; kunci theme (bukan hex) dipakai apa adanya.
+_FONT_MEANING = {rgb6(k): v for k, v in FONT_MEANING.items()}
+_BLACK_FONT = frozenset(rgb6(k) for k in BLACK_FONT_RGB)
+_STYLE_WHS_BY_FILL = {rgb6(k) or k: v for k, v in STYLE_WHS_BY_FILL.items()}
 
 
 def split_yarns(text: object) -> list[str]:
     """Pecah sel benang pada '/' dan baris baru; selalu dipecah (D2), urutan dipertahankan."""
-    parts = (norm(p) for p in re.split(r"[/\n]", str(text)))
+    parts = (norm(p) for p in _YARN_SPLIT.split(str(text)))
     return [p for p in parts if p]
 
 
@@ -40,11 +47,15 @@ def parse_no(value: object) -> int | str | None:
 
 
 def font_meaning(rgb: str | None) -> tuple[str, bool]:
-    """Arti warna font menurut legend; tanpa warna/hitam = REPEAT. Kode asing ditandai tidak dikenal."""
-    if rgb is None or rgb in BLACK_FONT_RGB:
+    """Arti warna font menurut legend; tanpa warna/hitam = REPEAT. Kode asing ditandai tidak dikenal.
+
+    Dicocokkan tanpa byte alpha; kode yang dilaporkan untuk warna asing tetap kode aslinya.
+    """
+    key = rgb6(rgb)
+    if rgb is None or key in _BLACK_FONT:
         return DEFAULT_FONT_MEANING, True
-    if rgb in FONT_MEANING:
-        return FONT_MEANING[rgb], True
+    if key in _FONT_MEANING:
+        return _FONT_MEANING[key], True
     return f"? ({rgb})", False
 
 
@@ -55,7 +66,7 @@ def is_new_repeat_label(value: object) -> bool:
 
 def is_punctuation_only(text: str) -> bool:
     """Sel yang hanya berisi tanda baca (mis. '.', '`') bukan data (D5)."""
-    return re.fullmatch(r"[\W_]+", text) is not None
+    return _PUNCTUATION_ONLY.fullmatch(text) is not None
 
 
 def join_tag_cells(values: list[str]) -> str | None:
@@ -334,7 +345,8 @@ def _read_card(page: _Page, col: int, warnings: list[str]) -> Card | None:
         number_cell = ws.cell(page.num_row, col)
         no = parse_no(values.cell(page.num_row, col).value)
         no_cell, no_fill = number_cell.coordinate, fill_key(number_cell)
-    style_whs = STYLE_WHS_BY_FILL.get(no_fill)   # WHS style = warna background sel nomor
+    # WHS style = warna background sel nomor; kode rgb tanpa alpha, kunci theme apa adanya.
+    style_whs = _STYLE_WHS_BY_FILL.get(rgb6(no_fill) or no_fill)
 
     name_ref = f"{ws.title} {name_cell} {style}"
     if no is None:   # D8; sel nomor kosong yang ber-background tetap memberi WHS style

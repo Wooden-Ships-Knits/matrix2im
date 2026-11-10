@@ -35,6 +35,13 @@ def test_font_meaning_table():
     assert font_meaning("FF123456") == ("? (FF123456)", False)
 
 
+def test_font_meaning_ignores_alpha_byte():                # F8: openpyxl menulis "00B050" sebagai "0000B050"
+    assert font_meaning("0000B050") == ("NEW COLOR", True)
+    assert font_meaning("00FF00FF") == ("000 ONLY COLOR", True)
+    assert font_meaning("00000000") == ("REPEAT COLOR", True)
+    assert font_meaning("00123456") == ("? (00123456)", False)   # kode asli 8 digit tetap dilaporkan
+
+
 def test_new_repeat_label_full_match_only():
     for ok in ("NEW", " exact repeat ", "REPEAT WITH UPDATE", "SIMILAR", "UPDATE", "REPEAT"):
         assert is_new_repeat_label(ok)

@@ -3,6 +3,7 @@ import hashlib
 import pytest
 from helpers.matrix_factory import build_matrix, build_no_pages
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Border, Font, PatternFill, Side
 
 from matrix_to_im.errors import Matrix2ImError
 from matrix_to_im.excel_reader import open_workbooks
@@ -188,3 +189,16 @@ def test_uncached_formula_tag_cell_is_not_a_tag(tmp_path):
     assert "TEST B14: formula tanpa nilai tersimpan, diabaikan" in w
     assert "TEST B13: formula tanpa nilai tersimpan, diabaikan" in w   # sebelum blok TAG
     assert "TEST B12 JUDE T NECK: tidak ada baris TAG" in w
+
+
+def test_six_digit_colours_written_by_openpyxl(tmp_path):   # F8: alpha "00" bukan warna lain
+    wb = load_workbook(build_matrix(tmp_path / "m.xlsx"))
+    ws = wb["TEST"]
+    ws["A9"].fill = PatternFill("solid", fgColor="FF66FF")
+    ws["A15"].font = Font(color="00B050")
+    ws["A18"].border = Border(top=Side(style="medium", color="FF0000"))
+    wb.save(tmp_path / "alpha00.xlsx")
+    a = extract_workbook(tmp_path / "alpha00.xlsx").cards[0]
+    assert (a.no_fill, a.style_whs) == ("00FF66FF", "000")
+    assert a.above_black[0].font_color == "NEW COLOR"
+    assert a.red_line_row == 18 and [x.cell for x in a.below_red] == ["A18"]

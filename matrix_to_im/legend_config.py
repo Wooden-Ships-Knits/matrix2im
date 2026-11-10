@@ -5,9 +5,15 @@ WIDTH_LABEL = "- LEBAR/WIDTH"
 NEW_REPEAT_LABELS = ("NEW", "EXACT REPEAT", "REPEAT", "REPEAT WITH UPDATE", "UPDATE", "SIMILAR")
 NUMBER_RE = r"^(\d+(\.0)?[A-Z]?|S\d+( - [A-Z])?)$"
 TAG_PREFIX = "TAG"
+TAG_PREFIX_RE = r"^TAG\s*:?\s*"            # dibuang dari instruksi TAG sebelum substitusi Cn
+TAG_CN_RE = r"\bC(\d+)\b"                  # Cn = benang ke-n colorway
+TAG_REPLACEMENTS = ((r"\bSTRIPED\b", "STRIPE"),)   # catatan header IM: "STRIPE tanpa D"
+YARN_SPLIT_RE = r"[/\n]"                   # pemisah benang di sel warna (D2)
+PUNCTUATION_ONLY_RE = r"[\W_]+"            # sel tanpa huruf/angka bukan data (D5)
 SECTION_EXCLUDE_WORDS = ("COLOR", "STYLE", "ORDER")
 LEGEND_LABELS = ("000 ONLY STYLE", "SY ONLY", "NEW COLOR", "REPEAT COLOR", "000 ONLY COLOR",
                  "000 REPEAT COLOR", "YR COLOR", "HOLD COLOR FOR SY", "DISCONTINUED COLOR FOR SY")
+# Kode rgb dibandingkan tanpa byte alpha (excel_reader.rgb6): openpyxl menulis "00", Excel "FF".
 STYLE_WHS_BY_FILL = {"FFFF66FF": "000", "theme0-0.15": "000 & SY", "FFD9D9D9": "000 & SY", "FFFF0000": "SY"}
 FONT_MEANING = {"FF00B050": "NEW COLOR", "FFFF00FF": "000 ONLY COLOR", "FFFF99FF": "000 REPEAT COLOR",
                 "FF9900FF": "YR COLOR", "FFFF0000": "HOLD COLOR FOR SY", "FF0066FF": "DISCONTINUED COLOR FOR SY"}

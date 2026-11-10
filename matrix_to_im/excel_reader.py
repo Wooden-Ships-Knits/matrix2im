@@ -26,6 +26,24 @@ def open_workbooks(path: Path) -> tuple[Workbook, Workbook]:
         raise Matrix2ImError(f"File tidak bisa dibaca: {path} ({exc})") from exc
 
 
+_HEX_RGB = re.compile(r"[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?")
+
+
+def rgb6(value: object) -> str | None:
+    """Kode warna tanpa byte alpha (RRGGBB), atau None bila bukan kode hex.
+
+    Excel menyimpan alpha "FF" ("FF00B050"), openpyxl "00" untuk warna 6 digit
+    ("00B050" -> "0000B050"); alpha tidak mengubah arti warna legend.
+    """
+    if isinstance(value, str) and _HEX_RGB.fullmatch(value):
+        return value[-6:].upper()
+    return None
+
+
+_RED_LINE = frozenset(rgb6(c) for c in cfg.RED_LINE_RGB)
+_BLACK_LINE = frozenset(rgb6(c) for c in cfg.BLACK_LINE_RGB)
+
+
 def norm(value: object) -> str:
     """Rapikan spasi/tab/NBSP tetapi pertahankan newline (dipakai sebagai pemisah di sel TAG)."""
     return re.sub(r"[ \t\xa0]+", " ", str(value)).strip()
@@ -64,7 +82,7 @@ def is_red_line(side) -> bool:
     if side is None or side.style not in cfg.THICK_BORDER_STYLES:
         return False
     color = side.color
-    return color is not None and color.type == "rgb" and color.rgb in cfg.RED_LINE_RGB
+    return color is not None and color.type == "rgb" and rgb6(color.rgb) in _RED_LINE
 
 
 def is_black_line(side) -> bool:
@@ -81,7 +99,7 @@ def is_black_line(side) -> bool:
     if color.type == "theme":
         return color.theme in cfg.BLACK_LINE_THEME
     if color.type == "rgb":
-        return color.rgb in cfg.BLACK_LINE_RGB
+        return rgb6(color.rgb) in _BLACK_LINE
     return False
 
 
