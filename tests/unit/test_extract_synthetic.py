@@ -112,3 +112,37 @@ def test_input_not_modified(tmp_path):
     before = (hashlib.sha256(path.read_bytes()).hexdigest(), path.stat().st_mtime_ns)
     extract_workbook(path)
     assert (hashlib.sha256(path.read_bytes()).hexdigest(), path.stat().st_mtime_ns) == before
+
+
+def _variant(tmp_path, name, **cells):
+    """Salinan workbook sintetis dengan beberapa sel diganti (disimpan openpyxl: formula tanpa cache)."""
+    wb = load_workbook(build_matrix(tmp_path / "m.xlsx"))
+    for ref, value in cells.items():
+        wb["TEST"][ref] = value
+    wb.save(tmp_path / name)
+    return tmp_path / name
+
+
+def test_uncached_formula_number_is_fatal(tmp_path):         # F4
+    path = _variant(tmp_path, "tanpa_cache.xlsx", B9="=A9+1")
+    with pytest.raises(Matrix2ImError) as exc:
+        extract_workbook(path)
+    assert str(exc.value) == (
+        f"Nilai hasil formula nomor style tidak tersimpan di {path} (contoh: TEST B9). File kemungkinan "
+        "disimpan tanpa kalkulasi; buka dan simpan ulang di Excel, lalu jalankan lagi.")
+
+
+def test_number_row_with_only_uncached_formulas_is_fatal(tmp_path):
+    # Halaman 2 hanya punya satu nomor; bila itu formula tanpa cache baris nomor tidak terbaca
+    # sama sekali, dan itu harus error, bukan "nomor style tidak ditemukan".
+    path = _variant(tmp_path, "tanpa_cache2.xlsx", A30="=A9")
+    with pytest.raises(Matrix2ImError, match=r"\(contoh: TEST A30\)"):
+        extract_workbook(path)
+
+
+def test_missing_number_with_known_fill_says_whs_from_background(tmp_path):   # D8 teks
+    result = extract_workbook(_variant(tmp_path, "b9_kosong.xlsx", B9=None))
+    b = result.cards[1]
+    assert (b.no, b.no_cell, b.style_whs) == (None, "B9", "000 & SY")
+    assert [w for w in result.warnings if "B9" in w] == [
+        "TEST B9 JUDE T NECK: nomor style tidak ditemukan, WHS style 000 & SY diambil dari warna background"]

@@ -129,6 +129,14 @@ def _is_number(value: object) -> bool:
     return value is not None and _NUMBER.match(norm(value)) is not None
 
 
+def _uncached_formula(ws: Worksheet, values: Worksheet, row: int, col: int) -> bool:
+    """Sel formula yang hasilnya tidak tersimpan di file: workbook data_only hanya melihat None.
+
+    Terjadi bila file disimpan oleh tool yang tidak menghitung formula (mis. openpyxl).
+    """
+    return ws.cell(row, col).data_type == "f" and values.cell(row, col).value is None
+
+
 def _page_bounds(ws: Worksheet) -> list[tuple[int, int]]:
     """(baris awal, baris akhir eksklusif) tiap halaman; satu sheet memuat banyak halaman cetak."""
     tops = [c.row for c in ws["A"] if isinstance(c.value, str) and c.value.startswith(PAGE_MARKER)]
@@ -144,18 +152,32 @@ def _width_label(ws: Worksheet, top: int, bottom: int) -> tuple[int, int] | None
     return None
 
 
-def _number_row(ws: Worksheet, values: Worksheet, top: int, nr_row: int, columns: range) -> int | None:
+def _number_row(ws: Worksheet, values: Worksheet, top: int, nr_row: int, columns: range,
+                source: Path) -> int | None:
     """Baris nomor = baris pertama di bawah legend yang punya nomor style di kolom kartu.
 
     Pencarian dimulai setelah baris legend terakhir (D3, pengganti offset tetap top+5
     prototipe) supaya isi legend tidak terbaca sebagai nomor, dan berhenti sebelum baris nama.
+    Nomor style berupa formula (mis. =A9+1); formula tanpa nilai tersimpan di baris yang
+    diperiksa (termasuk seluruh baris nomor) adalah error, karena kalau dilewati semua nomor
+    hilang diam-diam dan WHS style ikut tidak bisa dicek.
     """
     legend_end = top
     for row in range(top, nr_row):
         if any(isinstance(c.value, str) and norm(c.value).upper() in LEGEND_LABELS for c in ws[row]):
             legend_end = row
-    return next((row for row in range(legend_end + 1, nr_row - 1)
-                 if any(_is_number(values.cell(row, col).value) for col in columns)), None)
+    for row in range(legend_end + 1, nr_row - 1):
+        found = False
+        for col in columns:
+            if _uncached_formula(ws, values, row, col):
+                raise Matrix2ImError(
+                    f"Nilai hasil formula nomor style tidak tersimpan di {source} "
+                    f"(contoh: {ws.title} {ws.cell(row, col).coordinate}). File kemungkinan disimpan "
+                    "tanpa kalkulasi; buka dan simpan ulang di Excel, lalu jalankan lagi.")
+            found = found or _is_number(values.cell(row, col).value)
+        if found:
+            return row
+    return None
 
 
 def _section(ws: Worksheet, num_row: int | None) -> str | None:
@@ -185,7 +207,7 @@ def _page_red_line(ws: Worksheet, nr_row: int, width_row: int, columns: range) -
 
 
 def _read_page(ws: Worksheet, values: Worksheet, number: int, top: int, bottom: int,
-               warnings: list[str]) -> _Page | None:
+               warnings: list[str], source: Path) -> _Page | None:
     """Anchor halaman; halaman yang anchor-nya tidak lengkap dilewati dengan warning, bukan error."""
     label = _width_label(ws, top, bottom)
     if label is None:
@@ -199,7 +221,7 @@ def _read_page(ws: Worksheet, values: Worksheet, number: int, top: int, bottom: 
     if nr_row is None:
         warnings.append(f"{ws.title} hal.{number}: baris NEW/REPEAT tidak ditemukan")
         return None
-    num_row = _number_row(ws, values, top, nr_row, columns)
+    num_row = _number_row(ws, values, top, nr_row, columns, source)
     red_row = _page_red_line(ws, nr_row, width_row, columns)
     if red_row is None:
         warnings.append(
@@ -290,9 +312,10 @@ def _read_card(page: _Page, col: int, warnings: list[str]) -> Card | None:
     style_whs = STYLE_WHS_BY_FILL.get(no_fill)   # WHS style = warna background sel nomor
 
     name_ref = f"{ws.title} {name_cell} {style}"
-    if no is None:   # D8: tanpa nomor, background-nya juga tidak bermakna
-        warnings.append(f"{ws.title} {no_cell or name_cell} {style}: "
-                        "nomor style tidak ditemukan, WHS style tidak bisa ditentukan")
+    if no is None:   # D8; sel nomor kosong yang ber-background tetap memberi WHS style
+        whs_note = ("WHS style tidak bisa ditentukan" if style_whs is None
+                    else f"WHS style {style_whs} diambil dari warna background")
+        warnings.append(f"{ws.title} {no_cell or name_cell} {style}: nomor style tidak ditemukan, {whs_note}")
     elif style_whs is None:
         warnings.append(f"{ws.title} {no_cell} No.{no} {style}: "
                         f"background nomor tidak dikenali ({no_fill}), WHS style tidak bisa ditentukan")
@@ -324,7 +347,7 @@ def extract_workbook(path: Path) -> ExtractResult:
         values = wb_values[ws.title]
         for number, (top, bottom) in enumerate(_page_bounds(ws), 1):
             page_count += 1
-            page = _read_page(ws, values, number, top, bottom, warnings)
+            page = _read_page(ws, values, number, top, bottom, warnings, path)
             if page is None:
                 continue
             for col in page.columns:

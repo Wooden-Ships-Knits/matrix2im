@@ -32,6 +32,7 @@ Pillow sengaja tidak dipasang. Tanpa Pillow, openpyxl melewati 220 foto di MATRI
 ```
 
 - `run` mewajibkan `--im-master`. `--strict` hanya ada di `run`.
+- File MATRIX harus disimpan oleh Excel, supaya nilai hasil formula ikut tersimpan (nomor style berupa formula, mis. `=A9+1`). File yang disimpan oleh tool yang tidak menghitung formula (mis. skrip openpyxl) tidak punya nilai itu; `extract`/`run` lalu berhenti dengan exit 1 dan menyebut contoh selnya. Buka dan simpan ulang file di Excel, lalu jalankan lagi.
 - `raw.json` ditulis segera setelah Tahap 1 berhasil. `final.json` hanya ditulis bila validasi lolos (jumlah colorway = jumlah record, key record ada di header IM, WHS hanya tiga nilai, tidak ada nilai tebakan). Bila validasi gagal, tiap error dicatat dan `final.json` tidak ditulis.
 - Ringkasan (jumlah style, record, WHS per nilai, WS TAG COLOR terisi/null, needs_review per kode) dicetak ke stdout. Log (progres, jumlah warning, error) ke stderr. Folder output dibuat otomatis.
 - JSON ditulis UTF-8, `ensure_ascii=False`, indent 2.
