@@ -1,0 +1,26 @@
+# Data input (besar, rahasia) — jangan di-commit
+data/*
+!data/README.md
+
+# Output matrix2im
+out/
+output/
+/raw.json
+/final.json
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# OS / Excel
+.DS_Store
+~$*.xlsx
+
+# Workspace superpowers
+.superpowers/
+.worktrees/
