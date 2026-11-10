@@ -204,3 +204,10 @@ def test_warnings_not_a_list_raises():
     raw["warnings"] = "oops"
     with pytest.raises(Matrix2ImError, match="warnings"):
         transform(raw)
+
+
+def test_tag_prefix_only_gives_null_and_tag_empty_with_instruction():   # F1
+    doc = transform(raw_of(style(tag="TAG:", above=[cw(["A"])])))
+    assert doc["records"][0]["WS TAG COLOR"] is None
+    item = by_code(doc, "TAG_EMPTY")[0]
+    assert item["record"] == 0 and item["tag_instruction"] == "TAG:" and item["issue"] == "TAG kosong"

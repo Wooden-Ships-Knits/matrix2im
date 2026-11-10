@@ -1,6 +1,6 @@
 import pytest
 
-from matrix_to_im.review import Code
+from matrix_to_im.review import Code, Problem
 from matrix_to_im.tag_rules import build_ws_tag_color, color_name, unique_yarns
 
 
@@ -51,3 +51,13 @@ def test_tag_without_cn_and_spacing():
 def test_c10_not_confused_with_c1():
     yarns = [f"Y{i}" for i in range(1, 11)]
     assert build_ws_tag_color("TAG: C10", yarns) == ("Y10", None)
+
+
+@pytest.mark.parametrize("tag", ["TAG:", "TAG", "TAG: -", "TAG : / ."])
+def test_tag_without_letters_or_digits_is_empty(tag):     # F1
+    assert build_ws_tag_color(tag, ["A", "B"]) == (None, Problem(Code.TAG_EMPTY, "TAG kosong"))
+
+
+def test_tag_c0_out_of_range():                            # F2
+    v, p = build_ws_tag_color("TAG: C0", ["A", "B"])
+    assert v is None and p == Problem(Code.TAG_CN_OUT_OF_RANGE, "TAG minta C0 tapi colorway hanya punya 2 benang")

@@ -5,6 +5,8 @@ from .legend_config import (TAG_ALIAS, TAG_CONDITIONAL_MARKERS, TAG_DOUBLE_SUFFI
                             YARN_CODE_SUFFIX_RE, YARN_PREFIX_RE)
 from .review import Code, Problem
 
+_CN = re.compile(r"\bC(\d+)\b")
+
 
 def color_name(yarn: str) -> str:
     """Nama benang -> nama warna: buang prefix pemasok dan kode angka, lalu terapkan alias.
@@ -38,11 +40,15 @@ def build_ws_tag_color(tag: str | None, yarns: list[str]) -> tuple[str | None, P
     if any(m in t for m in TAG_CONDITIONAL_MARKERS):
         return None, Problem(Code.TAG_CONDITIONAL, "TAG kondisional / singkatan: perlu aturan khusus")
     body = re.sub(r"^TAG\s*:?\s*", "", t).strip()
-    missing = [m for m in re.findall(r"\bC(\d+)\b", body) if int(m) > len(yarns)]
+    # "TAG:" saja atau "TAG: -" tidak memuat nama warna; string kosong/tanda baca bukan nilai IM.
+    if not re.search(r"[^\W_]", body):
+        return None, Problem(Code.TAG_EMPTY, "TAG kosong")
+    # C0 juga di luar jangkauan: tanpa cek ini yarns[-1] diam-diam memilih benang terakhir.
+    missing = [m for m in _CN.findall(body) if not 1 <= int(m) <= len(yarns)]
     if missing:
         return None, Problem(Code.TAG_CN_OUT_OF_RANGE,
                              f"TAG minta C{missing[0]} tapi colorway hanya punya {len(yarns)} benang")
-    val = re.sub(r"\bC(\d+)\b", lambda m: color_name(yarns[int(m.group(1)) - 1]), body)
+    val = _CN.sub(lambda m: color_name(yarns[int(m.group(1)) - 1]), body)
     # Catatan header IM: "STRIPE tanpa D".
     val = re.sub(r"\bSTRIPED\b", "STRIPE", val)
     # Nama benang sudah berakhir dengan sufiks itu ("OYSTER MARL" + " MARL"), jadi lipat jadi satu.
