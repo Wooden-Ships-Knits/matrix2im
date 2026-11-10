@@ -158,6 +158,34 @@ def test_transform_validation_failure_writes_nothing(tmp_path, matrix):
     assert not final.exists()
 
 
+def test_failed_run_removes_stale_final(tmp_path, matrix, caplog):     # F7
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "final.json").write_text('{"lama": true}', encoding="utf-8")
+    im = build_im(tmp_path / "im.xlsx", drop="COLOR2")
+    assert main(["run", str(matrix), "--im-master", str(im), "-o", str(out)]) == 1
+    assert (out / "raw.json").exists() and not (out / "final.json").exists()
+    assert any(r.levelname == "WARNING" and "dihapus" in r.getMessage() and "final.json" in r.getMessage()
+               for r in caplog.records)
+
+
+def test_failed_transform_removes_stale_final(tmp_path, matrix):
+    raw, final = tmp_path / "raw.json", tmp_path / "final.json"
+    assert main(["extract", str(matrix), "-o", str(raw)]) == 0
+    final.write_text('{"lama": true}', encoding="utf-8")
+    im = build_im(tmp_path / "im.xlsx", drop="COLOR2")
+    assert main(["transform", str(raw), "-o", str(final), "--im-master", str(im)]) == 1
+    assert not final.exists()
+
+
+def test_run_with_unreadable_im_removes_stale_final(tmp_path, matrix):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "final.json").write_text('{"lama": true}', encoding="utf-8")
+    assert main(["run", str(matrix), "--im-master", str(tmp_path / "nope.xlsx"), "-o", str(out)]) == 1
+    assert (out / "raw.json").exists() and not (out / "final.json").exists()
+
+
 def test_im_master_missing_returns_1(tmp_path, matrix):
     assert main(["run", str(matrix), "--im-master", str(tmp_path / "nope.xlsx"),
                  "-o", str(tmp_path / "out")]) == 1

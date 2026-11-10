@@ -57,14 +57,35 @@ def _extract_to(matrix: Path, raw_path: Path) -> dict:
     return raw
 
 
+def _remove_stale(path: Path) -> None:
+    """Hapus final lama di path tujuan agar tidak dikira hasil run yang baru saja gagal."""
+    if not path.is_file():
+        return
+    try:
+        path.unlink()
+    except OSError as exc:
+        log.warning("File lama %s tidak bisa dihapus: %s", path, exc)
+    else:
+        log.warning("File lama %s dihapus karena Tahap 2 gagal", path)
+
+
 def _transform_to(raw: dict, final_path: Path, im_master: Path | None) -> dict:
-    final = transform(raw)
-    header = read_im_header(im_master) if im_master else None
-    errors = validate(raw, final, header)
-    if errors:
-        for message in errors:
-            log.error(message)
-        raise Matrix2ImError(f"Validasi gagal ({len(errors)} error); {final_path} tidak ditulis")
+    """Tahap 2 + validasi; final hanya ditulis bila lolos.
+
+    Bila gagal (validasi, header IM, transformasi), final lama dari run sebelumnya dihapus:
+    kalau tidak, final itu tertinggal di samping raw.json baru seolah keduanya satu pasang.
+    """
+    try:
+        final = transform(raw)
+        header = read_im_header(im_master) if im_master else None
+        errors = validate(raw, final, header)
+        if errors:
+            for message in errors:
+                log.error(message)
+            raise Matrix2ImError(f"Validasi gagal ({len(errors)} error); {final_path} tidak ditulis")
+    except Exception:
+        _remove_stale(final_path)
+        raise
     write_json(final_path, final)
     log.info("Tahap 2 selesai: %d record -> %s", len(final["records"]), final_path)
     return final
