@@ -31,6 +31,6 @@ def find_data_file(kind: Literal["matrix", "im"]) -> Path | None:
 import pytest  # noqa: E402
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_finder():
     return find_data_file
