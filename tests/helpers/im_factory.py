@@ -29,6 +29,8 @@ class GroupSpec:
     description: str
     colorways: list[list[str]]
     subtotal: str | None = "BOTH WHS"
+    subtotal_label: str | None = None      # label baris subtotal apa adanya (menggantikan "<desc> - <subtotal>")
+    subtotal_func: str = "SUBTOTAL"        # nama fungsi di rumus subtotal (mis. huruf kecil)
     ws_tags: list[str | None] | None = None
     whs: list[str | None] | None = None
 
@@ -61,10 +63,10 @@ def build_im_sheet(path: Path, groups: list[GroupSpec], *, extra_header: dict[st
             ws.cell(row, _NOTE_COL, "catatan")
             row += 1
         if g.subtotal is not None:
-            ws.cell(row, 1, f"{g.description} - {g.subtotal}")
+            ws.cell(row, 1, g.subtotal_label or f"{g.description} - {g.subtotal}")
             last = row - 1
             rng = f"B{first}" if first == last else f"B{first}:B{last}"
-            ws.cell(row, 2, f"=SUBTOTAL(9,{rng})")
+            ws.cell(row, 2, f"={g.subtotal_func}(9,{rng})")
             row += 1
     wb.save(path)
     return path

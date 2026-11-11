@@ -46,7 +46,8 @@ IM_HEADER_ROW = 54
 IM_DESCRIPTION_KEY = "DESCRIPTION"
 IM_WS_TAG_KEY = "WS TAG COLOR"
 IM_WHS_KEY = "WHS"                      # yang ditulis: kolom tepat di kanan WS TAG COLOR (PRD aturan 6)
-IM_SUBTOTAL_RE = r" - (BOTH WHS|000 ONLY|SHOPIFY ONLY)\b"
+# Baris subtotal dikenali dari rumus SUBTOTAL, bukan label: label di IM asli bervariasi.
+IM_SUBTOTAL_FUNC = "SUBTOTAL"
 SOURCE_NAME = "F27 MATRIX MASTER"
 TARGET_NAME = "F27 IM MASTER (sheet F27, header baris 54)"
 # Arti font -> WHS warna di atas garis merah; di bawah garis merah selalu "SY".

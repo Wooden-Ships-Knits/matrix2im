@@ -301,7 +301,7 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 1. Ditambahkan penulis IM MASTER: `matrix2im write` dan panel **Tulis ke IM MASTER** di UI (multi-sesi, satu penulis pada satu waktu). Aturan 1 sampai 7 di "Fase berikutnya" berlaku penuh.
 2. Pengaman: cocokkan password ubah dengan hash `fileSharing`, cek file `~$`, cadangan bertanggal, deteksi perubahan file sejak rencana, verifikasi hasil, dan log JSONL (`matrix2im-log.jsonl`, tanpa password).
 3. Sisip baris lewat Excel (baris utuh, `fill down` terbatas); nilai sel ditulis langsung di XML sheet. openpyxl tidak pernah menyimpan IM MASTER. Setting `insert_engine = "none"` hanya mengisi baris yang ada.
-4. Regression F27 pada salinan uji AI TEST V2: 211 style tanpa dilewati; 184 sisipan (321 baris, 27 di grup 1 baris) dan 195 style IM tanpa data MATRIX. Angka ini berbeda dari perkiraan spike (177 / 286 / 179) karena grup kini juga dipecah saat DESCRIPTION berubah.
+4. Regression F27 pada salinan uji AI TEST V2: 211 style tanpa dilewati; 181 sisipan (294 baris, 24 di grup 1 baris) dan 195 style IM tanpa data MATRIX. Angka ini berbeda dari perkiraan spike (177 / 286 / 179) karena grup kini juga dipecah saat DESCRIPTION berubah. Baris subtotal dikenali dari rumus SUBTOTAL, bukan label.
 5. Dokumentasi: README bagian "Menulis ke IM MASTER" dan daftar uji terima `docs/uji-terima-tulis-im.md`.
 
 ### 10 November 2026: hasil review `needs_review`

@@ -9,7 +9,7 @@ import openpyxl
 
 from .errors import Matrix2ImError
 from .legend_config import (
-    IM_COLOR_KEYS, IM_DESCRIPTION_KEY, IM_HEADER_ROW, IM_SHEET, IM_SUBTOTAL_RE, IM_WHS_KEY, IM_WS_TAG_KEY,
+    IM_COLOR_KEYS, IM_DESCRIPTION_KEY, IM_HEADER_ROW, IM_SHEET, IM_SUBTOTAL_FUNC, IM_WHS_KEY, IM_WS_TAG_KEY,
 )
 
 
@@ -61,7 +61,7 @@ def read_layout(path: Path, sheet: str = IM_SHEET, header_row: int = IM_HEADER_R
         last = ws.max_column
         header: dict[str, int] = {}
         columns: ImColumns | None = None
-        subtotal_re = re.compile(IM_SUBTOTAL_RE)
+        func_re = re.compile(rf"=\s*{re.escape(IM_SUBTOTAL_FUNC)}\(", re.IGNORECASE)
         groups: list[ImGroup] = []
         values: dict[tuple[int, int], object] = {}
         formulas: dict[int, dict[int, str]] = {}
@@ -93,12 +93,10 @@ def read_layout(path: Path, sheet: str = IM_SHEET, header_row: int = IM_HEADER_R
                 continue
             desc_raw = row[columns.description - 1] if len(row) >= columns.description else None
             desc = normalize(desc_raw)
-            if " - " in desc and subtotal_re.search(desc):
-                if cur_desc is not None and desc.startswith(cur_desc + " - "):
-                    close(r)
-                else:
-                    close(None)
-                formulas[r] = {c: v for c, v in enumerate(row, 1) if isinstance(v, str) and v.startswith("=")}
+            row_formulas = {c: v for c, v in enumerate(row, 1) if isinstance(v, str) and v.startswith("=")}
+            if any(func_re.match(v) for v in row_formulas.values()):
+                close(r)
+                formulas[r] = row_formulas
                 continue
             if not desc:
                 close(None)

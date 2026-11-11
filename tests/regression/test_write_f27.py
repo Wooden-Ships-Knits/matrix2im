@@ -19,14 +19,15 @@ from matrix_to_im.xlsx_cells import apply_cell_values, sheet_xml_path
 
 pytestmark = pytest.mark.regression
 
-# Angka rencana sisip F27 (salinan uji "AI TEST V2"). Spike awal memperkirakan 177 op / 286 baris /
-# 179 style IM tak cocok karena mengelompokkan baris hanya di baris subtotal. Aturan pengelompokan
-# Task 2 juga memecah grup saat DESCRIPTION berubah (varian "- SY ONLY", "-BOTH WHS", label musim
-# seperti GRASSY/FALL, dll.), sehingga hasil nyata: 184 op, 321 baris, 27 op grup 1 baris, 195 style.
-# Penjelasan rinci ada di .superpowers/sdd/2026-11-10-tulis-im-master/task-12-report.md (bagian R3).
-EXPECTED_OPS = 184
-EXPECTED_ROWS = 321
-EXPECTED_SINGLE_ROW_OPS = 27
+# Angka rencana sisip F27 (salinan uji "AI TEST V2"), setelah R14 (baris subtotal = baris ber-rumus
+# SUBTOTAL, bukan label). Spike awal memperkirakan 177 op / 286 baris / 179 style IM tak cocok
+# dengan pengelompokan yang berbeda; pembacaan berbasis label sebelumnya juga salah (10 baris
+# subtotal berlabel varian terbaca sebagai baris data, 4 baris data "... BOTH WHS - ALT n" terbaca
+# sebagai subtotal). Hasil nyata kini: 181 op, 294 baris, 24 op grup 1 baris, 195 style IM tak cocok.
+# Penjelasan: .superpowers/sdd/2026-11-10-tulis-im-master/task-12-report.md (R3 dan fix R14).
+EXPECTED_OPS = 181
+EXPECTED_ROWS = 294
+EXPECTED_SINGLE_ROW_OPS = 24
 EXPECTED_UNMATCHED_IM_STYLES = 195
 
 
@@ -40,6 +41,25 @@ def colorways(golden_final):
 @pytest.fixture(scope="module")
 def layout(im_write_path):
     return read_layout(im_write_path)
+
+
+def test_subtotal_rows_by_formula_f27(im_write_path, layout):
+    """R14: baris subtotal = baris ber-rumus SUBTOTAL; label bervariasi dan tidak menentukan."""
+    import openpyxl
+    wb = openpyxl.load_workbook(im_write_path, read_only=True)   # hanya baca, tidak pernah save
+    try:
+        sub_rows = {r for r, row in enumerate(wb[IM_SHEET].iter_rows(values_only=True), 1)
+                    if any(isinstance(v, str) and re.match(r"=\s*subtotal\(", v, re.I) for v in row)}
+    finally:
+        wb.close()
+    assert sub_rows == set(layout.subtotal_formulas)
+    group_rows = {r for g in layout.groups for r in g.rows}
+    assert not sub_rows & group_rows
+    assigned = {g.subtotal_row for g in layout.groups if g.subtotal_row is not None}
+    assert assigned <= sub_rows
+    assert {2976, 9305} <= sub_rows        # label varian "-BOTH WHS" dan "- SY ONLY" yang dulu terlewat
+    assert 8207 in group_rows and 8207 not in sub_rows   # WHITNEY ... BOTH WHS - ALT 1: baris data
+    assert {2976, 9305} <= assigned
 
 
 def test_style_colorways_f27(golden_final):

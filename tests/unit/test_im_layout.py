@@ -57,6 +57,33 @@ def test_groups_and_subtotals(tmp_path):
     ]
 
 
+def test_subtotal_detected_by_formula_not_label(tmp_path):
+    """R14: label subtotal di file nyata bervariasi; hanya rumus SUBTOTAL yang menentukan."""
+    groups = [
+        GroupSpec("AAA - K", _cw(2), subtotal_label="AAA - K -BOTH WHS"),
+        GroupSpec("AAA - L", _cw(1), subtotal_label="AAA - L - SY ONLY"),
+        GroupSpec("AAA - M", _cw(1), subtotal_label="AAA - M-  SHOPIFY ONLY - FAH\n(New design)"),
+    ]
+    lay = read_layout(build_im_sheet(tmp_path / "im.xlsx", groups))
+    assert [(g.description, g.rows, g.subtotal_row) for g in lay.groups] == [
+        ("AAA - K", (55, 56), 57), ("AAA - L", (58,), 59), ("AAA - M", (60,), 61)]
+    assert set(lay.subtotal_formulas) == {57, 59, 61}
+
+
+def test_label_without_subtotal_formula_is_data_row(tmp_path):
+    groups = [GroupSpec("BBB - K - BOTH WHS - ALT 1", _cw(2), subtotal=None)]
+    lay = read_layout(build_im_sheet(tmp_path / "im.xlsx", groups))
+    assert [(g.description, g.rows, g.subtotal_row) for g in lay.groups] == [
+        ("BBB - K - BOTH WHS - ALT 1", (55, 56), None)]
+    assert lay.subtotal_formulas == {}
+
+
+def test_lowercase_subtotal_function_counts(tmp_path):
+    groups = [GroupSpec("CCC - K", _cw(1), subtotal_func="subtotal")]
+    lay = read_layout(build_im_sheet(tmp_path / "im.xlsx", groups))
+    assert lay.groups[0].subtotal_row == 56
+
+
 def test_normalize():
     assert normalize("Reegan  cable - x/s ") == "REEGAN CABLE - X/S"
     assert normalize(None) == ""
