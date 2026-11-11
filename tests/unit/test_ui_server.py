@@ -99,6 +99,19 @@ def test_index_page_is_html(base):
     assert b"matrix2im" in body
 
 
+def test_index_has_write_panel(base):
+    """Panel tulis ada di halaman, memakai endpoint tulis, dan tidak memuat apa pun dari jaringan."""
+    _, _, body = call(f"{base}/")
+    html = body.decode("utf-8")
+    for needle in ("Tulis semua ke IM", 'id="write-password"', 'type="password"', 'autocomplete="off"',
+                   "/api/write/config", "/api/write/prepare", "/api/write/commit", "/api/write/status",
+                   "Saya sudah memastikan tidak ada yang sedang membuka IM MASTER", "Buat rencana",
+                   "Sedang ada penulisan oleh"):
+        assert needle in html, needle
+    assert "http://" not in html and "https://" not in html
+    assert "localStorage" not in html and "sessionStorage" not in html
+
+
 def test_run_without_matrix_is_400(base):
     status, payload = run(base)
     assert status == 400

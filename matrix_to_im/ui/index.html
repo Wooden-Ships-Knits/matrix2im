@@ -162,6 +162,31 @@
   .warnings { display: grid; gap: 6px; }
   .warning { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; }
   .empty-state { color: var(--muted); padding: 24px; text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); }
+
+  /* ---------- tulis ke IM MASTER ---------- */
+  [hidden] { display: none !important; }
+  .write h2 { font-size: 16px; }
+  .write .hint { margin: 4px 0 12px; }
+  .wform { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; max-width: 320px; }
+  .field label { color: var(--muted); font-size: 12.5px; }
+  .field input { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .field input:disabled { opacity: .6; }
+  .field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .wsub { margin-top: 18px; }
+  .wsub h3 { font-size: 14px; margin-bottom: 6px; }
+  .wlist { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .wlist li { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 13px; word-break: break-word; }
+  .wlist li .sub { color: var(--muted); }
+  .wtable-wrap { max-height: 360px; }
+  .confirm { display: flex; gap: 8px; align-items: flex-start; margin-top: 18px; padding: 12px 14px; border-radius: var(--radius);
+             background: var(--warn-bg); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
+  .confirm input { margin-top: 3px; }
+  .alert.warn { background: var(--warn-bg); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+  .alert.info { background: var(--info-bg); color: var(--info); border-color: color-mix(in srgb, var(--info) 30%, transparent); }
+  .alert .mono { color: inherit; word-break: break-all; }
+  .alert dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 8px 0 0; }
+  .alert dd { margin: 0; word-break: break-word; }
   @media (max-width: 760px) { .controls .shown { margin-left: 0; } }
 </style>
 </head>
@@ -259,6 +284,45 @@
 
     <div class="panel" id="panel-warnings" role="tabpanel" hidden>
       <div class="warnings" id="warning-list"></div>
+    </div>
+  </section>
+
+  <div class="alert warn" id="write-busy" role="status" hidden></div>
+
+  <section class="card write" id="write" hidden>
+    <h2>Tulis ke IM MASTER</h2>
+    <div class="alert warn" id="write-disabled" hidden></div>
+    <div id="write-main">
+      <p class="hint">Hasil proses di atas akan dicocokkan dengan IM MASTER bersama. Buat rencana dulu untuk melihat pratinjau;
+        belum ada yang ditulis sampai Anda menekan <strong>Tulis semua ke IM</strong>.</p>
+      <form class="wform" id="write-form" autocomplete="off" onsubmit="return false">
+        <div class="field"><label for="write-name">Nama Anda</label>
+          <input type="text" id="write-name" autocomplete="off" maxlength="80"></div>
+        <div class="field"><label for="write-password">Password IM MASTER</label>
+          <input type="password" id="write-password" autocomplete="off"></div>
+        <button class="primary" id="write-prepare" type="button">Buat rencana</button>
+      </form>
+      <div class="alert error" id="write-error" role="alert" hidden></div>
+
+      <div id="write-preview" hidden>
+        <div class="tiles" id="write-tiles"></div>
+        <div class="wsub" id="write-changes"></div>
+        <div class="wsub" id="write-inserts"></div>
+        <div class="wsub" id="write-skipped"></div>
+        <div class="wsub" id="write-others"></div>
+        <div class="wsub" id="write-warnings"></div>
+        <div id="write-confirm-box">
+          <label class="confirm"><input type="checkbox" id="write-confirm">
+            <span>Saya sudah memastikan tidak ada yang sedang membuka IM MASTER</span></label>
+          <div class="actions">
+            <button class="primary" id="write-commit" type="button" disabled>Tulis semua ke IM</button>
+            <span class="status" id="write-phase" aria-live="polite"></span>
+          </div>
+          <div class="progress indeterminate" id="write-progress" hidden><div class="bar"></div></div>
+        </div>
+        <div id="write-nothing" class="alert info" hidden>Tidak ada perubahan yang perlu ditulis ke IM MASTER.</div>
+      </div>
+      <div id="write-report" hidden></div>
     </div>
   </section>
 </main>
@@ -386,6 +450,8 @@
       showError(err.message);
       setStatus("");
       $("#results").hidden = true;
+      data = null;
+      refreshWritePanel();
     } finally {
       setProgress(undefined);
       $("#run").disabled = !files.matrix;
@@ -416,6 +482,7 @@
     $("#count-warnings").textContent = num(data.raw.warnings.length);
     $("#results").hidden = false;
     selectTab(currentTab);
+    refreshWritePanel();
   }
 
   function renderValidation() {
@@ -672,6 +739,211 @@
     document.querySelectorAll(".panel").forEach((p) => { p.hidden = p.id !== `panel-${name}`; });
   }
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => selectTab(t.dataset.tab)));
+
+  // ---------- tulis ke IM MASTER ----------
+  // Password hanya hidup di variabel `writePw` selama rencana aktif: tidak ke storage, URL, DOM lain, atau konsol.
+  const PHASES = {
+    "mulai": "Memulai…", "cek password": "Memeriksa password…", "cadangan": "Membuat cadangan IM MASTER…",
+    "Excel: sisip baris": "Excel menyisipkan baris (bisa makan beberapa menit)…", "tulis nilai": "Menulis nilai sel…",
+    "verifikasi": "Memverifikasi hasil…", "simpan ke IM MASTER": "Menyimpan ke IM MASTER…", "selesai": "Selesai",
+  };
+  const NET_ERR = "Koneksi ke server terputus. Pastikan `matrix2im ui` masih berjalan di terminal.";
+  let writeCfg = null, writePlan = null, writePw = "", writeTimer = null, writeBusy = false, writeOwn = false;
+
+  const colLetter = (n) => { let s = ""; for (let c = Number(n); c > 0; c = Math.floor((c - 1) / 26)) s = String.fromCharCode(65 + ((c - 1) % 26)) + s; return s; };
+  const cellVal = (v) => v === null || v === undefined || v === "" ? '<span class="null">kosong</span>' : esc(v);
+
+  async function postJson(url, payload) {
+    let resp;
+    try {
+      resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    } catch { throw Object.assign(new Error(NET_ERR), { status: 0 }); }
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw Object.assign(new Error(body.error || `HTTP ${resp.status}`), { status: resp.status });
+    return body;
+  }
+  function writeShowError(msg) { const el = $("#write-error"); el.innerHTML = `<strong>Gagal</strong>${esc(msg)}`; el.hidden = false; }
+  function writeHideError() { $("#write-error").hidden = true; }
+
+  function writeSyncButtons() {
+    const hasPlan = Boolean(writePlan);
+    $("#write-prepare").disabled = writeBusy;
+    $("#write-name").disabled = writeBusy || hasPlan;
+    $("#write-password").disabled = writeBusy || hasPlan;
+    $("#write-confirm").disabled = writeBusy;
+    $("#write-commit").disabled = writeBusy || !$("#write-confirm").checked;
+    $("#write-prepare").textContent = hasPlan ? "Buat rencana ulang" : "Buat rencana";
+  }
+  function writeSetBusy(on, phaseText) {
+    writeBusy = on;
+    $("#write-progress").hidden = !on;
+    $("#run").disabled = on || !files.matrix;   // proses ulang tidak boleh jalan saat menulis
+    $("#write-phase").textContent = phaseText || "";
+    writeSyncButtons();
+  }
+  function writeResetPlan() {
+    writePlan = null; writePw = "";
+    $("#write-password").value = "";
+    $("#write-preview").hidden = true;
+    $("#write-confirm").checked = false;
+    $("#write-phase").textContent = "";
+    writeSyncButtons();
+  }
+  function refreshWritePanel() {   // dipanggil setiap hasil proses baru; rencana lama sudah dibuang server
+    writeResetPlan();
+    $("#write-report").hidden = true;
+    writeHideError();
+    const sec = $("#write");
+    sec.hidden = !data || !writeCfg;
+    if (sec.hidden) return;
+    const off = !writeCfg.enabled;
+    $("#write-disabled").hidden = !off;
+    $("#write-main").hidden = off;
+    if (off) $("#write-disabled").innerHTML = `<strong>Penulisan ke IM MASTER belum aktif</strong>${esc(writeCfg.reason || "")}`;
+  }
+
+  function listBlock(title, items, fmt) {
+    if (!items.length) return "";
+    return `<h3>${esc(title)} (${num(items.length)})</h3><ul class="wlist">${items.map((x) => `<li>${fmt(x)}</li>`).join("")}</ul>`;
+  }
+  function renderWritePreview(p) {
+    const s = p.summary;
+    const tile = (label, value, sub) => `<div class="tile"><div class="label">${label}</div><div class="value">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ""}</div>`;
+    $("#write-tiles").innerHTML = [
+      tile("Style cocok", num(s.styles), `${num(s.groups)} grup di IM`),
+      tile("Sel berubah", num(s.cells_changed)),
+      tile("Baris disisipkan", num(s.rows_inserted)),
+      tile("Grup disisipi", num(s.groups_inserted)),
+      tile("Baris ganti colorway", num(s.changed_colorway_rows)),
+      tile("Grup kurang baris", num(s.short_groups)),
+      tile("Style dilewati", num(s.skipped)),
+      tile("Style IM tak ada di MATRIX", num(s.unmatched_im_styles)),
+      tile("Peringatan", num(s.warnings)),
+      tile("Engine sisip", `<span class="mono">${esc(s.engine)}</span>`),
+    ].join("");
+
+    const shown = p.changes.length;
+    $("#write-changes").innerHTML = shown ? `<h3>Perubahan sel</h3>
+      <p class="hint">Menampilkan ${num(shown)} dari ${num(p.changes_total)} perubahan${p.changes_total > shown ? " (sisanya tetap ditulis)" : ""}.</p>
+      <div class="table-wrap wtable-wrap"><table><thead><tr><th>Sel</th><th>Lama</th><th>Baru</th></tr></thead><tbody>
+      ${p.changes.map((c) => `<tr><td class="ref">${colLetter(c.col)}${c.row}</td><td>${cellVal(c.old)}</td><td>${cellVal(c.new)}</td></tr>`).join("")}
+      </tbody></table></div>` : "";
+    $("#write-inserts").innerHTML = listBlock("Baris yang akan disisipkan", p.inserts, (x) => `${esc(x.description)} <span class="sub">· +${num(x.count)} baris</span>`);
+    $("#write-skipped").innerHTML = listBlock("Style dilewati", p.skipped, (x) => `<b>${esc(x.style)}</b> <span class="sub">· ${esc(x.reason)}</span>`);
+    $("#write-others").innerHTML = listBlock("Grup kurang baris", p.short_groups, esc)
+      + listBlock("Style IM tak ada di MATRIX", p.unmatched_im_styles, esc);
+    $("#write-warnings").innerHTML = listBlock("Peringatan", p.warnings, esc);
+
+    const nothing = s.cells_changed === 0 && s.rows_inserted === 0;
+    $("#write-confirm-box").hidden = nothing;
+    $("#write-nothing").hidden = !nothing;
+    $("#write-confirm").checked = false;
+    $("#write-preview").hidden = false;
+    writeSyncButtons();
+  }
+
+  async function writePrepare() {
+    writeHideError();
+    $("#write-report").hidden = true;
+    const name = $("#write-name").value.trim();
+    const pw = writePlan ? writePw : $("#write-password").value;
+    if (!name) { writeShowError("Isi nama Anda dulu"); return; }
+    if (!pw) { writeShowError("Isi password IM MASTER"); return; }
+    writeSetBusy(true, "Membuat rencana…");
+    try {
+      const p = await postJson("/api/write/prepare", { name, password: pw });
+      writePlan = p; writePw = pw;
+      $("#write-password").value = "";
+      renderWritePreview(p);
+    } catch (err) {
+      writeResetPlan();
+      writeShowError(err.message);
+      if (err.status === 401) $("#write-password").focus();   // nama dipertahankan, password sudah dikosongkan
+    } finally {
+      writeSetBusy(false);
+    }
+  }
+
+  async function writeCommit() {
+    if (!writePlan || !$("#write-confirm").checked) return;
+    writeHideError();
+    $("#write-report").hidden = true;
+    writeSetBusy(true, PHASES["mulai"]);
+    const token = writePlan.token, pw = writePw;
+    try {
+      await postJson("/api/write/commit", { token, password: pw });
+    } catch (err) {
+      writeSetBusy(false);
+      writeShowError(err.message);
+      if (err.status === 401 || err.status === 409 || err.status === 403) writeResetPlan();
+      return;
+    }
+    writeOwn = true;
+    writePw = "";   // server sudah memegang password untuk job ini
+    pollWrite();
+  }
+
+  function renderWriteReport(st) {
+    writeResetPlan();
+    const box = $("#write-report");
+    if (st.state === "done") {
+      const r = st.report || {};
+      const sm = r.summary || {};
+      box.innerHTML = `<div class="alert ok"><strong>Penulisan selesai</strong>${esc(r.message || "")}
+        <dl><dt>Cadangan</dt><dd class="mono">${esc(r.backup || "(tidak ada)")}</dd>
+        <dt>Sel diubah</dt><dd>${num(sm.cells_changed ?? 0)}</dd>
+        <dt>Baris disisipkan</dt><dd>${num(sm.rows_inserted ?? 0)}${(r.inserted_rows || []).length ? ` (baris ${esc(r.inserted_rows.join(", "))})` : ""}</dd>
+        <dt>Durasi</dt><dd>${esc(String(r.seconds ?? "").replace(".", ","))} detik</dd></dl></div>`;
+    } else {
+      box.innerHTML = `<div class="alert error"><strong>Penulisan gagal</strong>${esc(st.error || "Penulisan gagal")}
+        <div class="files">IM MASTER asli tidak diubah bila gagal sebelum langkah simpan. Cadangan terakhir ada di folder cadangan (backup_dir) dan
+        catatan lengkap di berkas log di folder yang sama. Buat rencana lagi untuk mencoba ulang.</div></div>`;
+    }
+    box.hidden = false;
+  }
+
+  function stopPolling() { if (writeTimer) { clearInterval(writeTimer); writeTimer = null; } }
+  async function pollOnce() {
+    let st;
+    try {
+      const resp = await fetch("/api/write/status");
+      st = await resp.json();
+    } catch {
+      $("#write-phase").textContent = "Koneksi terputus, mencoba lagi…";
+      return;
+    }
+    if (st.state === "running") {
+      if (writeOwn) writeSetBusy(true, PHASES[st.phase] || st.phase || "Menulis…");
+      else showBusyBanner(st);
+      return;
+    }
+    stopPolling();
+    $("#write-busy").hidden = true;
+    if (writeOwn) { writeOwn = false; writeSetBusy(false); renderWriteReport(st); }
+    else writeSyncButtons();
+  }
+  function pollWrite() { stopPolling(); pollOnce(); writeTimer = setInterval(pollOnce, 2000); }
+  function showBusyBanner(st) {
+    const el = $("#write-busy");
+    el.innerHTML = `<strong>Sedang ada penulisan oleh ${esc(st.user || "pengguna lain")}</strong>Tunggu sampai selesai sebelum menulis; halaman ini memeriksa tiap 2 detik.`;
+    el.hidden = false;
+  }
+
+  async function initWrite() {
+    try {
+      writeCfg = await (await fetch("/api/write/config")).json();
+    } catch { writeCfg = null; }
+    try {
+      const st = await (await fetch("/api/write/status")).json();
+      if (st.state === "running") { showBusyBanner(st); pollWrite(); }
+    } catch { /* status awal tidak kritis */ }
+    refreshWritePanel();
+  }
+  $("#write-prepare").addEventListener("click", writePrepare);
+  $("#write-commit").addEventListener("click", writeCommit);
+  $("#write-confirm").addEventListener("change", writeSyncButtons);
+  $("#write-password").addEventListener("keydown", (e) => { if (e.key === "Enter") writePrepare(); });
+  initWrite();
 })();
 </script>
 </body>
