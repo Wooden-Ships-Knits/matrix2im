@@ -152,3 +152,10 @@ def test_blank_label_subtotal_still_closes_group(tmp_path):
 def test_wrapped_subtotal_is_not_a_subtotal_row(tmp_path):
     lay = _layout_with_formula(tmp_path, "=ROUND(SUBTOTAL(9,B55:B56),0)", "AAA - K - BOTH WHS")
     assert lay.subtotal_formulas == {} and lay.groups[0].subtotal_row is None
+
+
+def test_ws_tag_fills_read_for_group_rows(tmp_path):
+    p = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("S - X/S", [["A"], ["B"], ["C"]],
+                                                        ws_tag_fills=["FF99FF", None, "969696"])])
+    lay = read_layout(p)
+    assert lay.fills == {(55, 24): "FF99FF", (56, 24): None, (57, 24): "969696"}

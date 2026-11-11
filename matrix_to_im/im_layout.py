@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import openpyxl
 
 from .errors import Matrix2ImError
+from .xlsx_cells import read_fills
 from .legend_config import (
     IM_COLOR_KEYS, IM_DESCRIPTION_KEY, IM_GROUP_KEY_SEGMENTS, IM_HEADER_ROW, IM_SHEET, IM_SUBTOTAL_FUNC,
     IM_WHS_KEY, IM_WS_TAG_KEY,
@@ -41,6 +42,8 @@ class ImLayout:
     groups: list[ImGroup]
     values: dict[tuple[int, int], object]
     subtotal_formulas: dict[int, dict[int, str]]
+    # Warna latar WS TAG COLOR per baris grup (kunci xlsx_styles.fill_key: "FF99FF", None = tanpa warna).
+    fills: dict[tuple[int, int], str | None] = field(default_factory=dict)
 
 
 def _find(header: dict[str, int], key: str) -> int:
@@ -113,4 +116,10 @@ def read_layout(path: Path, sheet: str = IM_SHEET, header_row: int = IM_HEADER_R
         wb.close()
     if columns is None:
         raise Matrix2ImError(f"Header IM MASTER baris {header_row} kosong")
-    return ImLayout(columns, groups, values, formulas)
+    try:
+        fills = read_fills(path, sheet, [(r, columns.ws_tag) for g in groups for r in g.rows])
+    except Matrix2ImError:
+        raise
+    except Exception as exc:
+        raise Matrix2ImError(f"Warna sel tidak bisa dibaca: {path} ({exc})") from exc
+    return ImLayout(columns, groups, values, formulas, fills)

@@ -15,7 +15,8 @@ from matrix_to_im.im_writer import commit_write, prepare_write
 from matrix_to_im.legend_config import IM_SHEET
 from matrix_to_im.settings import Settings
 from matrix_to_im.write_plan import plan_inserts, plan_values, project_layout, style_colorways
-from matrix_to_im.xlsx_cells import apply_cell_values, sheet_xml_path
+from matrix_to_im.xlsx_cells import apply_cell_values, read_fills, sheet_xml_path
+from matrix_to_im.xlsx_styles import check_appended
 
 pytestmark = pytest.mark.regression
 
@@ -125,19 +126,23 @@ def test_value_plan_f27_runs_fast(im_write_path, colorways):
 
 
 def test_apply_values_on_copy_keeps_parts(tmp_path, im_write_path, colorways, layout):
-    """Tanpa sisip (engine none): hanya sheet XML dan workbook.xml yang boleh berbeda."""
+    """Tanpa sisip (engine none): hanya sheet XML, workbook.xml, dan styles.xml (format baru di akhir) berbeda."""
     plan = plan_values(layout, colorways)
-    assert plan.changes
+    assert plan.changes and plan.fills
     dst = tmp_path / "hasil.xlsx"
     start = time.perf_counter()
-    apply_cell_values(im_write_path, dst, IM_SHEET, plan.changes)
+    apply_cell_values(im_write_path, dst, IM_SHEET, plan.changes, plan.fills)
     assert time.perf_counter() - start < 30
     with zipfile.ZipFile(im_write_path) as a, zipfile.ZipFile(dst) as b:
         assert a.namelist() == b.namelist()
         sheet = _sheet_part(a)
         changed = {n for n in a.namelist() if a.read(n) != b.read(n)}
-        assert changed <= {sheet, "xl/workbook.xml"}
+        assert changed <= {sheet, "xl/workbook.xml", "xl/styles.xml"}
         assert sheet in changed
+        check_appended(a.read("xl/styles.xml"), b.read("xl/styles.xml"))
+    got = read_fills(dst, IM_SHEET, [(f.row, f.col) for f in plan.fills])
+    assert got == {(f.row, f.col): f.new for f in plan.fills}
+    assert not plan_values(read_layout(dst), colorways).fills        # sekali tulis sudah tuntas
     password = os.environ.get("MATRIX2IM_IM_PASSWORD")
     if password:
         check_modify_password(dst, password)

@@ -116,3 +116,16 @@ def test_extra_rows_listed(tmp_path, monkeypatch):
                                      "colorway MATRIX lebih sedikit; WS TAG COLOR dan WHS dikosongkan",
                                      "baris lebih")]
     assert {r[1] for r in kinds["ubah"]} == {"X56", "Y56"}
+
+
+def test_fill_rows_show_old_and_new_color(tmp_path, monkeypatch):
+    monkeypatch.setattr(im_writer, "excel_available", lambda: True)
+    im = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("AAA - K", [["a"], ["b"]], ws_tags=["T", "T"],
+                                                         whs=["SY", "SY"], ws_tag_fills=["FFFF00", "FFCC99"])])
+    add_file_sharing(im)
+    st = Settings(im_master=im, backup_dir=tmp_path / "cadangan", insert_engine="excel")
+    p = prepare_write({"records": [_rec("AAA", ["a"], 1, ws="T", whs="BOTH WHS")]}, st, TEST_PASSWORD)
+    kinds = _by_kind(report_rows(p))
+    assert kinds["warna"] == [
+        ("AAA - K", "X55", "55", "WS TAG COLOR (warna latar)", "FFFF00", "969696", "warna"),
+        ("AAA - K", "X56", "56", "WS TAG COLOR (warna latar)", "FFCC99", "tanpa warna", "warna")]

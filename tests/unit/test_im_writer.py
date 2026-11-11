@@ -1,4 +1,5 @@
 import dataclasses
+from copy import copy
 import json
 import logging
 import os
@@ -13,7 +14,9 @@ from openpyxl import load_workbook
 from matrix_to_im import im_writer
 from matrix_to_im.errors import Matrix2ImError
 from matrix_to_im.im_layout import read_layout
-from matrix_to_im.write_plan import CellChange
+from matrix_to_im.write_plan import CellChange, FillChange
+from matrix_to_im.xlsx_cells import read_fills
+from matrix_to_im.xlsx_styles import check_appended
 from matrix_to_im.im_lock import check_modify_password
 from matrix_to_im.im_writer import commit_write, fingerprint, prepare_write
 from matrix_to_im.settings import Settings
@@ -47,7 +50,10 @@ def _simple(tmp_path, engine="none"):
 
 
 def fake_inserter(path, password, ops, sheet, last_col, drop=0):
-    """Sisip via openpyxl pada file sintetis (tanpa gambar) lalu pulihkan fileSharing."""
+    """Sisip via openpyxl pada file sintetis (tanpa gambar) lalu pulihkan fileSharing.
+
+    Seperti fill down Excel, baris sisipan menyalin nilai dan format (termasuk warna) baris sumber.
+    """
     wb = load_workbook(path)
     ws = wb[sheet]
     for op in ops:
@@ -55,6 +61,7 @@ def fake_inserter(path, password, ops, sheet, last_col, drop=0):
         for r in range(op.at_row, op.at_row + op.count - drop):
             for c in range(1, ws.max_column + 1):
                 ws.cell(r, c).value = ws.cell(op.fill_from, c).value
+                ws.cell(r, c)._style = copy(ws.cell(op.fill_from, c)._style)
     wb.save(path)
     add_file_sharing(path)
     return 0.1
@@ -353,12 +360,13 @@ def test_commit_aborts_when_values_differ_from_plan(tmp_path, monkeypatch):
     _aborted(st, rep, "Perubahan nilai", im, before, ino)
 
 
-def _patch_apply(monkeypatch, mutate_changes=None, mutate_out=None):
+def _patch_apply(monkeypatch, mutate_changes=None, mutate_out=None, mutate_fills=None):
     real = im_writer.apply_cell_values
 
-    def wrapped(src, dst, sheet, changes):
-        changes = list(changes)
-        real(src, dst, sheet, mutate_changes(changes) if mutate_changes else changes)
+    def wrapped(src, dst, sheet, changes, fills=()):
+        changes, fills = list(changes), list(fills)
+        real(src, dst, sheet, mutate_changes(changes) if mutate_changes else changes,
+             mutate_fills(fills) if mutate_fills else fills)
         if mutate_out:
             mutate_out(dst)
 
@@ -853,3 +861,86 @@ def test_skipped_style_not_counted_as_unmatched_im_style(tmp_path):
     p = prepare_write(final, st, PW)
     assert [k.style for k in p.skipped] == ["BBB"]
     assert p.values.unmatched_im_styles == ["CCC"] and p.summary["unmatched_im_styles"] == 1
+
+
+
+# ---------- warna latar WS TAG COLOR ----------
+
+def _painted(tmp_path, engine="none", groups=None):
+    groups = groups or [GroupSpec("AAA - K", [["a1"], ["a2"], ["a3"]], ws_tags=["T1", "T2", "OLD"],
+                                  whs=["000", "SY", "000"], ws_tag_fills=["FF99FF", "FFFF00", "FF99FF"])]
+    im, st = _make(tmp_path, groups, engine)
+    final = {"records": [_rec("AAA", ["a1"], "T1", "000", 1), _rec("AAA", ["a2"], "T2", "BOTH WHS", 2)]}
+    return im, st, final
+
+
+def test_commit_paints_ws_tag_by_whs_and_clears_extra_row(tmp_path):
+    im, st, final = _painted(tmp_path)
+    p = prepare_write(final, st, PW)
+    assert p.summary["fills_changed"] == 2 and p.summary["extra_rows"] == 1
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    assert rep.ok, rep.message
+    assert "2 warna WS TAG COLOR diubah" in rep.message
+    assert read_fills(im, "F27", [(55, 24), (56, 24), (57, 24)]) == {
+        (55, 24): "FF99FF", (56, 24): "969696", (57, 24): None}
+    assert _values(im, 56) == ["a2", "T2", "BOTH WHS"]
+    assert _values(im, 57) == ["a3", None, None]                       # COLOR baris lebih dibiarkan
+    with zipfile.ZipFile(rep.backup) as a, zipfile.ZipFile(im) as b:
+        check_appended(a.read("xl/styles.xml"), b.read("xl/styles.xml"))
+    check_modify_password(im, PW)
+
+
+def test_commit_inserted_rows_get_whs_fill(tmp_path, excel_on):
+    groups = [GroupSpec("AAA - K", [["a1"]], ws_tags=["T1"], whs=["000"], ws_tag_fills=["FFFF00"])]
+    im, st, final = _painted(tmp_path, "excel", groups)
+    p = prepare_write(final, st, PW)
+    assert [(f.row, f.old, f.new) for f in p.values.fills] == [(55, "FFFF00", "FF99FF"), (56, "FFFF00", "969696")]
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=fake_inserter)
+    assert rep.ok, rep.message
+    assert read_fills(im, "F27", [(55, 24), (56, 24)]) == {(55, 24): "FF99FF", (56, 24): "969696"}
+
+
+def test_commit_aborts_when_fill_not_written_as_planned(tmp_path, monkeypatch):
+    im, st, final = _painted(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    _patch_apply(monkeypatch, mutate_fills=lambda fs: [dataclasses.replace(fs[0], new="FFFF00"), *fs[1:]])
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, "Verifikasi gagal: warna sel X56", im, before, ino)
+
+
+def test_commit_aborts_when_styles_change_beyond_append(tmp_path, monkeypatch):
+    im, st, final = _painted(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    _patch_apply(monkeypatch, mutate_out=lambda dst: _rewrite_entry(
+        dst, "xl/styles.xml", lambda b: b.replace(b'<sz val="11"', b'<sz val="12"', 1)))
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, "styles.xml", im, before, ino)
+
+
+def test_commit_aborts_when_styles_change_without_planned_fills(tmp_path, monkeypatch):
+    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a1"]])])
+    final = {"records": [_rec("AAA", ["x1"], "T1", None, 1)]}       # WHS tak diketahui: warna tidak diubah
+    p = prepare_write(final, st, PW)
+    assert p.values.fills == []
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    _patch_apply(monkeypatch, mutate_out=lambda dst: _rewrite_entry(
+        dst, "xl/styles.xml", lambda b: b.replace(b'<sz val="11"', b'<sz val="12"', 1)))
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, "bagian lain", im, before, ino)
+
+
+def test_commit_aborts_when_fills_differ_from_plan(tmp_path, monkeypatch):
+    im, st, final = _painted(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    real = im_writer.plan_values
+
+    def other(layout, colorways):
+        plan = real(layout, colorways)
+        return dataclasses.replace(plan, fills=[*plan.fills, FillChange(55, 24, "FF99FF", "FFCC99")])
+
+    monkeypatch.setattr(im_writer, "plan_values", other)
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, "warna", im, before, ino)

@@ -34,6 +34,7 @@ class GroupSpec:
     subtotal_func: str = "SUBTOTAL"        # nama fungsi di rumus subtotal (mis. huruf kecil)
     ws_tags: list[str | None] | None = None
     whs: list[str | None] | None = None
+    ws_tag_fills: list[str | None] | None = None   # warna latar WS TAG COLOR (6 hex) per baris
 
 
 def build_im_sheet(path: Path, groups: list[GroupSpec], *, extra_header: dict[str, str] | None = None) -> Path:
@@ -61,6 +62,8 @@ def build_im_sheet(path: Path, groups: list[GroupSpec], *, extra_header: dict[st
                 ws.cell(row, _WS_TAG_COL, g.ws_tags[i])
             if g.whs and g.whs[i] is not None:
                 ws.cell(row, _WHS_COL, g.whs[i])
+            if g.ws_tag_fills and g.ws_tag_fills[i] is not None:
+                ws.cell(row, _WS_TAG_COL).fill = PatternFill("solid", fgColor="FF" + g.ws_tag_fills[i])
             ws.cell(row, _NOTE_COL, "catatan")
             row += 1
         if g.subtotal is not None:

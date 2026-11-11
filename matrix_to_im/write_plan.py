@@ -10,7 +10,7 @@ from openpyxl.utils import get_column_letter
 
 from .errors import Matrix2ImError
 from .im_layout import ImGroup, ImLayout, normalize
-from .legend_config import IM_ACCESSORY_RE, IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS, WHS_VALUES
+from .legend_config import IM_ACCESSORY_RE, IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS, WHS_VALUES, WS_TAG_FILL_BY_WHS
 
 _REF_RE = re.compile(r"^(?P<sheet>.+?)(?: \((?P<section>[^)]*)\))? No\.(?P<no>.+?) \| ")
 _WHS_BY_SET = {parts: name for name, parts in WHS_SETS.items()}
@@ -189,13 +189,17 @@ def project_layout(layout: ImLayout, ops: list[InsertOp]) -> ImLayout:
                 None if g.subtotal_row is None else shift(g.subtotal_row))
         for i, g in enumerate(layout.groups)
     ]
-    values = {(shift(r), c): v for (r, c), v in layout.values.items()}
-    for new_row, src in inserted.items():
-        for (r, c), v in list(values.items()):
-            if r == src:
-                values[(new_row, c)] = v
+    def copy_rows(cells: dict) -> dict:
+        """Geser ke koordinat baru; baris sisipan = salinan baris sumbernya (nilai dan format, seperti fill down)."""
+        out = {(shift(r), c): v for (r, c), v in cells.items()}
+        for new_row, src in inserted.items():
+            for (r, c), v in list(out.items()):
+                if r == src:
+                    out[(new_row, c)] = v
+        return out
+
     formulas = {shift(r): dict(f) for r, f in layout.subtotal_formulas.items()}
-    return ImLayout(layout.columns, groups, values, formulas)
+    return ImLayout(layout.columns, groups, copy_rows(layout.values), formulas, copy_rows(layout.fills))
 
 
 _ACCESSORY = re.compile(IM_ACCESSORY_RE)
@@ -210,12 +214,22 @@ class CellChange:
     new: str | None
 
 
+@dataclass(frozen=True)
+class FillChange:
+    """Warna latar satu sel (WS TAG COLOR) yang berubah; kode 6 hex (mis. "FF99FF"), None = tanpa warna."""
+    row: int
+    col: int
+    old: str | None
+    new: str | None
+
+
 @dataclass
 class ValuePlan:
     changes: list[CellChange] = field(default_factory=list)
     changed_colorway_rows: list[int] = field(default_factory=list)
     short_groups: list[str] = field(default_factory=list)
     extra_rows: list[int] = field(default_factory=list)   # baris grup melebihi jumlah colorway MATRIX
+    fills: list[FillChange] = field(default_factory=list)  # warna latar WS TAG COLOR yang berubah
     unmatched_im_styles: list[str] = field(default_factory=list)
     missing_styles: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -270,11 +284,17 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
                 elif (None if _blank(old) else str(old)) != new and not (_blank(old) and new is None):
                     plan.changes.append(CellChange(row, col, old, new))
 
+            def paint(new: str | None) -> None:
+                old = layout.fills.get((row, cols.ws_tag))
+                if old != new:
+                    plan.fills.append(FillChange(row, cols.ws_tag, old, new))
+
             if i >= n:
-                # Baris lebih: WS TAG COLOR dan WHS dikosongkan, COLOR dibiarkan (keputusan user 11 Nov 2026).
+                # Baris lebih: WS TAG COLOR dan WHS dikosongkan tanpa warna, COLOR dibiarkan (keputusan user 11 Nov 2026).
                 plan.extra_rows.append(row)
                 put(cols.ws_tag, None)
                 put(cols.whs, None)
+                paint(None)
                 continue
             cw = cws[i]
             yarns = cw.colors[:len(cols.colors)]
@@ -297,6 +317,8 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
                 put(cols.ws_tag, cw.ws_tag)
             if cw.whs is not None:
                 put(cols.whs, cw.whs)
+            if cw.whs in WS_TAG_FILL_BY_WHS:
+                paint(WS_TAG_FILL_BY_WHS[cw.whs])
     plan.unmatched_im_styles = sorted(unmatched)
     plan.missing_styles = [s for s in colorways if s not in matched]
     return plan

@@ -355,3 +355,39 @@ def test_old_whs_label_rejected():
     final = _final(_rec("HUTTON", ["A"], "S1 No.1 | B1 | g", whs="000 & SY"))
     with pytest.raises(Matrix2ImError, match=r"WHS '000 & SY'.*buat ulang final\.json"):
         style_colorways(final)
+
+
+# ---- warna latar WS TAG COLOR menurut WHS ----
+
+from matrix_to_im.write_plan import FillChange  # noqa: E402
+
+
+def _flayout(groups, fills, values=None):
+    return ImLayout(_VCOLS, groups, values or {}, {}, fills)
+
+
+def test_ws_tag_fill_follows_whs():
+    """000 = FF99FF, SY = FFCC99, BOTH WHS = 969696 (permintaan user 11 Nov 2026); yang sudah benar tidak diubah."""
+    lay = _flayout([_grp("S - X/S", [5, 6, 7])], {(5, 20): "FF99FF", (6, 20): "FFFF00"})
+    plan = plan_values(lay, {"S": [_cw(["A"], whs="000"), _cw(["B"], whs="SY"), _cw(["C"], whs="BOTH WHS")]})
+    assert plan.fills == [FillChange(6, 20, "FFFF00", "FFCC99"), FillChange(7, 20, None, "969696")]
+
+
+def test_ws_tag_fill_untouched_when_whs_unknown():
+    lay = _flayout([_grp("S - X/S", [5])], {(5, 20): "FFFF00"})
+    assert plan_values(lay, {"S": [_cw(["A"], whs=None)]}).fills == []
+
+
+def test_extra_row_fill_removed():
+    lay = _flayout([_grp("S - X/S", [5, 6, 7])], {(5, 20): "FF99FF", (6, 20): "FF99FF"})
+    plan = plan_values(lay, {"S": [_cw(["A"], whs="000")]})
+    assert plan.fills == [FillChange(6, 20, "FF99FF", None)]       # baris 7 sudah tanpa warna
+
+
+def test_project_layout_copies_fills_to_inserted_rows():
+    lay = ImLayout(_COLS, [ImGroup("S - X/S", (55, 56), 57), ImGroup("T - X/S", (58,), 59)], {}, {},
+                   {(55, 3): "FF99FF", (56, 3): "FFCC99", (58, 3): "969696"})
+    ops = plan_inserts(lay, {"S": _cws(3), "T": _cws(2)})
+    proj = project_layout(lay, ops)
+    assert proj.fills == {(55, 3): "FF99FF", (56, 3): "FF99FF", (57, 3): "FFCC99",
+                          (59, 3): "969696", (60, 3): "969696"}

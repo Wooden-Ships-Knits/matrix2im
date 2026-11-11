@@ -226,3 +226,75 @@ def test_row_search_is_linear(tmp_path, monkeypatch):
         assert frm >= prev_end, f"baris {row}: pencarian mulai di {frm}, sebelum akhir baris sebelumnya {prev_end}"
         prev_end = end
     assert load_workbook(tmp_path / "o.xlsx")[IM_SHEET].cell(n, 3).value == "v"
+
+
+# ---- warna latar (fill) ----
+
+from openpyxl.styles import Font, PatternFill  # noqa: E402
+
+from matrix_to_im.write_plan import FillChange  # noqa: E402
+from matrix_to_im.xlsx_cells import read_fills  # noqa: E402
+from matrix_to_im.xlsx_styles import check_appended  # noqa: E402
+
+
+def _fill_wb(tmp_path):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = IM_SHEET
+    ws["X5"] = "T"
+    ws["X5"].fill = PatternFill("solid", fgColor="FFFF99FF")
+    ws["X6"] = "T"
+    ws["X7"] = "T"
+    ws["X7"].fill = PatternFill("solid", fgColor="FFFFCC99")
+    ws["X7"].font = Font(bold=True)
+    ws["A8"] = "a"                                   # X8 tidak ada di XML
+    ws["A9"] = "a"
+    ws.row_dimensions[9].fill = PatternFill("solid", fgColor="FF969696")   # gaya baris (customFormat)
+    ws["X11"] = "=1+1"
+    p = tmp_path / "f.xlsx"
+    wb.save(p)
+    return p
+
+
+def test_read_fills_cell_row_style_and_missing(tmp_path):
+    p = _fill_wb(tmp_path)
+    cells = [(5, 24), (6, 24), (7, 24), (8, 24), (9, 24), (10, 24)]
+    assert read_fills(p, IM_SHEET, cells) == {(5, 24): "FF99FF", (6, 24): None, (7, 24): "FFCC99",
+                                              (8, 24): None, (9, 24): "969696", (10, 24): None}
+    assert read_fills(p, IM_SHEET, []) == {}
+
+
+def test_fills_written_values_kept_other_parts_untouched(tmp_path):
+    p = _fill_wb(tmp_path)
+    dst = tmp_path / "out.xlsx"
+    fills = [FillChange(5, 24, "FF99FF", "FFCC99"), FillChange(6, 24, None, "969696"),
+             FillChange(7, 24, "FFCC99", None), FillChange(8, 24, None, "FF99FF"),
+             FillChange(9, 24, "969696", None), FillChange(11, 24, None, "FF99FF")]
+    apply_cell_values(p, dst, IM_SHEET, [CellChange(6, 24, "T", "U")], fills)
+    assert read_fills(dst, IM_SHEET, [(f.row, f.col) for f in fills]) == {(f.row, f.col): f.new for f in fills}
+    ws = load_workbook(dst)[IM_SHEET]
+    assert (ws["X5"].value, ws["X6"].value, ws["X7"].value, ws["X8"].value) == ("T", "U", "T", None)
+    assert ws["X7"].font.b and ws["X11"].value == "=1+1"
+    with zipfile.ZipFile(p) as a, zipfile.ZipFile(dst) as b:
+        check_appended(a.read("xl/styles.xml"), b.read("xl/styles.xml"))
+        changed = {n for n in a.namelist() if a.read(n) != b.read(n)}
+        assert {sheet_xml_path(a, IM_SHEET), "xl/styles.xml"} <= changed
+        assert changed <= {sheet_xml_path(a, IM_SHEET), "xl/workbook.xml", "xl/styles.xml"}
+
+
+def test_fill_on_cell_with_same_style_reuses_format(tmp_path):
+    p = _fill_wb(tmp_path)
+    one, two = tmp_path / "1.xlsx", tmp_path / "2.xlsx"
+    apply_cell_values(p, one, IM_SHEET, [], [FillChange(5, 24, "FF99FF", "FFCC99")])
+    apply_cell_values(one, two, IM_SHEET, [], [FillChange(6, 24, None, "FF99FF"),
+                                               FillChange(5, 24, "FFCC99", "FF99FF")])
+    with zipfile.ZipFile(one) as a, zipfile.ZipFile(two) as b:
+        xfs = [re.search(rb'<cellXfs count="(\d+)"', z.read("xl/styles.xml")).group(1) for z in (a, b)]
+    assert xfs[0] == xfs[1]                          # format X5 asli dipakai lagi, tidak menumpuk
+
+
+def test_no_fills_leaves_styles_untouched(im, tmp_path):
+    dst = tmp_path / "out.xlsx"
+    apply_cell_values(im, dst, IM_SHEET, [CellChange(R1, 5, "RED", "NAVY")], [])
+    with zipfile.ZipFile(im) as a, zipfile.ZipFile(dst) as b:
+        assert a.read("xl/styles.xml") == b.read("xl/styles.xml")

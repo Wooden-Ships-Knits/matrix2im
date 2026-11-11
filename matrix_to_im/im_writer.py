@@ -34,7 +34,8 @@ from .write_plan import (
     InsertOp, Skip, ValuePlan, match_style, plan_inserts, plan_values, project_layout, style_colorways,
 )
 from .write_report import inserted_rows, report_rows, report_xlsx_bytes
-from .xlsx_cells import apply_cell_values, sheet_xml_path
+from .xlsx_cells import apply_cell_values, sheet_xml_path, styles_xml_path
+from .xlsx_styles import check_appended
 
 try:
     import fcntl
@@ -171,6 +172,7 @@ def prepare_write(final: dict, settings: Settings, password: str) -> WritePrevie
         "styles": len({m for m in matched if m is not None}),
         "groups": sum(m is not None for m in matched),
         "cells_changed": len(values.changes),
+        "fills_changed": len(values.fills),
         "rows_inserted": sum(o.count for o in ops),
         "groups_inserted": len(ops),
         "changed_colorway_rows": len(values.changed_colorway_rows),
@@ -252,23 +254,30 @@ def _check_excel_kept(backup: Path, tmp: Path) -> list[str]:
     return []
 
 
-def _verify_written(tmp: Path, tmp2: Path, password: str, changes: list) -> None:
+def _verify_written(tmp: Path, tmp2: Path, password: str, changes: list, fills: list = ()) -> None:
     layout = read_layout(tmp2)
     for ch in changes:
         got = layout.values.get((ch.row, ch.col))
         blank = got is None or str(got).strip() == ""
         if (ch.new is None and not blank) or (ch.new is not None and (blank or str(got) != ch.new)):
             raise Matrix2ImError(f"Verifikasi gagal: sel {get_column_letter(ch.col)}{ch.row} tidak sesuai rencana")
+    for f in fills:
+        if layout.fills.get((f.row, f.col)) != f.new:
+            raise Matrix2ImError(f"Verifikasi gagal: warna sel {get_column_letter(f.col)}{f.row} tidak sesuai rencana")
     _check_password(tmp2, password)
     # workbook.xml dikecualikan dari cek CRC di bawah, jadi atribut kunci (mis. readOnlyRecommended) dicek di sini.
     if diff := _sharing_diff(read_file_sharing(tmp), read_file_sharing(tmp2)):
         raise Matrix2ImError(f"Verifikasi gagal: fileSharing berubah ({', '.join(diff)})")
     with zipfile.ZipFile(tmp) as a, zipfile.ZipFile(tmp2) as b:
-        skip = {sheet_xml_path(a, IM_SHEET), "xl/workbook.xml"}
+        styles = styles_xml_path(a)
+        skip = {sheet_xml_path(a, IM_SHEET), "xl/workbook.xml", styles}
         crc_a = {i.filename: i.CRC for i in a.infolist() if i.filename not in skip}
         crc_b = {i.filename: i.CRC for i in b.infolist() if i.filename not in skip}
-    if crc_a != crc_b:
+        styles_a, styles_b = a.read(styles), b.read(styles)
+    if crc_a != crc_b or (styles_a != styles_b and not fills):
         raise Matrix2ImError("Verifikasi gagal: bagian lain dari file berubah selain sheet dan workbook.xml")
+    if styles_a != styles_b:
+        check_appended(styles_a, styles_b)    # warna: hanya boleh menambah format baru di akhir styles.xml
 
 
 def _write_bytes_in_place(target: Path, data: bytes) -> None:
@@ -323,6 +332,11 @@ def _log(log_file: Path, entry: dict) -> bool:
         return False
 
 
+def _cells(items: list) -> set[tuple]:
+    """Pembanding rencana: sel dan nilai/warna barunya (CellChange atau FillChange)."""
+    return {(c.row, c.col, c.new) for c in items}
+
+
 def _execute(preview: WritePreview, final: dict, settings: Settings, password: str,
              progress: Callable[[str], None], inserter: Callable[..., float], state: dict) -> None:
     """Langkah 1-9; state["backup"] diisi segera setelah cadangan dibuat agar tercatat walau gagal sesudahnya."""
@@ -359,13 +373,14 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
                                  "penulisan dibatalkan, file asli tidak diubah")
         progress("tulis nilai")
         colorways, _ = style_colorways(final)
-        planned = {(c.row, c.col, c.new) for c in preview.values.changes}
-        if {(c.row, c.col, c.new) for c in plan_values(real, colorways).changes} != planned:
-            raise Matrix2ImError("Perubahan nilai pada file hasil sisip tidak sama dengan rencana; "
+        again = plan_values(real, colorways)
+        if (_cells(again.changes) != _cells(preview.values.changes)
+                or _cells(again.fills) != _cells(preview.values.fills)):
+            raise Matrix2ImError("Perubahan nilai atau warna pada file hasil sisip tidak sama dengan rencana; "
                                  "penulisan dibatalkan, file asli tidak diubah")
-        apply_cell_values(tmp, tmp2, IM_SHEET, preview.values.changes)
+        apply_cell_values(tmp, tmp2, IM_SHEET, preview.values.changes, preview.values.fills)
         progress("verifikasi")
-        _verify_written(tmp, tmp2, password, preview.values.changes)
+        _verify_written(tmp, tmp2, password, preview.values.changes, preview.values.fills)
         progress("simpan ke IM MASTER")
         if fingerprint(path) != preview.fingerprint or owner_file(path) is not None:
             raise Matrix2ImError(_CHANGED_MSG)
@@ -450,6 +465,7 @@ def commit_write(preview: WritePreview, final: dict, settings: Settings, passwor
             _execute(preview, final, settings, password, progress, inserter, state)
             ok = True
             message = (f"IM MASTER diperbarui: {preview.summary['cells_changed']} sel diubah, "
+                       f"{preview.summary['fills_changed']} warna WS TAG COLOR diubah, "
                        f"{preview.summary['rows_inserted']} baris disisipkan.")
             if missing := len(preview.values.missing_styles):
                 message += f" {missing} style MATRIX tidak ada di IM (tidak ditulis)."

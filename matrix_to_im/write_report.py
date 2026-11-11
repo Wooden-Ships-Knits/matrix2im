@@ -28,6 +28,7 @@ REPORT_HEADER = ("DESCRIPTION", "sel", "baris", "kolom", "lama", "baru", "jenis"
 REPORT_SHEET = "Laporan"
 _BARIS = REPORT_HEADER.index("baris")
 EXTRA_ROW_NOTE = "colorway MATRIX lebih sedikit; WS TAG COLOR dan WHS dikosongkan"
+NO_FILL = "tanpa warna"
 
 
 def inserted_rows(ops: list[InsertOp]) -> list[tuple[str, int]]:
@@ -58,6 +59,10 @@ def report_rows(preview: WritePreview, notes: Iterable[str] = ()) -> list[tuple[
         letter = get_column_letter(c.col)
         rows.append((owner.get(c.row, ""), f"{letter}{c.row}", str(c.row), names.get(c.col, letter),
                      _text(c.old), _text(c.new), "ubah"))
+    for f in plan.fills:
+        rows.append((owner.get(f.row, ""), f"{get_column_letter(f.col)}{f.row}", str(f.row),
+                     f"{names.get(f.col, get_column_letter(f.col))} (warna latar)",
+                     f.old or NO_FILL, f.new or NO_FILL, "warna"))
     for description, row in inserted_rows(preview.inserts):
         rows.append((description, "", str(row), "", "", "baris sisipan (salinan baris di atasnya)", "sisip"))
     for row in plan.extra_rows:

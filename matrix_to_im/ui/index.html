@@ -811,6 +811,7 @@
     $("#write-tiles").innerHTML = [
       tile("Style cocok", num(s.styles), `${num(s.groups)} grup di IM`),
       tile("Sel berubah", num(s.cells_changed)),
+      tile("Warna WS TAG COLOR", num(s.fills_changed ?? 0), "000 pink · SY oranye · BOTH WHS abu"),
       tile("Baris disisipkan", num(s.rows_inserted)),
       tile("Grup disisipi", num(s.groups_inserted)),
       tile("Baris ganti colorway", num(s.changed_colorway_rows)),
@@ -837,7 +838,7 @@
       + listBlock("Style IM tak ada di MATRIX", p.unmatched_im_styles, esc);
     $("#write-warnings").innerHTML = listBlock("Peringatan", p.warnings, esc);
 
-    const nothing = s.cells_changed === 0 && s.rows_inserted === 0;
+    const nothing = s.cells_changed === 0 && s.rows_inserted === 0 && !s.fills_changed;
     $("#write-confirm-box").hidden = nothing;
     $("#write-nothing").hidden = !nothing;
     $("#write-confirm").checked = false;

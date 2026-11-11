@@ -48,6 +48,9 @@ IM_HEADER_ROW = 54
 IM_DESCRIPTION_KEY = "DESCRIPTION"
 IM_WS_TAG_KEY = "WS TAG COLOR"
 IM_WHS_KEY = "WHS"                      # yang ditulis: kolom tepat di kanan WS TAG COLOR (PRD aturan 6)
+# Warna latar sel WS TAG COLOR menurut WHS (permintaan user 11 Nov 2026; sama dengan kebiasaan di IM asli).
+# Baris lebih (WS TAG COLOR dikosongkan) dibuat tanpa warna.
+WS_TAG_FILL_BY_WHS = {"000": "FF99FF", "SY": "FFCC99", WHS_BOTH: "969696"}
 # Baris subtotal dikenali dari rumus SUBTOTAL, bukan label: label di IM asli bervariasi.
 IM_SUBTOTAL_FUNC = "SUBTOTAL"
 # Kunci grup = "STYLE - SIZE" (2 segmen " - "); teks sesudahnya di DESCRIPTION adalah catatan (mis. "- ALT 1").
