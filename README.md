@@ -109,7 +109,7 @@ Hanya satu orang yang bisa menulis pada satu waktu; sesi lain melihat pesan bahw
 
 Langkah ini dikerjakan sendiri oleh pengelola (menyangkut pengaturan sistem), bukan oleh tool:
 
-- **Google Drive:** beri aplikasi yang menjalankan server (Terminal/Python) izin ke folder Google Drive di System Settings, Privacy & Security, Files and Folders (atau Full Disk Access).
+- **Google Drive:** beri aplikasi yang menjalankan server (Terminal/Python) izin ke folder Google Drive di System Settings, Privacy & Security, Files and Folders (atau Full Disk Access). Tanpa izin ini, proses dan rencana tulis berhenti dengan pesan "Beri izin akses folder Google Drive ...".
 - **Automation:** saat pop-up pertama "Terminal ingin mengontrol Microsoft Excel" muncul, pilih izinkan (System Settings, Privacy & Security, Automation).
 - **Folder kerja:** Excel memakai salinan sementara di `<backup_dir>/kerja`. Pertama kali, macOS bisa bertanya apakah Excel boleh membuka file di sana; izinkan sekali saja.
 - **Tidak sleep:** atur Mac supaya tidak tidur (System Settings, Energy / Lock Screen).

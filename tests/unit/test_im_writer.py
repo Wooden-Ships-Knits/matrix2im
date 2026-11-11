@@ -812,3 +812,27 @@ def test_no_run_report_when_other_process_holds_lock(tmp_path):
     assert not list(st.backup_dir.glob("*laporan matrix2im.csv"))
     entry = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
     assert entry["laporan"] is None
+
+
+# ---------- M5: izin folder Google Drive ----------
+
+@pytest.mark.parametrize("where", ["is_file", "read"])
+def test_prepare_permission_error_points_to_drive_permission(tmp_path, monkeypatch, where):
+    im, st, final = _simple(tmp_path)
+    if where == "is_file":
+        real = Path.is_file
+
+        def denied(self):
+            if self == im:
+                raise PermissionError(1, "Operation not permitted", str(self))
+            return real(self)
+
+        monkeypatch.setattr(Path, "is_file", denied)
+    else:
+        def denied(path, password):
+            raise PermissionError(13, "Permission denied", str(path))
+
+        monkeypatch.setattr(im_writer, "check_modify_password", denied)
+    with pytest.raises(Matrix2ImError) as ei:
+        prepare_write(final, st, PW)
+    assert "izin akses folder Google Drive" in str(ei.value) and str(im) in str(ei.value)

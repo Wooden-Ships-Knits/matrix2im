@@ -59,6 +59,15 @@ class ImMasterBusy(Matrix2ImError):
     """IM MASTER sedang dibuka orang lain; UI memetakannya ke 409 tanpa mencocokkan teks pesan."""
 
 
+DRIVE_PERMISSION_HINT = ("Beri izin akses folder Google Drive ke aplikasi yang menjalankan matrix2im "
+                         '(README, bagian "Menyiapkan PC pusat").')
+
+
+def drive_access_error(path: Path, exc: OSError) -> Matrix2ImError:
+    """PermissionError dari folder Google Drive biasanya berarti izin macOS belum diberikan, bukan file rusak."""
+    return Matrix2ImError(f"IM MASTER tidak bisa dibuka: {path} ({exc.strerror or exc}). {DRIVE_PERMISSION_HINT}")
+
+
 @dataclass(frozen=True)
 class Fingerprint:
     """Sidik file IM MASTER saat rencana dibuat; beda berarti ada orang lain yang mengubahnya."""
@@ -129,11 +138,14 @@ def prepare_write(final: dict, settings: Settings, password: str) -> WritePrevie
     if settings.backup_dir is None:
         raise Matrix2ImError("Setting backup_dir belum diisi")
     path = settings.im_master
-    if not path.is_file():
-        raise Matrix2ImError(f"IM MASTER tidak ditemukan: {path}")
-    _check_password(path, password)
-    _no_owner(path)
-    fp = fingerprint(path)
+    try:
+        if not path.is_file():
+            raise Matrix2ImError(f"IM MASTER tidak ditemukan: {path}")
+        _check_password(path, password)
+        _no_owner(path)
+        fp = fingerprint(path)
+    except OSError as exc:
+        raise drive_access_error(path, exc) from exc
     layout = read_layout(path)
     colorways, skipped = style_colorways(final)
     warnings: list[str] = []

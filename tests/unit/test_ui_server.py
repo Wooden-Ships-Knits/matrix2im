@@ -972,3 +972,36 @@ def test_panel_has_csv_link_and_run_report_path(serve_with, sessions, tmp_path):
     post_json(base, "/api/write/commit", {"token": plan["token"], "password": "salah-pw"}, cookie)
     st = wait_state(base, cookie, ("error",))
     assert st["laporan"] and st["laporan"].endswith("laporan matrix2im.csv")
+
+
+def test_panel_idle_after_own_write_is_unknown_status_not_missing_backup(base):
+    """Server dimulai ulang saat menulis: status jadi idle; jangan klaim cadangan belum dibuat."""
+    _, _, body = call(f"{base}/")
+    html = body.decode("utf-8")
+    msg = "Status penulisan tidak diketahui (server dimulai ulang?). Periksa log dan folder cadangan."
+    assert msg in html
+    report_fn = html[html.index("function renderWriteReport"):html.index("function stopPolling")]
+    idle = report_fn.index('st.state === "idle"')
+    assert idle < report_fn.index(msg) < report_fn.index("belum dibuat (gagal sebelum langkah cadangan)")
+
+
+# ---------- M5: izin folder Google Drive ----------
+
+def test_run_settings_im_permission_error_points_to_drive_permission(serve_with, tmp_path, monkeypatch):
+    im = build_im(tmp_path / "im-setting.xlsx")
+    base = serve_with(Settings(im_master=im, backup_dir=tmp_path / "bak"))
+    cookie = _new_session(base)
+    call(f"{base}/api/upload/matrix", "POST", build_matrix(tmp_path / "m.xlsx").read_bytes(),
+         {"X-Filename": "m.xlsx", "Cookie": cookie})
+    real = Path.is_file
+
+    def denied(self):
+        if self == im:
+            raise PermissionError(1, "Operation not permitted", str(self))
+        return real(self)
+
+    monkeypatch.setattr(Path, "is_file", denied)
+    status, _, body = call(f"{base}/api/run", "POST", b"", {"Cookie": cookie})
+    payload = json.loads(body)
+    assert status == 422 and "izin akses folder Google Drive" in payload["error"]
+    assert "Menyiapkan PC pusat" in payload["error"]

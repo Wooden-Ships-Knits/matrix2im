@@ -888,7 +888,9 @@
   function renderWriteReport(st) {
     writeResetPlan();
     const box = $("#write-report");
-    if (st.state === "done") {
+    if (st.state === "idle") {   // server dimulai ulang: hasil job tak diketahui, jangan klaim apa pun soal cadangan
+      box.innerHTML = `<div class="alert warn"><strong>Status tidak diketahui</strong>Status penulisan tidak diketahui (server dimulai ulang?). Periksa log dan folder cadangan.</div>`;
+    } else if (st.state === "done") {
       const r = st.report || {};
       const sm = r.summary || {};
       box.innerHTML = `<div class="alert ok"><strong>Penulisan selesai</strong>${esc(r.message || "")}

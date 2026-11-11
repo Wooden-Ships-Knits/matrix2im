@@ -31,7 +31,9 @@ from openpyxl.utils import get_column_letter
 from .errors import Matrix2ImError
 from .legend_config import EXCEL_TIMEOUT_S
 from .im_lock import WrongPassword
-from .im_writer import ImMasterBusy, WritePreview, WriteReport, commit_write, prepare_write
+from .im_writer import (
+    ImMasterBusy, WritePreview, WriteReport, commit_write, drive_access_error, prepare_write,
+)
 from .settings import Settings
 from .extract import extract
 from .transform import transform
@@ -343,8 +345,14 @@ class _Handler(BaseHTTPRequestHandler):
             im = state.uploads.get("im")
             if im is None:   # tanpa upload IM, header diperiksa terhadap IM MASTER di setting
                 master = self.server.settings.im_master
-                if master is not None and master.is_file():
-                    im = (master, master.name)
+                try:
+                    if master is not None and master.is_file():
+                        with open(master, "rb"):    # cek izin baca di sini agar pesannya menunjuk langkah izin
+                            pass
+                        im = (master, master.name)
+                except OSError as exc:
+                    self._error(HTTPStatus.UNPROCESSABLE_ENTITY, str(drive_access_error(master, exc)))
+                    return
             if matrix is None:
                 self._error(HTTPStatus.BAD_REQUEST, "Upload file MATRIX MASTER dulu")
                 return
