@@ -84,7 +84,7 @@ Dengan `insert_engine = "none"` (atau bila Excel tidak terpasang), tool hanya me
 
 ### Lewat UI
 
-1. Jalankan `.venv/bin/matrix2im ui` (di PC pusat: `--host 0.0.0.0`, lihat di bawah), upload MATRIX dan IM MASTER, klik **Proses**, lalu periksa hasilnya.
+1. Jalankan `.venv/bin/matrix2im ui` (di PC pusat: `--host 0.0.0.0`, lihat di bawah), upload MATRIX, klik **Proses**, lalu periksa hasilnya. IM MASTER tidak perlu diupload: penulisan selalu memakai file `master` di `matrix2im.local.toml` (header file itu juga dipakai untuk validasi bila tidak ada upload IM). Kotak upload IM MASTER opsional dan hanya untuk validasi header (fase 1); file yang diupload di sana tidak pernah ditulis.
 2. Di panel **Tulis ke IM MASTER**, isi **Nama Anda** (masuk log) dan **Password IM MASTER**, lalu klik **Buat rencana**. Belum ada yang ditulis pada tahap ini.
 3. Periksa pratinjau: jumlah sel dan baris yang berubah, daftar sel (nilai lama dan baru), baris yang disisipkan, style yang dilewati, style MATRIX yang tidak ada di IM (tidak ditulis sama sekali), dan peringatan. Tabel di layar dibatasi 500 sel; klik **Unduh semua perubahan (CSV)** untuk daftar lengkap (format di "Laporan CSV" di bawah).
 4. Centang pernyataan bahwa tidak ada yang sedang membuka IM MASTER, lalu klik **Tulis semua ke IM**. Tunggu laporan; satu penulisan penuh F27 memakan waktu beberapa menit.
