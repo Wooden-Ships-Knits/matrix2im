@@ -86,7 +86,7 @@ Dengan `insert_engine = "none"` (atau bila Excel tidak terpasang), tool hanya me
 
 1. Jalankan `.venv/bin/matrix2im ui` (di PC pusat: `--host 0.0.0.0`, lihat di bawah), upload MATRIX dan IM MASTER, klik **Proses**, lalu periksa hasilnya.
 2. Di panel **Tulis ke IM MASTER**, isi **Nama Anda** (masuk log) dan **Password IM MASTER**, lalu klik **Buat rencana**. Belum ada yang ditulis pada tahap ini.
-3. Periksa pratinjau: jumlah sel dan baris yang berubah, daftar sel (nilai lama dan baru), baris yang disisipkan, style yang dilewati, style MATRIX yang tidak ada di IM (tidak ditulis sama sekali), dan peringatan.
+3. Periksa pratinjau: jumlah sel dan baris yang berubah, daftar sel (nilai lama dan baru), baris yang disisipkan, style yang dilewati, style MATRIX yang tidak ada di IM (tidak ditulis sama sekali), dan peringatan. Tabel di layar dibatasi 500 sel; klik **Unduh semua perubahan (CSV)** untuk daftar lengkap (format di "Laporan CSV" di bawah).
 4. Centang pernyataan bahwa tidak ada yang sedang membuka IM MASTER, lalu klik **Tulis semua ke IM**. Tunggu laporan; satu penulisan penuh F27 memakan waktu beberapa menit.
 
 Hanya satu orang yang bisa menulis pada satu waktu; sesi lain melihat pesan bahwa penulisan sedang berjalan.
@@ -102,6 +102,7 @@ Hanya satu orang yang bisa menulis pada satu waktu; sesi lain melihat pesan bahw
 ```
 
 - Password dibaca dari prompt (atau baris pertama stdin), tidak pernah dari argumen perintah. Tanpa terminal, `--yes` wajib.
+- `--report rencana.csv` menulis CSV semua perubahan rencana (juga dengan `--dry-run`), sebelum konfirmasi.
 - Opsi `--settings`, `--im-master`, `--backup-dir`, dan `--engine` menimpa isi `matrix2im.local.toml`. Exit code 0 bila berhasil, 1 bila gagal atau dibatalkan.
 
 ### Menyiapkan PC pusat
@@ -122,7 +123,8 @@ Langkah ini dikerjakan sendiri oleh pengelola (menyangkut pengaturan sistem), bu
 ### Cadangan, log, dan pemulihan
 
 - Tiap penulisan lebih dulu membuat cadangan `<nama> <tanggal jam> sebelum matrix2im.xlsx` di `backup_dir`. Folder `kerja` di sana hanya berisi salinan sementara dan dibersihkan sendiri.
-- Log berupa file `matrix2im-log.jsonl` di `backup_dir`, satu baris JSON per penulisan: waktu, nama user, nama file MATRIX yang diupload (di UI) atau nama file `final.json` (di CLI), ringkasan rencana, hasil (ok/gagal), pesan, dan path cadangan. Password tidak pernah dicatat. Penulisan yang gagal pun dicatat.
+- Log berupa file `matrix2im-log.jsonl` di `backup_dir`, satu baris JSON per penulisan: waktu, nama user, nama file MATRIX yang diupload (di UI) atau nama file `final.json` (di CLI), ringkasan rencana, hasil (ok/gagal), pesan, path cadangan, dan path laporan CSV (`laporan`). Password tidak pernah dicatat. Penulisan yang gagal pun dicatat.
+- **Laporan CSV:** tiap penulisan (berhasil maupun gagal) menyimpan `<nama> <tanggal jam> laporan matrix2im.csv` di `backup_dir`, sepasang dengan cadangannya; path-nya tampil di laporan UI dan CLI. Kolomnya `DESCRIPTION, sel, baris, kolom, lama, baru, jenis` (UTF-8 dengan BOM agar terbaca benar di Excel Windows). `jenis` berisi `ubah` (perubahan sel), `sisip` (baris sisipan, nomor barisnya di file hasil), `baris colorway berubah` (benang lama dan baru), `dilewati`, `tidak ada di IM` (style MATRIX yang tidak ditulis), `IM tanpa MATRIX`, atau `peringatan`; untuk empat jenis terakhir kolom `baru` berisi keterangan. Bila penulisan gagal, alasannya ada di baris `peringatan`. CSV yang sama bisa diunduh dari pratinjau UI atau ditulis lewat `--report`.
 - Selama menulis, tool memegang kunci file `matrix2im.lock` di `backup_dir`, supaya dua proses di PC yang sama (mis. CLI dan server) tidak menulis bersamaan; proses kedua langsung berhenti dengan pesan "Ada penulisan lain yang sedang berjalan (proses lain di PC ini)" tanpa menyentuh apa pun. Bila penulisan dihentikan paksa (Ctrl+C) saat isi IM MASTER sedang ditimpa, tool memulihkan isinya dari cadangan, memeriksa sha256-nya, dan mencatatnya di log.
 - **Memulihkan:** tutup IM MASTER di semua PC, lalu salin isi file cadangan menimpa file IM MASTER (isi ditimpa, bukan file diganti, supaya link Google Drive tetap). Di Google Drive, lebih baik pakai riwayat versi (klik kanan file, Kelola versi).
 

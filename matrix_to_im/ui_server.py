@@ -36,6 +36,7 @@ from .settings import Settings
 from .extract import extract
 from .transform import transform
 from .validate import read_im_header, validate
+from .write_report import report_csv_bytes, report_rows
 
 log = logging.getLogger("matrix2im.ui")
 
@@ -165,10 +166,12 @@ class WriteCoordinator:
                 if rep.ok:
                     fields = {"state": "done", "phase": "selesai", "report": {
                         "backup": str(rep.backup) if rep.backup else None, "seconds": round(rep.seconds, 2),
-                        "summary": rep.summary, "inserted_rows": rep.inserted_rows, "message": rep.message}}
+                        "summary": rep.summary, "inserted_rows": rep.inserted_rows, "message": rep.message,
+                        "laporan": str(rep.laporan) if rep.laporan else None}}
                 else:
                     fields = {"state": "error", "error": rep.message,
-                              "backup": str(rep.backup) if rep.backup else None}
+                              "backup": str(rep.backup) if rep.backup else None,
+                              "laporan": str(rep.laporan) if rep.laporan else None}
             except Matrix2ImError as exc:
                 fields = {"state": "error", "error": str(exc), "backup": None}
             except Exception as exc:  # noqa: BLE001 - hanya nama tipe; pesan asli bisa memuat data sensitif
@@ -248,6 +251,8 @@ class _Handler(BaseHTTPRequestHandler):
             self._write_config()
         elif path == "/api/write/status":
             self._json(HTTPStatus.OK, self.server.writer.status())
+        elif path == "/api/write/preview.csv":
+            self._write_preview_csv()
         else:
             self._error(HTTPStatus.NOT_FOUND, "Halaman tidak ditemukan")
 
@@ -488,6 +493,17 @@ class _Handler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.CONFLICT, self._busy_message() or "sedang ada penulisan oleh pengguna lain")
             return
         self._json(HTTPStatus.ACCEPTED, {"ok": True})
+
+    def _write_preview_csv(self) -> None:
+        """CSV semua perubahan rencana milik sesi ini (tabel di UI dibatasi 500 baris)."""
+        with self.state.wlock:
+            plan = self.state.write
+        if plan is None:
+            self._error(HTTPStatus.NOT_FOUND, "Belum ada rencana tulis; buat rencana dulu")
+            return
+        body = report_csv_bytes(report_rows(plan["preview"]))
+        self._send(HTTPStatus.OK, body, "text/csv; charset=utf-8",
+                   {"Content-Disposition": 'attachment; filename="rencana matrix2im.csv"'})
 
     def _download(self, name: str) -> None:
         last = self.state.last

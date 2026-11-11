@@ -929,3 +929,46 @@ def test_prepare_returns_missing_styles_and_panel_shows_them(serve_with, session
     html = body.decode("utf-8")
     assert html.count("Style MATRIX tidak ada di IM (tidak ditulis)") >= 2   # tile dan judul daftar
     assert "p.missing_styles" in html and "s.missing_styles" in html
+
+
+# ---------- I4: CSV rencana per sesi ----------
+
+def test_preview_csv_for_own_plan_only(serve_with, sessions, tmp_path):
+    im, settings, final = _write_env(tmp_path)
+    base = serve_with(settings)
+    a, b = _new_session(base), _new_session(base)
+    status, headers, body = call(f"{base}/api/write/preview.csv", headers={"Cookie": a})
+    assert status == 404 and "rencana" in json.loads(body)["error"]      # belum ada rencana
+    _inject(sessions, a, final)
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, a)
+    status, headers, body = call(f"{base}/api/write/preview.csv", headers={"Cookie": a})
+    assert status == 200
+    assert headers["Content-Type"].startswith("text/csv") and "attachment" in headers["Content-Disposition"]
+    assert body.startswith(b"\xef\xbb\xbf")
+    lines = body.decode("utf-8-sig").splitlines()
+    assert lines[0] == "DESCRIPTION,sel,baris,kolom,lama,baru,jenis"
+    assert sum(line.endswith(",ubah") for line in lines) == plan["changes_total"]
+    assert PW.encode() not in body and plan["token"].encode() not in body
+    status, _, _ = call(f"{base}/api/write/preview.csv", headers={"Cookie": b})   # sesi lain
+    assert status == 404
+
+
+def test_panel_has_csv_link_and_run_report_path(serve_with, sessions, tmp_path):
+    im, settings, final = _write_env(tmp_path)
+    base = serve_with(settings)
+    _, _, body = call(f"{base}/")
+    html = body.decode("utf-8")
+    assert "Unduh semua perubahan (CSV)" in html and "/api/write/preview.csv" in html
+    assert "r.laporan" in html and "st.laporan" in html
+    cookie = _new_session(base)
+    _inject(sessions, cookie, final)
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
+    post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, cookie)
+    st = wait_state(base, cookie, ("done", "error"))
+    assert st["state"] == "done" and st["report"]["laporan"].endswith("laporan matrix2im.csv")
+    assert Path(st["report"]["laporan"]).is_file()
+    post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
+    post_json(base, "/api/write/commit", {"token": plan["token"], "password": "salah-pw"}, cookie)
+    st = wait_state(base, cookie, ("error",))
+    assert st["laporan"] and st["laporan"].endswith("laporan matrix2im.csv")

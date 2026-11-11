@@ -33,6 +33,7 @@ from .settings import Settings
 from .write_plan import (
     InsertOp, Skip, ValuePlan, match_style, plan_inserts, plan_values, project_layout, style_colorways,
 )
+from .write_report import inserted_rows, report_csv_bytes, report_rows
 from .xlsx_cells import apply_cell_values, sheet_xml_path
 
 try:
@@ -103,6 +104,7 @@ class WriteReport:
     log_file: Path
     seconds: float
     inserted_rows: list[int]
+    laporan: Path | None = None      # CSV laporan run di folder cadangan
 
 
 def _check_password(path: Path, password: str) -> None:
@@ -170,11 +172,7 @@ def prepare_write(final: dict, settings: Settings, password: str) -> WritePrevie
 
 def _inserted_rows(ops: list[InsertOp]) -> list[int]:
     """Baris baru hasil sisipan, dalam koordinat akhir (rumus yang sama dengan project_layout)."""
-    rows: list[int] = []
-    for o in ops:
-        start = o.at_row + sum(p.count for p in ops if p.at_row < o.at_row)
-        rows.extend(range(start, start + o.count))
-    return sorted(rows)
+    return [row for _, row in inserted_rows(ops)]
 
 
 def _structure(layout: ImLayout) -> list[tuple]:
@@ -322,7 +320,7 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
         raise Matrix2ImError(_CHANGED_MSG)
     progress("cadangan")
     backup_dir.mkdir(parents=True, exist_ok=True)
-    backup = backup_dir / f"{path.stem} {datetime.now():%Y-%m-%d %H%M%S} sebelum matrix2im{path.suffix}"
+    backup = backup_dir / f"{path.stem} {state['stamp']} sebelum matrix2im{path.suffix}"
     shutil.copyfile(path, backup)
     if _sha256(backup) != preview.fingerprint.sha256:
         backup.unlink(missing_ok=True)
@@ -376,6 +374,16 @@ def _acquire_lock(backup_dir: Path):
     return handle
 
 
+def _write_run_report(preview: WritePreview, backup_dir: Path, stamp: str, notes: list[str]) -> Path | None:
+    """CSV laporan run, sepasang dengan nama cadangan; gagal menulis tidak boleh mengubah hasil penulisan."""
+    path = backup_dir / f"{preview.im_master.stem} {stamp} laporan matrix2im.csv"
+    try:
+        path.write_bytes(report_csv_bytes(report_rows(preview, notes)))
+    except OSError:
+        return None
+    return path
+
+
 def _interrupted(exc: BaseException, state: dict) -> str:
     """Pesan log untuk Ctrl+C/SIGTERM yang jujur tentang keadaan file asli."""
     notes = " ".join(getattr(exc, "__notes__", []))
@@ -396,20 +404,28 @@ def commit_write(preview: WritePreview, final: dict, settings: Settings, passwor
     if settings.backup_dir is None:
         raise Matrix2ImError("Setting backup_dir belum diisi")
     log_file = settings.backup_dir / LOG_NAME
-    state: dict = {"backup": None, "warnings": [], "written": False}
+    stamp = f"{datetime.now():%Y-%m-%d %H%M%S}"   # sama untuk cadangan dan laporan run
+    state: dict = {"backup": None, "warnings": [], "written": False, "stamp": stamp}
     lock = None
 
     def record(ok: bool, message: str) -> WriteReport:
         if password:
             message = message.replace(password, "***")
+        laporan = None
+        if lock is not None:     # hanya pemegang kunci yang menulis ke folder cadangan (nama bisa bentrok)
+            notes = state["warnings"] + ([] if ok else [f"Penulisan gagal: {message}"])
+            laporan = _write_run_report(preview, settings.backup_dir, stamp, notes)
+            if laporan is None:
+                message += " (laporan CSV gagal ditulis)"
         backup = state["backup"]
         entry = {"waktu": datetime.now().isoformat(timespec="seconds"), "user": user, "matrix": matrix_name,
                  "im_master": str(preview.im_master), "engine": preview.engine, "summary": preview.summary,
-                 "backup": str(backup) if backup else None, "hasil": "ok" if ok else "gagal", "pesan": message}
+                 "backup": str(backup) if backup else None, "hasil": "ok" if ok else "gagal", "pesan": message,
+                 "laporan": str(laporan) if laporan else None}
         if not _log(log_file, entry):
             message += " (catatan log gagal ditulis)"
         return WriteReport(ok, message, preview.summary, backup, log_file, time.monotonic() - start,
-                           _inserted_rows(preview.inserts) if ok else [])
+                           _inserted_rows(preview.inserts) if ok else [], laporan)
 
     try:
         try:

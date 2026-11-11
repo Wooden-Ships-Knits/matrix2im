@@ -360,3 +360,36 @@ def test_write_summary_lists_missing_styles_and_final_count(write_env, tmp_path,
     monkeypatch.setattr("sys.stdin", io.StringIO(TEST_PASSWORD + "\n"))
     assert main(argv + ["--yes"]) == 0
     assert "1 style MATRIX tidak ada di IM (tidak ditulis)" in capsys.readouterr().out
+
+
+def test_write_report_flag_dry_run_and_normal_run(write_env, tmp_path, monkeypatch, capsys):
+    im, argv = write_env
+    before = _sha(im)
+    report = tmp_path / "keluar" / "rencana.csv"
+    report.parent.mkdir()
+    assert main(argv + ["--dry-run", "--report", str(report)]) == 0
+    assert _sha(im) == before
+    data = report.read_bytes()
+    assert data.startswith(b"\xef\xbb\xbf")
+    lines = data.decode("utf-8-sig").splitlines()
+    assert lines[0] == "DESCRIPTION,sel,baris,kolom,lama,baru,jenis" and any(line.endswith(",ubah") for line in lines)
+    assert str(report) in capsys.readouterr().out
+    report.unlink()
+    monkeypatch.setattr("sys.stdin", io.StringIO(TEST_PASSWORD + "\n"))
+    assert main(argv + ["--yes", "--report", str(report)]) == 0
+    out = capsys.readouterr().out
+    assert report.read_bytes().startswith(b"\xef\xbb\xbf") and TEST_PASSWORD.encode() not in report.read_bytes()
+    run_reports = list((tmp_path / "cadangan").glob("* laporan matrix2im.csv"))
+    assert len(run_reports) == 1 and f"Laporan: {run_reports[0]}" in out
+
+
+def test_write_failure_prints_run_report_path(write_env, monkeypatch, capsys):
+    from pathlib import Path
+
+    from matrix_to_im.im_writer import WriteReport
+    im, argv = write_env
+    monkeypatch.setattr("matrix_to_im.cli.commit_write", lambda *a, **k: WriteReport(
+        False, "Gagal contoh", {}, None, Path("/x/log.jsonl"), 0.1, [], Path("/x/laporan.csv")))
+    assert main(argv + ["--yes"]) == 1
+    err = capsys.readouterr().err
+    assert "Laporan: /x/laporan.csv" in err

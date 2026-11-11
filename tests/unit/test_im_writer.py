@@ -170,7 +170,8 @@ def test_commit_engine_none_in_place_backup_log(tmp_path):
     lines = (st.backup_dir / "matrix2im-log.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(lines) == 1
     entry = json.loads(lines[0])
-    assert set(entry) == {"waktu", "user", "matrix", "im_master", "engine", "summary", "backup", "hasil", "pesan"}
+    assert set(entry) == {"waktu", "user", "matrix", "im_master", "engine", "summary", "backup", "hasil", "pesan",
+                          "laporan"}
     assert entry["hasil"] == "ok" and entry["user"] == "andi" and PW not in lines[0]
     assert rep.log_file == st.backup_dir / "matrix2im-log.jsonl" and rep.inserted_rows == []
     assert _kerja_empty(st)
@@ -747,3 +748,67 @@ def test_final_message_without_missing_styles_has_no_count(tmp_path):
     im, st, final = _simple(tmp_path)
     rep = commit_write(prepare_write(final, st, PW), final, st, PW, "andi", "m.xlsx")
     assert rep.ok and "tidak ada di IM" not in rep.message
+
+
+# ---------- I4: laporan CSV tiap run ----------
+
+def _report_path(st, im):
+    found = sorted(st.backup_dir.glob(f"{im.stem} * laporan matrix2im.csv"))
+    assert len(found) == 1, found
+    return found[0]
+
+
+def test_run_report_written_on_success_and_logged(tmp_path):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    assert rep.ok, rep.message
+    path = _report_path(st, im)
+    assert rep.laporan == path
+    stamp = rep.backup.name.removeprefix(f"{im.stem} ").removesuffix(" sebelum matrix2im.xlsx")
+    assert path.name == f"{im.stem} {stamp} laporan matrix2im.csv"          # pasangan cadangan
+    entry = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
+    assert entry["laporan"] == str(path)
+    data = path.read_bytes()
+    assert data.startswith(b"\xef\xbb\xbf") and PW.encode() not in data
+    text = data.decode("utf-8-sig")
+    assert text.splitlines()[0] == "DESCRIPTION,sel,baris,kolom,lama,baru,jenis"
+    assert text.count(",ubah") == len(p.values.changes)
+
+
+def test_run_report_written_on_abort_with_reason(tmp_path, excel_on):
+    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a"]])], "excel")
+    final = {"records": [_rec("AAA", ["x1"]), _rec("AAA", ["x2"], n=2)]}
+    p = prepare_write(final, st, PW)
+
+    def boom(*a, **k):
+        raise Matrix2ImError("Excel gagal: macet")
+
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=boom)
+    assert not rep.ok and rep.laporan is not None and rep.laporan == _report_path(st, im)
+    text = rep.laporan.read_text(encoding="utf-8-sig")
+    assert "Penulisan gagal: Excel gagal: macet" in text and ",sisip" in text
+    entry = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
+    assert entry["laporan"] == str(rep.laporan)
+
+
+def test_wrong_password_report_has_no_password(tmp_path):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    rep = commit_write(p, final, st, "salah-sandi-77", "andi", "m.xlsx")
+    assert not rep.ok and rep.laporan is not None
+    assert b"salah-sandi-77" not in rep.laporan.read_bytes() and PW.encode() not in rep.laporan.read_bytes()
+
+
+def test_no_run_report_when_other_process_holds_lock(tmp_path):
+    import fcntl
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    st.backup_dir.mkdir(parents=True)
+    with open(st.backup_dir / "matrix2im.lock", "a+b") as other:
+        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    assert not rep.ok and rep.laporan is None
+    assert not list(st.backup_dir.glob("*laporan matrix2im.csv"))
+    entry = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
+    assert entry["laporan"] is None

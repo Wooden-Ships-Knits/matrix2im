@@ -214,6 +214,7 @@ class ValuePlan:
     unmatched_im_styles: list[str] = field(default_factory=list)
     missing_styles: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    colorway_text: dict[int, tuple[str, str]] = field(default_factory=dict)   # baris -> (benang lama, baru)
 
 
 def _blank(v: object) -> bool:
@@ -259,16 +260,19 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
                     plan.changes.append(CellChange(row, col, old, new))
 
             old_yarns: list[str] = []
+            old_text: list[str] = []
             for j, col in enumerate(cols.colors):
                 old = layout.values.get((row, col))
                 if not _blank(old) and not _is_formula(old) and not _ACCESSORY.match(str(old)):
                     old_yarns.append(normalize(old))
+                    old_text.append(str(old))
                 if j < len(yarns):
                     put(col, yarns[j])
                 elif not _blank(old) and not _ACCESSORY.match(str(old)):
                     put(col, None)
             if tuple(old_yarns) != tuple(normalize(y) for y in yarns):
                 plan.changed_colorway_rows.append(row)
+                plan.colorway_text[row] = (" / ".join(old_text), " / ".join(yarns))
             if cw.ws_tag is not None and not (
                     cw.ws_tag == NEED_REVIEW and not _blank(layout.values.get((row, cols.ws_tag)))):
                 put(cols.ws_tag, cw.ws_tag)
