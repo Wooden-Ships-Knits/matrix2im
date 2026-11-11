@@ -445,6 +445,7 @@ class _Handler(BaseHTTPRequestHandler):
             "inserts": [{"description": o.description, "count": o.count} for o in preview.inserts],
             "skipped": [{"style": k.style, "reason": k.reason} for k in preview.skipped],
             "short_groups": values.short_groups, "unmatched_im_styles": values.unmatched_im_styles,
+            "missing_styles": values.missing_styles,
             "warnings": values.warnings, "engine": preview.engine, "token": token})
 
     def _write_commit(self) -> None:

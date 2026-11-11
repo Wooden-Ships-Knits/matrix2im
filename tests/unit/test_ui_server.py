@@ -914,3 +914,18 @@ def test_writer_thread_is_not_daemon():
     finally:
         gate.set()
         coord.wait(20)
+
+
+def test_prepare_returns_missing_styles_and_panel_shows_them(serve_with, sessions, tmp_path):
+    im, settings, final = _write_env(tmp_path)
+    final = {"records": [*final["records"], {"DESCRIPTION": "ZZZ", "COLOR1": "z", "WS TAG COLOR": None,
+                                             "WHS": None, "_ref": "SHEET No.9 | B1 | x"}]}
+    base = serve_with(settings)
+    cookie = _new_session(base)
+    _inject(sessions, cookie, final)
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
+    assert plan["missing_styles"] == ["ZZZ"] and plan["summary"]["missing_styles"] == 1
+    _, _, body = call(f"{base}/")
+    html = body.decode("utf-8")
+    assert html.count("Style MATRIX tidak ada di IM (tidak ditulis)") >= 2   # tile dan judul daftar
+    assert "p.missing_styles" in html and "s.missing_styles" in html

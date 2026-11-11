@@ -420,6 +420,8 @@ def commit_write(preview: WritePreview, final: dict, settings: Settings, passwor
             ok = True
             message = (f"IM MASTER diperbarui: {preview.summary['cells_changed']} sel diubah, "
                        f"{preview.summary['rows_inserted']} baris disisipkan.")
+            if missing := len(preview.values.missing_styles):
+                message += f" {missing} style MATRIX tidak ada di IM (tidak ditulis)."
             message += "".join(f" PERINGATAN: {w}." for w in state["warnings"])
         except Matrix2ImError as exc:
             ok, message = False, str(exc)

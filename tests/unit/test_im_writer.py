@@ -730,3 +730,20 @@ def test_lock_held_during_run_and_released_after(tmp_path):
     assert _lock_free(st)
     bad = commit_write(p, final, st, "salah-sandi", "andi", "m.xlsx")
     assert not bad.ok and _lock_free(st)
+
+
+# ---------- I1: style MATRIX yang tidak ada di IM ----------
+
+def test_final_message_mentions_missing_styles_count(tmp_path):
+    im, st, final = _simple(tmp_path)
+    final["records"] += [_rec("ZZZ", ["z"], n=7), _rec("YYY", ["y"], n=8)]
+    p = prepare_write(final, st, PW)
+    assert p.values.missing_styles == ["ZZZ", "YYY"]
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    assert rep.ok and "2 style MATRIX tidak ada di IM (tidak ditulis)" in rep.message
+
+
+def test_final_message_without_missing_styles_has_no_count(tmp_path):
+    im, st, final = _simple(tmp_path)
+    rep = commit_write(prepare_write(final, st, PW), final, st, PW, "andi", "m.xlsx")
+    assert rep.ok and "tidak ada di IM" not in rep.message

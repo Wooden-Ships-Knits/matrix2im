@@ -134,7 +134,7 @@ _SUMMARY_LABELS = (("styles", "Style cocok"), ("groups", "Grup IM cocok"), ("cel
                    ("rows_inserted", "Baris disisipkan"), ("groups_inserted", "Grup yang disisipi"),
                    ("changed_colorway_rows", "Baris colorway berubah"), ("short_groups", "Grup kekurangan baris"),
                    ("skipped", "Style dilewati"), ("unmatched_im_styles", "Style IM tanpa data MATRIX"),
-                   ("missing_styles", "Style MATRIX tidak ada di IM"), ("warnings", "Peringatan"))
+                   ("missing_styles", "Style MATRIX tidak ada di IM (tidak ditulis)"), ("warnings", "Peringatan"))
 
 
 def format_write_preview(preview: WritePreview) -> str:
@@ -146,6 +146,8 @@ def format_write_preview(preview: WritePreview) -> str:
         lines.append(f"  PERINGATAN: {warning}")
     for skip in preview.skipped:
         lines.append(f"  DILEWATI: {skip.style}: {skip.reason}")
+    for style in preview.values.missing_styles:
+        lines.append(f"  TIDAK ADA DI IM (tidak ditulis): {style}")
     return "\n".join(lines)
 
 

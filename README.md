@@ -86,7 +86,7 @@ Dengan `insert_engine = "none"` (atau bila Excel tidak terpasang), tool hanya me
 
 1. Jalankan `.venv/bin/matrix2im ui` (di PC pusat: `--host 0.0.0.0`, lihat di bawah), upload MATRIX dan IM MASTER, klik **Proses**, lalu periksa hasilnya.
 2. Di panel **Tulis ke IM MASTER**, isi **Nama Anda** (masuk log) dan **Password IM MASTER**, lalu klik **Buat rencana**. Belum ada yang ditulis pada tahap ini.
-3. Periksa pratinjau: jumlah sel dan baris yang berubah, daftar sel (nilai lama dan baru), baris yang disisipkan, style yang dilewati, dan peringatan.
+3. Periksa pratinjau: jumlah sel dan baris yang berubah, daftar sel (nilai lama dan baru), baris yang disisipkan, style yang dilewati, style MATRIX yang tidak ada di IM (tidak ditulis sama sekali), dan peringatan.
 4. Centang pernyataan bahwa tidak ada yang sedang membuka IM MASTER, lalu klik **Tulis semua ke IM**. Tunggu laporan; satu penulisan penuh F27 memakan waktu beberapa menit.
 
 Hanya satu orang yang bisa menulis pada satu waktu; sesi lain melihat pesan bahwa penulisan sedang berjalan.

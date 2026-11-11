@@ -345,3 +345,18 @@ def test_ui_passes_host_and_settings(tmp_path, monkeypatch):
     assert calls[0]["settings"].port == 9000
     assert main(["ui", "--settings", str(toml), "--host", "127.0.0.1", "--port", "9100", "--no-browser"]) == 0
     assert calls[1]["host"] == "127.0.0.1" and calls[1]["port"] == 9100
+
+
+def test_write_summary_lists_missing_styles_and_final_count(write_env, tmp_path, monkeypatch, capsys):
+    im, argv = write_env
+    final = tmp_path / "final.json"
+    data = json.loads(final.read_text(encoding="utf-8"))
+    data["records"].append(_rec("ZZZ", ["z"], "T", "000", 9))
+    final.write_text(json.dumps(data), encoding="utf-8")
+    assert main(argv + ["--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "Style MATRIX tidak ada di IM (tidak ditulis): 1" in out
+    assert "  TIDAK ADA DI IM (tidak ditulis): ZZZ" in out
+    monkeypatch.setattr("sys.stdin", io.StringIO(TEST_PASSWORD + "\n"))
+    assert main(argv + ["--yes"]) == 0
+    assert "1 style MATRIX tidak ada di IM (tidak ditulis)" in capsys.readouterr().out
