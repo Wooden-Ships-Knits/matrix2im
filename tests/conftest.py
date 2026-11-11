@@ -11,10 +11,11 @@ ROOT = Path(__file__).resolve().parent.parent
 _KINDS = {
     "matrix": ("MATRIX2IM_MATRIX", "F27_MATRIX_MASTER.xlsx", "*F27*MATRIX*MASTER*.xlsx"),
     "im": ("MATRIX2IM_IM", "F27_IM_MASTER.xlsx", "*F27*IM*MASTER*.xlsx"),
+    "im_write": ("MATRIX2IM_IM_WRITE", "F27_IM_MASTER_WRITE.xlsx", "*IM*MASTER*AI*TEST*.xlsx"),
 }
 
 
-def find_data_file(kind: Literal["matrix", "im"]) -> Path | None:
+def find_data_file(kind: Literal["matrix", "im", "im_write"]) -> Path | None:
     """Cari file data: env var (tanpa fallback), nama spec, lalu glob (nama asli 'Copy of ...')."""
     env, spec_name, pattern = _KINDS[kind]
     override = os.environ.get(env)

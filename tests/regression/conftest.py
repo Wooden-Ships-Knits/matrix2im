@@ -29,6 +29,15 @@ def im_path(data_finder) -> Path:
 
 
 @pytest.fixture(scope="session")
+def im_write_path(data_finder) -> Path:
+    """Salinan uji IM MASTER (terkunci); hanya dibaca, test menulis ke salinan di tmp_path."""
+    path = data_finder("im_write")
+    if path is None:
+        pytest.skip("Salinan uji IM MASTER tidak ditemukan (MATRIX2IM_IM_WRITE); test tulis di-skip")
+    return path
+
+
+@pytest.fixture(scope="session")
 def f27_result(matrix_path: Path) -> ExtractResult:
     return extract_workbook(matrix_path)
 

@@ -4,7 +4,7 @@ Mengubah file Excel **F27 MATRIX MASTER** menjadi JSON untuk **IM MASTER**.
 
 - Masukan: file MATRIX `.xlsx`.
 - Keluaran: `raw.json` (hasil baca MATRIX apa adanya, per style) dan `final.json` (satu record per colorway, dengan key kolom IM MASTER).
-- Menulis ke IM MASTER (Excel) adalah fase 2 dan **belum dikerjakan**. Tool ini hanya membaca; file input tidak pernah diubah.
+- Fase 2: menulis `final.json` ke IM MASTER (Excel) yang dibagikan, lewat UI atau `matrix2im write` (lihat bagian "Menulis ke IM MASTER"). File MATRIX tidak pernah diubah; IM MASTER hanya diubah saat Anda menekan tombol tulis (atau `write` tanpa `--dry-run`).
 
 ## Instalasi
 
@@ -29,7 +29,7 @@ Perintah ini membuka halaman `http://127.0.0.1:8765/` di browser (pakai `--port`
 2. Klik **Proses**. Tahap 1, Tahap 2, dan validasi dijalankan sama seperti `matrix2im run`.
 3. Lihat hasilnya: ringkasan, status validasi, tab **Records** (bisa dicari dan difilter per WHS / perlu review), **Needs review** (per kode, dengan comment sel MATRIX), **Per style** (colorway dikelompokkan menurut garis hitam/merah, dengan warna font legend), dan **Warning**. Tombol **raw.json** / **final.json** mengunduh hasilnya.
 
-Server hanya bisa diakses dari komputer ini (127.0.0.1). File yang diupload disimpan sebagai salinan di folder sementara dan dihapus saat server dihentikan (Ctrl+C); file asli tidak disentuh. Berbeda dengan `run`, UI tetap menampilkan hasil walau validasi gagal (errornya ditampilkan di atas), supaya datanya bisa diperiksa.
+Secara default server hanya bisa diakses dari komputer ini (127.0.0.1); untuk PC pusat lihat "Menulis ke IM MASTER". File yang diupload disimpan sebagai salinan di folder sementara dan dihapus saat server dihentikan (Ctrl+C); file asli tidak disentuh. Berbeda dengan `run`, UI tetap menampilkan hasil walau validasi gagal (errornya ditampilkan di atas), supaya datanya bisa diperiksa.
 
 ## Perintah
 
@@ -58,6 +58,78 @@ Server hanya bisa diakses dari komputer ini (127.0.0.1). File yang diupload disi
 | 0 | Sukses (item `needs_review` tidak membuat gagal) |
 | 1 | Error fatal: argumen salah/kurang (mis. `run` tanpa `--im-master`), file tidak terbaca, tidak ada halaman/kartu, raw JSON rusak/tidak lengkap, validasi gagal, error tak terduga. Tidak ada traceback; pesan di stderr |
 | 2 | Hanya dengan `--strict` dan `needs_review` tidak kosong (file tetap ditulis) |
+
+## Menulis ke IM MASTER
+
+Aturan penulisan lengkap ada di `docs/superpowers/specs/2026-11-10-tulis-im-master-design.md` (§6 aturan, §7 pengaman, §8 PC pusat). Daftar uji terima untuk TIM IM: `docs/uji-terima-tulis-im.md`.
+
+Ringkasnya: tool mengisi COLOR1..n, WS TAG COLOR, dan WHS di baris colorway tiap grup size IM MASTER, menyisipkan baris bila colorway lebih banyak dari baris, dan tidak menyentuh kolom rumus. Sebelum menulis, tool mencocokkan password, membuat cadangan, dan memverifikasi hasilnya.
+
+### Setting `matrix2im.local.toml`
+
+Salin contoh di bawah ke file `matrix2im.local.toml` di folder tempat perintah dijalankan (atau tunjuk file lain dengan `--settings`). File ini berisi path lokal, tidak di-commit, dan **tidak boleh berisi password**.
+
+```toml
+[ui]
+host = "127.0.0.1"      # "0.0.0.0" agar bisa dibuka dari PC lain di jaringan kantor
+port = 8765
+
+[im]
+master = "/path/ke/F27 IM MASTER.xlsx"   # file IM MASTER yang ditulis
+backup_dir = "/path/ke/folder cadangan"  # cadangan, folder kerja, dan log
+insert_engine = "excel"                  # "excel" (sisip baris lewat Excel) atau "none" (hanya isi baris yang ada)
+```
+
+Dengan `insert_engine = "none"` (atau bila Excel tidak terpasang), tool hanya mengisi baris yang sudah ada; grup yang kekurangan baris didaftar sebagai peringatan untuk ditambah manual.
+
+### Lewat UI
+
+1. Jalankan `.venv/bin/matrix2im ui` (di PC pusat: `--host 0.0.0.0`, lihat di bawah), upload MATRIX dan IM MASTER, klik **Proses**, lalu periksa hasilnya.
+2. Di panel **Tulis ke IM MASTER**, isi **Nama Anda** (masuk log) dan **Password IM MASTER**, lalu klik **Buat rencana**. Belum ada yang ditulis pada tahap ini.
+3. Periksa pratinjau: jumlah sel dan baris yang berubah, daftar sel (nilai lama dan baru), baris yang disisipkan, style yang dilewati, dan peringatan.
+4. Centang pernyataan bahwa tidak ada yang sedang membuka IM MASTER, lalu klik **Tulis semua ke IM**. Tunggu laporan; satu penulisan penuh F27 memakan waktu beberapa menit.
+
+Hanya satu orang yang bisa menulis pada satu waktu; sesi lain melihat pesan bahwa penulisan sedang berjalan.
+
+### Lewat CLI
+
+```bash
+# Lihat rencana saja; IM MASTER tidak diubah
+.venv/bin/matrix2im write out/final.json --dry-run
+
+# Tulis (menanyakan password dan konfirmasi 'ya')
+.venv/bin/matrix2im write out/final.json --user "Nama Anda"
+```
+
+- Password dibaca dari prompt (atau baris pertama stdin), tidak pernah dari argumen perintah. Tanpa terminal, `--yes` wajib.
+- Opsi `--settings`, `--im-master`, `--backup-dir`, dan `--engine` menimpa isi `matrix2im.local.toml`. Exit code 0 bila berhasil, 1 bila gagal atau dibatalkan.
+
+### Menyiapkan PC pusat
+
+Langkah ini dikerjakan sendiri oleh pengelola (menyangkut pengaturan sistem), bukan oleh tool:
+
+- **Google Drive:** beri aplikasi yang menjalankan server (Terminal/Python) izin ke folder Google Drive di System Settings, Privacy & Security, Files and Folders (atau Full Disk Access).
+- **Automation:** saat pop-up pertama "Terminal ingin mengontrol Microsoft Excel" muncul, pilih izinkan (System Settings, Privacy & Security, Automation).
+- **Folder kerja:** Excel memakai salinan sementara di `<backup_dir>/kerja`. Pertama kali, macOS bisa bertanya apakah Excel boleh membuka file di sana; izinkan sekali saja.
+- **Tidak sleep:** atur Mac supaya tidak tidur (System Settings, Energy / Lock Screen).
+- **Firewall:** izinkan koneksi masuk untuk Python di System Settings, Network, Firewall, untuk port server (default 8765).
+- **Jalankan server:** `.venv/bin/matrix2im ui --host 0.0.0.0 --no-browser`. Anggota TIM membuka `http://<alamat IP Mac>:8765/` dari browser (Mac atau Windows); alamat IP ada di System Settings, Network, atau lewat `ipconfig getifaddr en0`.
+- **Saat menulis:** Excel di PC pusat membuka dan menutup file sendiri. Jangan bekerja di Excel di PC itu selama penulisan. Bila Excel macet, tool hanya menutup workbook kerjanya sendiri.
+
+**Password di jaringan kantor.** UI memakai HTTP biasa, jadi password melewati jaringan kantor tanpa enkripsi. Pakai hanya di LAN kantor dan jangan pernah meneruskan (port forward) port ini ke internet. Tool tidak pernah menyimpan password: tidak di disk, log, laporan, maupun argumen perintah.
+
+### Cadangan, log, dan pemulihan
+
+- Tiap penulisan lebih dulu membuat cadangan `<nama> <tanggal jam> sebelum matrix2im.xlsx` di `backup_dir`. Folder `kerja` di sana hanya berisi salinan sementara dan dibersihkan sendiri.
+- Log berupa file `matrix2im-log.jsonl` di `backup_dir`, satu baris JSON per penulisan: waktu, nama user, nama file MATRIX, ringkasan rencana, hasil (ok/gagal), pesan, dan path cadangan. Password tidak pernah dicatat. Penulisan yang gagal pun dicatat.
+- **Memulihkan:** tutup IM MASTER di semua PC, lalu salin isi file cadangan menimpa file IM MASTER (isi ditimpa, bukan file diganti, supaya link Google Drive tetap). Di Google Drive, lebih baik pakai riwayat versi (klik kanan file, Kelola versi).
+
+### Batasan
+
+- **Celah file sudah dibuka:** pengecekan "file sedang dibuka" bergantung pada file pemilik `~$` buatan Excel. Apakah `~$` dari PC lain terlihat lewat Google Drive masih harus diuji (uji terima nomor 2, spec §10.4). Sampai terkonfirmasi, TIM IM tetap berkoordinasi manual. Bila seseorang sudah membuka IM MASTER sebelum tool menulis lalu menyimpan sesudahnya, simpanannya bisa menimpa hasil tool; cadangan dan log adalah jalan pemulihan.
+- **Rujukan dari file lain:** file lain yang merujuk ke sel IM MASTER diperlakukan seperti saat TIM menyisipkan baris manual; tidak ada penanganan khusus. Laporan menyebut baris yang disisipkan.
+- Grup yang hanya 1 baris dan disisipi baris: rumus di luar baris subtotal yang merujuk baris itu tidak ikut melebar (ada peringatan di pratinjau).
+- Style IM yang tidak ada di MATRIX tidak disentuh. Label subtotal tidak diubah.
 
 ## Skema keluaran
 
@@ -99,6 +171,8 @@ Test regression memakai file asli di `data/` (tidak di-commit) dan di-skip denga
 ```bash
 MATRIX2IM_MATRIX=/path/MATRIX.xlsx MATRIX2IM_IM=/path/IM.xlsx .venv/bin/pytest -m regression
 ```
+
+Test tulis (`tests/regression/test_write_f27.py`) memakai salinan uji IM MASTER lewat `MATRIX2IM_IM_WRITE` (pola `data/*IM*MASTER*AI*TEST*.xlsx`); file itu hanya dibaca dan hasil tulis selalu ke salinan di folder sementara. Test `test_full_write_on_copy` menjalankan Microsoft Excel sungguhan dan hanya jalan bila `MATRIX2IM_EXCEL_TESTS=1` dan `MATRIX2IM_IM_PASSWORD` (password ubah salinan uji, diberikan lewat environment, tidak pernah ditulis di repo) diisi: `.venv/bin/pytest -m excel`.
 
 ## Open issues (belum diputuskan)
 

@@ -205,7 +205,7 @@ Tidak lagi masuk review sejak revisi 10 November 2026: WHS warna yang diturunkan
 
 ## Fase berikutnya: penulisan ke IM MASTER
 
-Final JSON akan dipakai oleh penulis IM MASTER. Aturan penulisannya sudah disepakati dan dicatat di sini supaya format JSON tidak perlu diubah nanti.
+Final JSON dipakai oleh penulis IM MASTER (fase 2, sudah dibangun; lihat spec `docs/superpowers/specs/2026-11-10-tulis-im-master-design.md` dan README bagian "Menulis ke IM MASTER"). Aturan penulisannya sudah disepakati dan dicatat di sini supaya format JSON tidak perlu diubah.
 
 Sudah disepakati:
 
@@ -224,7 +224,13 @@ Usulan yang masih menunggu konfirmasi:
 
 Kondisi IM F27 saat ini: hanya 172 dari 1.068 grup size yang jumlah barisnya sudah sama dengan jumlah colorway. 733 grup kelebihan baris dan 163 grup kekurangan baris.
 
-Catatan teknis: fungsi sisip baris di openpyxl tidak menggeser referensi formula. Penulis IM perlu engine yang menyesuaikan referensi (Excel atau LibreOffice), atau menulis ulang formula baris yang disisipkan.
+Catatan teknis: fungsi sisip baris di openpyxl tidak menggeser referensi formula, dan menyimpan ulang lewat openpyxl menghapus gambar serta aturan conditional formatting. Karena itu penulis IM memakai Excel (via `osascript`) hanya untuk menyisipkan baris, dan mengubah nilai sel langsung di XML sheet; openpyxl hanya membaca.
+
+Status dan sisa pekerjaan setelah fase 2 dibangun:
+
+- Penulisan lewat UI dan CLI sudah ada; detail rancangan, pengaman, dan batasan ada di spec di atas (§6 sampai §10).
+- Masih menunggu uji terima manual oleh user (`docs/uji-terima-tulis-im.md`): identitas file dan riwayat versi di Google Drive setelah Excel menyimpan (spec §10.3), terlihatnya file `~$` dari PC lain (§10.4), akses dari PC Windows, dan dua penulis bersamaan.
+- Masih terbuka: label subtotal otomatis (tidak diubah sampai diputuskan), penanganan khusus rujukan dari file lain, dan memasang server sebagai layanan otomatis di PC pusat.
 
 ## Open issues
 
@@ -289,6 +295,14 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 | Border | garis merah tebal | — | colorway di bawahnya = SY |
 
 ## Riwayat perubahan
+
+### 11 November 2026: fase 2, penulisan ke IM MASTER
+
+1. Ditambahkan penulis IM MASTER: `matrix2im write` dan panel **Tulis ke IM MASTER** di UI (multi-sesi, satu penulis pada satu waktu). Aturan 1 sampai 7 di "Fase berikutnya" berlaku penuh.
+2. Pengaman: cocokkan password ubah dengan hash `fileSharing`, cek file `~$`, cadangan bertanggal, deteksi perubahan file sejak rencana, verifikasi hasil, dan log JSONL (`matrix2im-log.jsonl`, tanpa password).
+3. Sisip baris lewat Excel (baris utuh, `fill down` terbatas); nilai sel ditulis langsung di XML sheet. openpyxl tidak pernah menyimpan IM MASTER. Setting `insert_engine = "none"` hanya mengisi baris yang ada.
+4. Regression F27 pada salinan uji AI TEST V2: 211 style tanpa dilewati; 184 sisipan (321 baris, 27 di grup 1 baris) dan 195 style IM tanpa data MATRIX. Angka ini berbeda dari perkiraan spike (177 / 286 / 179) karena grup kini juga dipecah saat DESCRIPTION berubah.
+5. Dokumentasi: README bagian "Menulis ke IM MASTER" dan daftar uji terima `docs/uji-terima-tulis-im.md`.
 
 ### 10 November 2026: hasil review `needs_review`
 
