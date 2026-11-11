@@ -21,8 +21,10 @@ def test_tag_substitution_marl():
     assert build_ws_tag_color("TAG: C1/C2 MARL", ["YCA KHAKI - 749", "YCA BLUSH CHAMPAGNE - 645"]) == ("KHAKI/BLUSH CHAMPAGNE MARL", None)
 
 
-@pytest.mark.parametrize("tag", ["TAG: C1 (For Solid) | TAG: SNOW MARL", "TAG for Heathered: C1 HEATHERED TAG For solids: C1",
-                                 "TAG: C1 for marled", "TAG: C1/C2/C3 with abbreviated color names"])
+@pytest.mark.parametrize("tag", ["TAG: C1 (For Solid) | TAG: SNOW MARL", "TAG: C1 for marled",
+                                 "TAG: C1/C2/C3 with abbreviated color names",
+                                 "TAG: BLACK/LATTE/ RED | TAG: RED PAPRIKA/SHADLE/ KALE",
+                                 "TAG: C1 (For Solid) | TAG: C1/C2 (For abbreviated)"])
 def test_tag_conditional(tag):
     v, p = build_ws_tag_color(tag, ["A", "B", "C"])
     assert v is None and p.code is Code.TAG_CONDITIONAL
@@ -74,3 +76,50 @@ def test_tag_with_untranslated_instruction_is_unresolved(tag, yarns):
 def test_yarn_name_containing_color_is_not_unresolved():
     # Pengecekan dilakukan pada teks TAG sebelum Cn diganti, jadi nama benang tidak ikut diperiksa.
     assert build_ws_tag_color("TAG: C1", ["MULTI COLOR"]) == ("MULTI COLOR", None)
+
+
+
+# ---- TAG bersyarat (keputusan user 11 Nov 2026): solid = 1 benang, selain itu bukan solid ----
+
+HUTTON = "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)"
+SHEPHERD = "TAG: C1 (For Solid) TAG: C1 MARL (For Marled)"
+ARIA = "TAG for Heathered: C1 HEATHERED TAG For solids: C1"
+
+
+@pytest.mark.parametrize("tag, yarns, want", [
+    (HUTTON, ["YCA NIGHT NAVY - 123"], "NIGHT NAVY"),
+    (HUTTON, ["YCA PURE SNOW - 1", "YCA ALMOND BUTTER - 2"], "SNOW MARL"),
+    (SHEPHERD, ["FAWN"], "FAWN"),
+    (SHEPHERD, ["FAWN", "BLACK"], "FAWN MARL"),
+    (ARIA, ["SILVER PELT"], "SILVER PELT"),
+    (ARIA, ["YCA DARK DUSK - 899", "BJ BLUE FIRE"], "DARK DUSK HEATHERED"),
+])
+def test_conditional_tag_resolved_by_solid_or_colorway(tag, yarns, want):
+    assert build_ws_tag_color(tag, yarns) == (want, None)
+
+
+def test_conditional_no_matching_clause_needs_review():
+    v, p = build_ws_tag_color(HUTTON, ["BLACK", "RED"])          # bukan solid, bukan PURE SNOW/ALMOND BUTTER
+    assert v is None and p.code is Code.TAG_CONDITIONAL
+    assert p.issue == "TAG bersyarat: tidak ada syarat yang cocok untuk colorway ini (bukan solid, 2 benang)"
+
+
+def test_conditional_colorway_clause_beats_solid_clause():
+    tag = "TAG: C1 (For Solid) | TAG: SNOW (For PURE SNOW)"
+    assert build_ws_tag_color(tag, ["YCA PURE SNOW - 1"]) == ("SNOW", None)
+    assert build_ws_tag_color(tag, ["FAWN"]) == ("FAWN", None)
+
+
+def test_conditional_colorway_clause_needs_exact_yarn_order():
+    v, p = build_ws_tag_color(HUTTON, ["ALMOND BUTTER", "PURE SNOW"])
+    assert v is None and p.code is Code.TAG_CONDITIONAL
+
+
+def test_conditional_two_clauses_same_condition_is_ambiguous():
+    v, p = build_ws_tag_color("TAG: C1 (For Solid) | TAG: C1 MARL (For Solid)", ["A"])
+    assert v is None and p.code is Code.TAG_CONDITIONAL
+
+
+def test_conditional_chosen_instruction_follows_normal_rules():
+    v, p = build_ws_tag_color(SHEPHERD.replace("C1 MARL", "C3 MARL"), ["A", "B"])
+    assert v is None and p.code is Code.TAG_CN_OUT_OF_RANGE

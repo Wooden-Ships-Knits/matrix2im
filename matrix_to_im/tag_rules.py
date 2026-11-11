@@ -1,9 +1,9 @@
 """Aturan WS TAG COLOR: instruksi TAG + daftar benang -> nilai kolom IM."""
 import re
 
-from .legend_config import (PUNCTUATION_ONLY_RE, TAG_ALIAS, TAG_CN_RE, TAG_CONDITIONAL_MARKERS,
-                            TAG_DOUBLE_SUFFIX_RE, TAG_PREFIX_RE, TAG_REPLACEMENTS, TAG_UNRESOLVED_RE,
-                            YARN_CODE_SUFFIX_RE, YARN_PREFIX_RE)
+from .legend_config import (PUNCTUATION_ONLY_RE, TAG_ALIAS, TAG_CN_RE, TAG_COND_NOT_SOLID, TAG_COND_SOLID,
+                            TAG_COND_UNSUPPORTED, TAG_CONDITIONAL_MARKERS, TAG_DOUBLE_SUFFIX_RE, TAG_PREFIX_RE,
+                            TAG_REPLACEMENTS, TAG_UNRESOLVED_RE, YARN_CODE_SUFFIX_RE, YARN_PREFIX_RE)
 from .review import Code, Problem
 
 _PREFIX = re.compile(TAG_PREFIX_RE)
@@ -11,6 +11,9 @@ _CN = re.compile(TAG_CN_RE)
 _REPLACEMENTS = tuple((re.compile(pattern), repl) for pattern, repl in TAG_REPLACEMENTS)
 _PUNCTUATION_ONLY = re.compile(PUNCTUATION_ONLY_RE)
 _UNRESOLVED = re.compile(TAG_UNRESOLVED_RE, re.IGNORECASE)
+# Dua bentuk bagian TAG bersyarat: "TAG: <instruksi> (FOR <syarat>)" dan "TAG FOR <syarat>: <instruksi>".
+_CLAUSE_PAREN = re.compile(r"^TAG\s*:?\s*(?P<instr>.+?)\s*\(\s*FOR\s+(?P<cond>[^)]+?)\s*\)$")
+_CLAUSE_PREFIX = re.compile(r"^TAG\s+FOR\s+(?P<cond>[^:]+?)\s*:\s*(?P<instr>.+)$")
 
 
 def color_name(yarn: str) -> str:
@@ -34,6 +37,43 @@ def unique_yarns(yarns: list[str]) -> list[str]:
     return out
 
 
+def _clauses(tag: str) -> list[tuple[str, str]] | None:
+    """(syarat, instruksi) per bagian TAG bersyarat; None bila ada bagian yang bentuknya tidak dikenali."""
+    parts = [c.strip() for piece in tag.split("|") for c in re.split(r"(?=\bTAG\b)", piece) if c.strip()]
+    out = []
+    for part in parts:
+        m = _CLAUSE_PAREN.match(part) or _CLAUSE_PREFIX.match(part)
+        if m is None:
+            return None
+        out.append((re.sub(r"\s+", " ", m.group("cond")).strip(), m.group("instr").strip()))
+    return out
+
+
+def _conditional_instruction(tag: str, yarns: list[str]) -> tuple[str | None, str]:
+    """Instruksi TAG yang berlaku untuk colorway ini, atau (None, alasan) bila tidak bisa diputuskan.
+
+    Urutan: syarat nama colorway (persis, urutan benang sama), lalu solid (1 benang) / bukan solid.
+    Lebih dari satu bagian yang cocok dianggap ambigu.
+    """
+    if any(m in tag for m in TAG_COND_UNSUPPORTED):
+        return None, "TAG kondisional / singkatan: perlu aturan khusus"
+    clauses = _clauses(tag)
+    if not clauses:
+        return None, "TAG kondisional / singkatan: perlu aturan khusus"
+    names = [color_name(y) for y in yarns]
+    solid = len(yarns) == 1
+    by_colorway = [i for c, i in clauses if c not in TAG_COND_SOLID | TAG_COND_NOT_SOLID
+                   and [n.strip() for n in c.split("/")] == names]
+    by_kind = [i for c, i in clauses if c in (TAG_COND_SOLID if solid else TAG_COND_NOT_SOLID)]
+    for found in (by_colorway, by_kind):
+        if len(found) == 1:
+            return found[0], ""
+        if len(found) > 1:
+            return None, "TAG bersyarat: lebih dari satu syarat cocok untuk colorway ini"
+    kind = "solid, 1 benang" if solid else f"bukan solid, {len(yarns)} benang"
+    return None, f"TAG bersyarat: tidak ada syarat yang cocok untuk colorway ini ({kind})"
+
+
 def build_ws_tag_color(tag: str | None, yarns: list[str]) -> tuple[str | None, Problem | None]:
     """Ganti C1, C2, ... di instruksi TAG dengan nama warna benang (yarns = hasil unique_yarns).
 
@@ -43,7 +83,11 @@ def build_ws_tag_color(tag: str | None, yarns: list[str]) -> tuple[str | None, P
         return None, Problem(Code.TAG_EMPTY, "TAG kosong")
     t = tag.upper()
     if any(m in t for m in TAG_CONDITIONAL_MARKERS):
-        return None, Problem(Code.TAG_CONDITIONAL, "TAG kondisional / singkatan: perlu aturan khusus")
+        # TAG bersyarat dipilih per colorway (solid / bukan solid / nama colorway), lalu diproses seperti TAG biasa.
+        chosen, why = _conditional_instruction(t, yarns)
+        if chosen is None:
+            return None, Problem(Code.TAG_CONDITIONAL, why)
+        return build_ws_tag_color("TAG: " + chosen, yarns)
     body = _PREFIX.sub("", t).strip()
     # "TAG:" saja atau "TAG: -" tidak memuat nama warna; string kosong/tanda baca bukan nilai IM.
     if not body or _PUNCTUATION_ONLY.fullmatch(body):

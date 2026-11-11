@@ -26,7 +26,9 @@ RULES = {
                       "tanpa membedakan huruf besar/kecil",
     "WS TAG COLOR": "instruksi TAG, C1/C2/... diganti nama warna benang (tanpa prefix YCA/YST dan kode); "
                     "STRIPED -> STRIPE; alias nama (mis. BLACK B -> BLACK); akhiran dobel (STRIPE STRIPE) "
-                    "dijadikan satu; 'Need Review' bila TAG bersyarat/singkatan, Cn di luar jumlah benang, "
+                    "dijadikan satu; TAG bersyarat dipilih per colorway: (For Solid) = 1 benang, (For Marled/"
+                    "Heathered) = lebih dari 1 benang, (For <nama colorway>) = colorway itu; 'Need Review' bila "
+                    "TAG bersyarat tidak cocok/singkatan, Cn di luar jumlah benang, "
                     "TAG kosong, TAG belum diterjemahkan, atau COLOR berupa deskripsi (lihat needs_review)",
     "WHS": "kolom CE. Warna: di bawah garis merah = SY; di atas garis merah = BOTH WHS, "
            "kecuali font ungu/pink = 000. Style (background No): ungu 000, abu/putih/tanpa warna BOTH WHS, "

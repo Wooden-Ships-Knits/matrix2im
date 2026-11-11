@@ -150,7 +150,7 @@ Kode `needs_review`:
 
 | Kode | Arti |
 | --- | --- |
-| `TAG_CONDITIONAL` | TAG bersyarat atau singkatan; WS TAG COLOR `Need Review` |
+| `TAG_CONDITIONAL` | TAG singkatan, atau TAG bersyarat tanpa syarat yang cocok untuk colorway itu (solid = 1 benang); WS TAG COLOR `Need Review` |
 | `TAG_CN_OUT_OF_RANGE` | TAG meminta Cn melebihi jumlah benang; WS TAG COLOR `Need Review` |
 | `TAG_EMPTY` | TAG kosong; WS TAG COLOR `Need Review` |
 | `TAG_UNRESOLVED` | TAG masih berisi instruksi belum diterjemahkan (`C(car)`, `GONDOLA color`); WS TAG COLOR `Need Review` |
@@ -183,7 +183,7 @@ Test tulis (`tests/regression/test_write_f27.py`) memakai salinan uji IM MASTER 
 
 Kasus berikut sengaja tetap `Need Review` / `null` dan masuk `needs_review`; tidak ada aturan yang ditebak:
 
-- Aturan definitif WS TAG COLOR untuk TAG bersyarat atau singkatan.
+- TAG singkatan ("abbreviated color names") dan TAG per colorway tanpa syarat. TAG bersyarat `(For Solid)` / `(For Marled)` / `(For Heathered)` / `(For <colorway>)` sudah diputuskan otomatis: solid = colorway 1 benang.
 - TAG yang meminta Cn melebihi jumlah benang.
 - TAG yang masih berisi instruksi belum diterjemahkan (TREE FARM `C1/C(car)`, TELLURIDE `C1/GONDOLA color`).
 - COLOR berupa deskripsi stripe/marl (benang asli ada di comment sel).

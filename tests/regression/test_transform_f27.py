@@ -27,9 +27,10 @@ def test_baseline(f27_final):
     s = f27_final["summary"]
     assert s["total_records"] == 724 and s["total_styles"] == 211
     assert s["WHS"] == {"BOTH WHS": 194, "000": 354, "SY": 176}
-    assert (s["WS_TAG_COLOR_filled"], s["WS_TAG_COLOR_need_review"], s["WS_TAG_COLOR_null"]) == (633, 91, 0)
-    assert s["needs_review_items"] == 91
-    assert s["needs_review_by_issue"] == {"TAG_CONDITIONAL": 57, "TAG_CN_OUT_OF_RANGE": 21,
+    # TAG bersyarat diputuskan per colorway sejak 11 Nov 2026: 45 record keluar dari Need Review.
+    assert (s["WS_TAG_COLOR_filled"], s["WS_TAG_COLOR_need_review"], s["WS_TAG_COLOR_null"]) == (678, 46, 0)
+    assert s["needs_review_items"] == 46
+    assert s["needs_review_by_issue"] == {"TAG_CONDITIONAL": 12, "TAG_CN_OUT_OF_RANGE": 21,
                                           "TAG_UNRESOLVED": 7, "COLOR_IS_DESCRIPTOR": 6}
 
 
@@ -43,7 +44,7 @@ def _review_records(final):
 
 def test_need_review_only_where_reviewed(f27_final):
     marked = {i for i, r in enumerate(f27_final["records"]) if r["WS TAG COLOR"] == "Need Review"}
-    assert len(marked) == 91 and marked == _review_records(f27_final)
+    assert len(marked) == 46 and marked == _review_records(f27_final)
 
 
 def test_hutton_in_two_sheets_are_separate_records_without_review(f27_final):
@@ -85,3 +86,17 @@ def test_colorway_count_equals_records(f27_raw, f27_final):
 def test_validate_f27_against_im_header(f27_raw, f27_final, im_path):
     from matrix_to_im.validate import read_im_header, validate
     assert validate(f27_raw, f27_final, read_im_header(im_path)) == []
+
+
+
+def test_conditional_tags_resolved_by_solid_rule(f27_final):
+    """Keputusan user 11 Nov 2026: (For Solid) = 1 benang, (For Marled/Heathered) = lebih dari 1 benang."""
+    tag = {r["_ref"].split(" | ")[0] + " " + r["_ref"].split(" | ")[1]: r["WS TAG COLOR"] for r in f27_final["records"]}
+    assert tag["ESSENTIALS GRASSY No.20 C164"] == "SNOW MARL"          # (For PURE SNOW/ALMOND BUTTER)
+    assert tag["ESSENTIALS GRASSY No.20 C163"] == "NIGHT NAVY"         # solid
+    assert tag["ESSENTIALS COTTON No.15 G105"] == "DARK DUSK HEATHERED"  # sama dengan comment sel di MATRIX
+    assert tag["ESSENTIALS COTTON No.15 G106"] == "SILVER PELT"
+    assert [tag[f"FALL No.26 E22{i}"] for i in (1, 2, 3)] == ["PURE SNOW", "WINTER COAL", "FAWN"]
+    left = {x["DESCRIPTION"] for x in _items(f27_final, "TAG_CONDITIONAL")}
+    assert left == {"CANDY CANES HEART CREW CHUNKY", "CHEERS COCKTAIL CREW CHUNKY", "MERRY COCKTAIL CREW CHUNKY",
+                    "FA LA LA FAIR ISLE CREW CHUNKY"}

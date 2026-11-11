@@ -123,7 +123,7 @@ Setiap colorway menjadi satu record. Key record sama persis dengan header IM MAS
 | --- | --- |
 | DESCRIPTION | nama style apa adanya, tanpa size; berlaku untuk semua size di IM |
 | COLOR1 … COLOR18 | 1 benang = 1 kolom, nilai persis seperti di MATRIX. Benang yang berulang (stripe) ditulis sekali, sesuai urutan kemunculan pertama. Slot tanpa benang tidak dicantumkan |
-| WS TAG COLOR | TAG tanpa awalan "TAG:", setiap Cn diganti nama warna benang ke-n (tanpa prefix YCA/YST/YTX/BJ/YP/POODLE dan tanpa kode). Alias BLACK B → BLACK; STRIPED → STRIPE; akhiran dobel dibuang. Diisi teks `Need Review` + review bila: TAG bersyarat atau singkatan; Cn melebihi jumlah benang; TAG kosong; TAG masih berisi instruksi yang belum diterjemahkan (`C(…)` tanpa nomor atau kata COLOR); atau COLOR colorway berupa deskripsi stripe/marl |
+| WS TAG COLOR | TAG tanpa awalan "TAG:", setiap Cn diganti nama warna benang ke-n (tanpa prefix YCA/YST/YTX/BJ/YP/POODLE dan tanpa kode). Alias BLACK B → BLACK; STRIPED → STRIPE; akhiran dobel dibuang. TAG bersyarat dipilih per colorway: `(For Solid)` = colorway 1 benang (solid), `(For Marled)`/`(For Heathered)` = lebih dari 1 benang, `(For <nama colorway>)` = colorway dengan benang persis itu (didahulukan). Diisi teks `Need Review` + review bila: TAG bersyarat tanpa syarat yang cocok, TAG singkatan ("abbreviated color names") atau TAG per colorway tanpa syarat; Cn melebihi jumlah benang; TAG kosong; TAG masih berisi instruksi yang belum diterjemahkan (`C(…)` tanpa nomor atau kata COLOR); atau COLOR colorway berupa deskripsi stripe/marl |
 | WHS (kolom CE) | irisan WHS style dan WHS warna (tabel di bawah) |
 
 WHS warna ditentukan dari posisi colorway dan warna fontnya. Garis hitam tidak memengaruhi WHS.
@@ -144,7 +144,7 @@ Struktur final JSON:
   "target": "F27 IM MASTER (sheet F27, header baris 54)",
   "source": "F27 MATRIX MASTER",
   "rules": {"...": "ringkasan aturan di bagian ini"},
-  "summary": {"total_records": 724, "WHS": {"...": 0}, "WS_TAG_COLOR_filled": 633, "WS_TAG_COLOR_need_review": 91, "WS_TAG_COLOR_null": 0, "needs_review_items": 91},
+  "summary": {"total_records": 724, "WHS": {"...": 0}, "WS_TAG_COLOR_filled": 678, "WS_TAG_COLOR_need_review": 46, "WS_TAG_COLOR_null": 0, "needs_review_items": 46},
   "records": [
     {
       "DESCRIPTION": "JUDE T NECK CHUNKY",
@@ -155,7 +155,7 @@ Struktur final JSON:
     }
   ],
   "needs_review": [
-    {"record": 61, "code": "TAG_CONDITIONAL", "DESCRIPTION": "ARIA V CHUNKY COTTON", "issue": "TAG kondisional / singkatan: perlu aturan khusus", "_ref": "..."}
+    {"record": 624, "code": "TAG_CONDITIONAL", "DESCRIPTION": "CANDY CANES HEART CREW CHUNKY", "issue": "TAG kondisional / singkatan: perlu aturan khusus", "_ref": "..."}
   ]
 }
 ```
@@ -179,7 +179,7 @@ Jenis item `needs_review` dan jumlahnya pada file F27:
 
 | Jenis masalah (kode) | F27 | Penanganan |
 | --- | --- | --- |
-| TAG bersyarat atau pakai singkatan (`TAG_CONDITIONAL`) | 57 record | WS TAG COLOR `Need Review`; aturan definitif belum ada |
+| TAG singkatan, atau TAG bersyarat tanpa syarat yang cocok (`TAG_CONDITIONAL`) | 12 record | WS TAG COLOR `Need Review` |
 | TAG meminta Cn melebihi jumlah benang (`TAG_CN_OUT_OF_RANGE`) | 21 record | WS TAG COLOR `Need Review`; dicek tim |
 | TAG masih berisi instruksi belum diterjemahkan, mis. `C(car)`, `GONDOLA color` (`TAG_UNRESOLVED`) | 7 record | WS TAG COLOR `Need Review`; dicek tim |
 | COLOR berisi deskripsi, bukan nama benang, mis. "BLUSH CHAMPAGNE STRIPE" (`COLOR_IS_DESCRIPTOR`) | 6 record | COLOR ditulis apa adanya, WS TAG COLOR `Need Review`; comment MATRIX disertakan |
@@ -237,7 +237,8 @@ Status dan sisa pekerjaan setelah fase 2 dibangun:
 
 Semua item ini sudah ditandai di `needs_review`, jadi sistem tetap bisa berjalan sambil menunggu keputusannya.
 
-- [ ] Aturan definitif WS TAG COLOR untuk TAG bersyarat dan singkatan (57 record, sementara `Need Review`). Contoh: HUTTON "C1 (For Solid) | SNOW MARL (For PURE SNOW/ALMOND BUTTER)", ARIA "TAG for Heathered: C1 HEATHERED / For solids: C1".
+- [x] TAG bersyarat (For Solid / For Marled / For Heathered / For <colorway>): diputuskan 11 November 2026, solid = 1 benang (45 record).
+- [ ] TAG singkatan "with abbreviated color names" (CANDY CANES, CHEERS COCKTAIL, MERRY COCKTAIL; 10 record) dan TAG per colorway tanpa syarat (FA LA LA FAIR ISLE; 2 record): tetap `Need Review`. Jawaban singkatan untuk sebagian ada di comment sel MATRIX ("TAG COLOR: …"), yang belum dibaca tool.
 - [ ] TAG yang meminta Cn melebihi jumlah benang (21 record, sementara `Need Review`): diperbaiki di MATRIX atau diberi aturan?
 - [ ] TAG yang masih berisi instruksi belum diterjemahkan (7 record, sementara `Need Review`): TREE FARM `C1/C(car)`, TELLURIDE `C1/GONDOLA color`.
 - [ ] COLOR berupa deskripsi stripe atau marl (6 record, WS TAG COLOR sementara `Need Review`): ambil daftar benang dari comment sel, atau tunggu automation pelengkap benang?
@@ -270,8 +271,8 @@ Baseline F27 (setelah revisi 10 November 2026):
 | WHS style | 86 "BOTH WHS", 70 "000", 59 "SY", 0 tidak diketahui |
 | Warning ekstraksi | 0 |
 | WHS final per record | 354 "000", 194 "BOTH WHS", 176 "SY" |
-| WS TAG COLOR | 633 terisi, 91 `Need Review`, 0 null |
-| needs_review | 91: 57 TAG_CONDITIONAL, 21 TAG_CN_OUT_OF_RANGE, 7 TAG_UNRESOLVED, 6 COLOR_IS_DESCRIPTOR |
+| WS TAG COLOR | 678 terisi, 46 `Need Review`, 0 null |
+| needs_review | 46: 12 TAG_CONDITIONAL, 21 TAG_CN_OUT_OF_RANGE, 7 TAG_UNRESOLVED, 6 COLOR_IS_DESCRIPTOR |
 | Waktu proses | sekitar 1,5 detik |
 
 Baseline awal prototipe (9 November 2026): WHS style 85 / 70 / 59 / 1 tidak diketahui; 4 warning; WS TAG COLOR 646 terisi dari 724; needs_review 115.
@@ -296,6 +297,12 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 | Border | garis merah tebal | — | colorway di bawahnya = SY |
 
 ## Riwayat perubahan
+
+### 11 November 2026: TAG bersyarat
+
+1. TAG bersyarat dipilih per colorway (keputusan user): colorway dengan 1 benang = solid, selain itu bukan solid. `(For Solid)` berlaku untuk solid, `(For Marled)`/`(For Heathered)` untuk bukan solid, dan `(For <nama colorway>)` untuk colorway dengan benang persis itu (didahulukan). Bila tidak ada syarat yang cocok, atau lebih dari satu, tetap `Need Review`.
+2. F27: 45 record keluar dari `Need Review` (HUTTON di 2 sheet, FRAYED EDGE, JANE, MAYA, COCOON, SHEPHERD, ARIA V). `TAG_CONDITIONAL` 57 → 12, needs_review 91 → 46. Hasil ARIA V DARK DUSK (`DARK DUSK HEATHERED`) sama dengan comment sel di MATRIX.
+3. Tetap `Need Review`: TAG singkatan ("abbreviated color names", 10 record) dan FA LA LA FAIR ISLE (2 record, TAG per colorway tanpa syarat).
 
 ### 11 November 2026: revisi user setelah penulisan pertama
 

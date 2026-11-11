@@ -1,11 +1,11 @@
 {
   "target": "F27 IM MASTER (sheet F27, header baris 54)",
   "source": "F27 MATRIX MASTER",
-  "generated": "2026-11-10",
+  "generated": "2026-11-11",
   "rules": {
     "DESCRIPTION": "nama style dari MATRIX (tanpa size); berlaku untuk semua size di IM",
     "COLOR1-COLOR18": "1 benang = 1 kolom, nilai apa adanya dari MATRIX; benang berulang (stripe) ditulis sekali; slot tanpa benang tidak dicantumkan (tidak ditulis ke IM); benang yang sama dianggap sama tanpa membedakan huruf besar/kecil",
-    "WS TAG COLOR": "instruksi TAG, C1/C2/... diganti nama warna benang (tanpa prefix YCA/YST dan kode); STRIPED -> STRIPE; alias nama (mis. BLACK B -> BLACK); akhiran dobel (STRIPE STRIPE) dijadikan satu; 'Need Review' bila TAG bersyarat/singkatan, Cn di luar jumlah benang, TAG kosong, TAG belum diterjemahkan, atau COLOR berupa deskripsi (lihat needs_review)",
+    "WS TAG COLOR": "instruksi TAG, C1/C2/... diganti nama warna benang (tanpa prefix YCA/YST dan kode); STRIPED -> STRIPE; alias nama (mis. BLACK B -> BLACK); akhiran dobel (STRIPE STRIPE) dijadikan satu; TAG bersyarat dipilih per colorway: (For Solid) = 1 benang, (For Marled/Heathered) = lebih dari 1 benang, (For <nama colorway>) = colorway itu; 'Need Review' bila TAG bersyarat tidak cocok/singkatan, Cn di luar jumlah benang, TAG kosong, TAG belum diterjemahkan, atau COLOR berupa deskripsi (lihat needs_review)",
     "WHS": "kolom CE. Warna: di bawah garis merah = SY; di atas garis merah = BOTH WHS, kecuali font ungu/pink = 000. Style (background No): ungu 000, abu/putih/tanpa warna BOTH WHS, merah SY. WHS style = batas atas (irisan); null = belum ada aturan, tidak ditulis",
     "_ref": "asal di MATRIX: sheet (sub-koleksi) No | sel | posisi terhadap garis; tidak ditulis ke IM",
     "needs_review.code": "kode mesin: TAG_CONDITIONAL, TAG_CN_OUT_OF_RANGE, TAG_EMPTY, TAG_UNRESOLVED, WHS_STYLE_UNKNOWN, WHS_CONFLICT, FONT_COLOR_NO_RULE, COLOR_IS_DESCRIPTOR, TOO_MANY_YARNS, EXTRACTION_WARNING"
@@ -18,15 +18,15 @@
       "000": 354,
       "SY": 176
     },
-    "WS_TAG_COLOR_filled": 633,
-    "WS_TAG_COLOR_need_review": 91,
+    "WS_TAG_COLOR_filled": 678,
+    "WS_TAG_COLOR_need_review": 46,
     "WS_TAG_COLOR_null": 0,
-    "needs_review_items": 91,
+    "needs_review_items": 46,
     "needs_review_by_issue": {
-      "TAG_CONDITIONAL": 57,
       "COLOR_IS_DESCRIPTOR": 6,
       "TAG_CN_OUT_OF_RANGE": 21,
-      "TAG_UNRESOLVED": 7
+      "TAG_UNRESOLVED": 7,
+      "TAG_CONDITIONAL": 12
     }
   },
   "records": [
@@ -473,7 +473,7 @@
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA ALMOND BUTTER - 872",
       "COLOR2": "YCA CHOCOLATE ALE - 609",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "ALMOND BUTTER HEATHERED",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS COTTON No.15 | G98 | above_black"
     },
@@ -481,7 +481,7 @@
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA DARKEST INDIGO - 583",
       "COLOR2": "YCA SILVERSTONE - 887",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "DARKEST INDIGO HEATHERED",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS COTTON No.15 | G99 | between_black_red"
     },
@@ -489,7 +489,7 @@
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA SILVERSTONE - 887",
       "COLOR2": "YCA BREAKER WHITE - 658",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SILVERSTONE HEATHERED",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS COTTON No.15 | G100 | between_black_red"
     },
@@ -497,14 +497,14 @@
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA DARK DUSK - 899",
       "COLOR2": "BJ BLUE FIRE",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "DARK DUSK HEATHERED",
       "WHS": "SY",
       "_ref": "ESSENTIALS COTTON No.15 | G105 | below_red"
     },
     {
       "DESCRIPTION": "ARIA V CHUNKY COTTON",
       "COLOR1": "YCA SILVER PELT - 873",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SILVER PELT",
       "WHS": "SY",
       "_ref": "ESSENTIALS COTTON No.15 | G106 | below_red"
     },
@@ -2172,7 +2172,7 @@
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "NIGHT NAVY",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "NIGHT NAVY",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.20 | C163 | above_black"
     },
@@ -2180,49 +2180,49 @@
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SNOW MARL",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.20 | C164 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "GLASGOW",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "GLASGOW",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.20 | C165 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "FAWN",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "FAWN",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.20 | C166 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "RED CHILE",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "RED CHILE",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.20 | C167 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "BLACK",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "BLACK",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.20 | C171 | below_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "DARK ROAST",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "DARK ROAST",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.20 | C172 | below_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "SCANDIA BLUE",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SCANDIA BLUE",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.20 | C173 | below_red"
     },
@@ -2355,7 +2355,7 @@
     {
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "COLOR1": "BLACK",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "BLACK",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.25 | H163 | above_black"
     },
@@ -2363,28 +2363,28 @@
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SNOW MARL",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.25 | H164 | above_black"
     },
     {
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "COLOR1": "RED GINGER",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "RED GINGER",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.25 | H165 | between_black_red"
     },
     {
       "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
       "COLOR1": "DARK CEDAR",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "DARK CEDAR",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.25 | H166 | between_black_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "FLAX SAND",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "FLAX SAND",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.26 | I163 | above_black"
     },
@@ -2392,42 +2392,42 @@
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SNOW MARL",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.26 | I164 | between_black_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "ARCTIC NAVY",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "ARCTIC NAVY",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.26 | I165 | between_black_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "CEMENT",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "CEMENT",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.26 | I166 | between_black_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "CREAM",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "CREAM",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.26 | I171 | below_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "PEACH ICE",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "PEACH ICE",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.26 | I172 | below_red"
     },
     {
       "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
       "COLOR1": "PHANTOM INK",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "PHANTOM INK",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.26 | I173 | below_red"
     },
@@ -2507,7 +2507,7 @@
     {
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "FAWN",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "FAWN",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.30 | D231 | above_black"
     },
@@ -2515,28 +2515,28 @@
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SNOW MARL",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.30 | D232 | between_black_red"
     },
     {
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "MOSS OLIVE",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "MOSS OLIVE",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.30 | D233 | between_black_red"
     },
     {
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "RAVEN GRAY",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "RAVEN GRAY",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.30 | D234 | between_black_red"
     },
     {
       "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
       "COLOR1": "DARK ROAST",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "DARK ROAST",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.30 | D235 | between_black_red"
     },
@@ -2564,7 +2564,7 @@
     {
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "ALASKA NIGHT",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "ALASKA NIGHT",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.32 | F231 | above_black"
     },
@@ -2572,28 +2572,28 @@
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SNOW MARL",
       "WHS": "000",
       "_ref": "ESSENTIALS GRASSY No.32 | F232 | between_black_red"
     },
     {
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "DARK ROAST",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "DARK ROAST",
       "WHS": "BOTH WHS",
       "_ref": "ESSENTIALS GRASSY No.32 | F233 | between_black_red"
     },
     {
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "DARK CEDAR",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "DARK CEDAR",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.32 | F240 | below_red"
     },
     {
       "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
       "COLOR1": "ALMOND BUTTER",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "ALMOND BUTTER",
       "WHS": "SY",
       "_ref": "ESSENTIALS GRASSY No.32 | F241 | below_red"
     },
@@ -4076,21 +4076,21 @@
     {
       "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
       "COLOR1": "PURE SNOW",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "PURE SNOW",
       "WHS": "000",
       "_ref": "FALL No.26 | E221 | above_black"
     },
     {
       "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
       "COLOR1": "WINTER COAL",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "WINTER COAL",
       "WHS": "000",
       "_ref": "FALL No.26 | E222 | between_black_red"
     },
     {
       "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
       "COLOR1": "FAWN",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "FAWN",
       "WHS": "000",
       "_ref": "FALL No.26 | E223 | between_black_red"
     },
@@ -4685,14 +4685,14 @@
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "RED CHILE",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "RED CHILE",
       "WHS": "BOTH WHS",
       "_ref": "LUXE No.11 | D94 | above_black"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "NIGHT NAVY",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "NIGHT NAVY",
       "WHS": "BOTH WHS",
       "_ref": "LUXE No.11 | D95 | between_black_red"
     },
@@ -4700,42 +4700,42 @@
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "PURE SNOW",
       "COLOR2": "ALMOND BUTTER",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SNOW MARL",
       "WHS": "BOTH WHS",
       "_ref": "LUXE No.11 | D96 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "GLASGOW",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "GLASGOW",
       "WHS": "BOTH WHS",
       "_ref": "LUXE No.11 | D97 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "FAWN",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "FAWN",
       "WHS": "BOTH WHS",
       "_ref": "LUXE No.11 | D98 | between_black_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "BLACK",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "BLACK",
       "WHS": "SY",
       "_ref": "LUXE No.11 | D99 | below_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "DARK ROAST",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "DARK ROAST",
       "WHS": "SY",
       "_ref": "LUXE No.11 | D100 | below_red"
     },
     {
       "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
       "COLOR1": "SCANDIA BLUE",
-      "WS TAG COLOR": "Need Review",
+      "WS TAG COLOR": "SCANDIA BLUE",
       "WHS": "SY",
       "_ref": "LUXE No.11 | D101 | below_red"
     },
@@ -5859,51 +5859,6 @@
   ],
   "needs_review": [
     {
-      "record": 61,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "ARIA V CHUNKY COTTON",
-      "colorway": "YCA ALMOND BUTTER - 872/YCA CHOCOLATE ALE - 609",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG for Heathered: C1 HEATHERED TAG For solids: C1",
-      "_ref": "ESSENTIALS COTTON No.15 | G98 | above_black"
-    },
-    {
-      "record": 62,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "ARIA V CHUNKY COTTON",
-      "colorway": "YCA DARKEST INDIGO - 583/YCA SILVERSTONE - 887",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG for Heathered: C1 HEATHERED TAG For solids: C1",
-      "_ref": "ESSENTIALS COTTON No.15 | G99 | between_black_red"
-    },
-    {
-      "record": 63,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "ARIA V CHUNKY COTTON",
-      "colorway": "YCA SILVERSTONE - 887/YCA BREAKER WHITE - 658",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG for Heathered: C1 HEATHERED TAG For solids: C1",
-      "_ref": "ESSENTIALS COTTON No.15 | G100 | between_black_red"
-    },
-    {
-      "record": 64,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "ARIA V CHUNKY COTTON",
-      "colorway": "YCA DARK DUSK - 899/BJ BLUE FIRE",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG for Heathered: C1 HEATHERED TAG For solids: C1",
-      "_ref": "ESSENTIALS COTTON No.15 | G105 | below_red"
-    },
-    {
-      "record": 65,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "ARIA V CHUNKY COTTON",
-      "colorway": "YCA SILVER PELT - 873",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG for Heathered: C1 HEATHERED TAG For solids: C1",
-      "_ref": "ESSENTIALS COTTON No.15 | G106 | below_red"
-    },
-    {
       "record": 167,
       "code": "COLOR_IS_DESCRIPTOR",
       "DESCRIPTION": "RIHANNA STRIPED CARDI CHUNKY COTTON",
@@ -5956,267 +5911,6 @@
       "issue": "TAG minta C2 tapi colorway hanya punya 1 benang",
       "tag_instruction": "TAG: C1/C2 MARL",
       "_ref": "ESSENTIALS GRASSY No.14 | E97 | between_black_red"
-    },
-    {
-      "record": 294,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "NIGHT NAVY",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.20 | C163 | above_black"
-    },
-    {
-      "record": 295,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "PURE SNOW/ALMOND BUTTER",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.20 | C164 | between_black_red"
-    },
-    {
-      "record": 296,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "GLASGOW",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.20 | C165 | between_black_red"
-    },
-    {
-      "record": 297,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "FAWN",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.20 | C166 | between_black_red"
-    },
-    {
-      "record": 298,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "RED CHILE",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.20 | C167 | between_black_red"
-    },
-    {
-      "record": 299,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "BLACK",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.20 | C171 | below_red"
-    },
-    {
-      "record": 300,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "DARK ROAST",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.20 | C172 | below_red"
-    },
-    {
-      "record": 301,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "SCANDIA BLUE",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.20 | C173 | below_red"
-    },
-    {
-      "record": 320,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
-      "colorway": "BLACK",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.25 | H163 | above_black"
-    },
-    {
-      "record": 321,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
-      "colorway": "PURE SNOW/ALMOND BUTTER",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.25 | H164 | above_black"
-    },
-    {
-      "record": 322,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
-      "colorway": "RED GINGER",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.25 | H165 | between_black_red"
-    },
-    {
-      "record": 323,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "FRAYED EDGE JACKET CHUNKY",
-      "colorway": "DARK CEDAR",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.25 | H166 | between_black_red"
-    },
-    {
-      "record": 324,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
-      "colorway": "FLAX SAND",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.26 | I163 | above_black"
-    },
-    {
-      "record": 325,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
-      "colorway": "PURE SNOW/ALMOND BUTTER",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.26 | I164 | between_black_red"
-    },
-    {
-      "record": 326,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
-      "colorway": "ARCTIC NAVY",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.26 | I165 | between_black_red"
-    },
-    {
-      "record": 327,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
-      "colorway": "CEMENT",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.26 | I166 | between_black_red"
-    },
-    {
-      "record": 328,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
-      "colorway": "CREAM",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.26 | I171 | below_red"
-    },
-    {
-      "record": 329,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
-      "colorway": "PEACH ICE",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.26 | I172 | below_red"
-    },
-    {
-      "record": 330,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "JANE BUTTON CARDI CHUNKY",
-      "colorway": "PHANTOM INK",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.26 | I173 | below_red"
-    },
-    {
-      "record": 341,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
-      "colorway": "FAWN",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.30 | D231 | above_black"
-    },
-    {
-      "record": 342,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
-      "colorway": "PURE SNOW/ALMOND BUTTER",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.30 | D232 | between_black_red"
-    },
-    {
-      "record": 343,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
-      "colorway": "MOSS OLIVE",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.30 | D233 | between_black_red"
-    },
-    {
-      "record": 344,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
-      "colorway": "RAVEN GRAY",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.30 | D234 | between_black_red"
-    },
-    {
-      "record": 345,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "MAYA V BUTTON CARDI CHUNKY",
-      "colorway": "DARK ROAST",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.30 | D235 | between_black_red"
-    },
-    {
-      "record": 349,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
-      "colorway": "ALASKA NIGHT",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.32 | F231 | above_black"
-    },
-    {
-      "record": 350,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
-      "colorway": "PURE SNOW/ALMOND BUTTER",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.32 | F232 | between_black_red"
-    },
-    {
-      "record": 351,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
-      "colorway": "DARK ROAST",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.32 | F233 | between_black_red"
-    },
-    {
-      "record": 352,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
-      "colorway": "DARK CEDAR",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.32 | F240 | below_red"
-    },
-    {
-      "record": 353,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "COCOON WRAP CARDI CHUNKY",
-      "colorway": "ALMOND BUTTER",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "ESSENTIALS GRASSY No.32 | F241 | below_red"
     },
     {
       "record": 379,
@@ -6327,33 +6021,6 @@
       "_ref": "FALL No.14 | G96 | between_black_red"
     },
     {
-      "record": 534,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
-      "colorway": "PURE SNOW",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) TAG: C1 MARL (For Marled)",
-      "_ref": "FALL No.26 | E221 | above_black"
-    },
-    {
-      "record": 535,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
-      "colorway": "WINTER COAL",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) TAG: C1 MARL (For Marled)",
-      "_ref": "FALL No.26 | E222 | between_black_red"
-    },
-    {
-      "record": 536,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "SHEPHERD CARDI CHUNKY",
-      "colorway": "FAWN",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) TAG: C1 MARL (For Marled)",
-      "_ref": "FALL No.26 | E223 | between_black_red"
-    },
-    {
       "record": 588,
       "code": "TAG_UNRESOLVED",
       "DESCRIPTION": "TREE FARM CREW CHUNKY",
@@ -6370,78 +6037,6 @@
       "issue": "TAG masih berisi instruksi yang belum diterjemahkan: TAG: C1/C(car)",
       "tag_instruction": "TAG: C1/C(car)",
       "_ref": "LUXE (CHRISTMAS - GRASSY) No.7 | H28 | between_black_red"
-    },
-    {
-      "record": 597,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "RED CHILE",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "LUXE No.11 | D94 | above_black"
-    },
-    {
-      "record": 598,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "NIGHT NAVY",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "LUXE No.11 | D95 | between_black_red"
-    },
-    {
-      "record": 599,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "PURE SNOW/ALMOND BUTTER",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "LUXE No.11 | D96 | between_black_red"
-    },
-    {
-      "record": 600,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "GLASGOW",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "LUXE No.11 | D97 | between_black_red"
-    },
-    {
-      "record": 601,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "FAWN",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "LUXE No.11 | D98 | between_black_red"
-    },
-    {
-      "record": 602,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "BLACK",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "LUXE No.11 | D99 | below_red"
-    },
-    {
-      "record": 603,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "DARK ROAST",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "LUXE No.11 | D100 | below_red"
-    },
-    {
-      "record": 604,
-      "code": "TAG_CONDITIONAL",
-      "DESCRIPTION": "HUTTON MOCK T NECK CHUNKY",
-      "colorway": "SCANDIA BLUE",
-      "issue": "TAG kondisional / singkatan: perlu aturan khusus",
-      "tag_instruction": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
-      "_ref": "LUXE No.11 | D101 | below_red"
     },
     {
       "record": 624,

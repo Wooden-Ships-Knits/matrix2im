@@ -33,6 +33,11 @@ YARN_PREFIX_RE = r"^(YCA|YST|YTX|YP|BJ|POODLE)\s+"
 YARN_CODE_SUFFIX_RE = r"\s*-\s*\d+\s*[A-Z]?$"
 TAG_ALIAS = {"BLACK B": "BLACK"}
 TAG_CONDITIONAL_MARKERS = ("|", "FOR SOLID", "FOR HEATHER", "FOR MARL", "ABBREVIAT")
+# TAG bersyarat yang bisa diputuskan (keputusan user 11 Nov 2026): colorway 1 benang = solid, selain itu bukan solid.
+# Syarat lain di "(For ...)" dibaca sebagai nama colorway, mis. "(For PURE SNOW/ALMOND BUTTER)".
+TAG_COND_SOLID = frozenset({"SOLID", "SOLIDS"})
+TAG_COND_NOT_SOLID = frozenset({"MARL", "MARLED", "HEATHER", "HEATHERED"})
+TAG_COND_UNSUPPORTED = ("ABBREVIAT",)       # singkatan nama warna: tidak bisa diturunkan dari aturan
 TAG_DOUBLE_SUFFIX_RE = r"\b(STRIPE|MARL|MULTI|HEATHERED)( \1\b)+"
 # Instruksi TAG yang belum diterjemahkan: Cn tanpa nomor ("C(car)") atau kata COLOR ("GONDOLA color").
 TAG_UNRESOLVED_RE = r"\bC\(|\bCOLOU?R\b"
