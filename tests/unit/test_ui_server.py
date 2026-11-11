@@ -895,3 +895,22 @@ def test_failed_commit_status_carries_backup(serve_with, sessions, tmp_path, mon
     post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, cookie)
     st = wait_state(base, cookie, ("done", "error"))
     assert st["state"] == "error" and st["error"] == "gagal simpan" and st["backup"] == str(bak)
+
+
+def test_writer_thread_is_not_daemon():
+    """Thread tulis bukan daemon: proses tidak boleh mati di tengah menimpa IM MASTER."""
+    from matrix_to_im.im_writer import WriteReport
+
+    coord = WriteCoordinator()
+    gate = threading.Event()
+
+    def job(progress):
+        assert gate.wait(timeout=20)
+        return WriteReport(True, "ok", {}, None, Path("log"), 0.1, [])
+
+    assert coord.start("andi", job)
+    try:
+        assert coord._thread is not None and coord._thread.daemon is False
+    finally:
+        gate.set()
+        coord.wait(20)

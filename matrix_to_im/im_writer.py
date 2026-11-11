@@ -35,7 +35,14 @@ from .write_plan import (
 )
 from .xlsx_cells import apply_cell_values, sheet_xml_path
 
+try:
+    import fcntl
+except ImportError:   # bukan Unix: penulisan IM hanya dari PC pusat (Mac), kunci antarproses dilewati
+    fcntl = None  # type: ignore[assignment]
+
 LOG_NAME = "matrix2im-log.jsonl"
+LOCK_NAME = "matrix2im.lock"
+_LOCKED_MSG = "Ada penulisan lain yang sedang berjalan (proses lain di PC ini)"
 _CHANGED_MSG = "IM MASTER berubah atau sedang dibuka sejak rencana dibuat; buat rencana lagi"
 _UNREADABLE = (zipfile.BadZipFile, KeyError, ValueError, binascii.Error, ET.ParseError)
 _ABORT_NOTE = "penulisan dibatalkan, file asli tidak diubah"
@@ -275,7 +282,7 @@ def _overwrite_in_place(target: Path, source: Path, backup: Path, password: str 
             os.fsync(f.fileno())
         if _sha256(target) != hashlib.sha256(data).hexdigest():
             raise Matrix2ImError("hasil tulis tidak cocok dengan data yang dikirim")
-    except Exception as exc:
+    except BaseException as exc:        # termasuk Ctrl+C/SIGTERM: file setengah tertulis lebih buruk dari gagal
         detail = str(exc).replace(password, "***") if password else str(exc)
         if not touched:
             note = "File asli tidak diubah."
@@ -283,10 +290,13 @@ def _overwrite_in_place(target: Path, source: Path, backup: Path, password: str 
             try:
                 _write_bytes_in_place(target, backup.read_bytes())
                 ok = _sha256(target) == _sha256(backup)
-            except Exception:  # noqa: BLE001 - pesan pemulihan manual harus selalu sampai
+            except BaseException:  # noqa: BLE001 - juga Ctrl+C kedua: pesan pemulihan manual harus selalu sampai
                 ok = False
             note = ("File asli sudah dipulihkan dari cadangan." if ok else
                     f"File asli mungkin rusak; pulihkan manual dari cadangan {backup}.")
+        if not isinstance(exc, Exception):
+            exc.add_note(note)          # commit_write mencatatnya ke log, lalu interupsi diteruskan
+            raise
         raise Matrix2ImError(f"Gagal menyimpan ke IM MASTER ({detail}). {note}") from exc
 
 
@@ -347,8 +357,35 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
         if fingerprint(path) != preview.fingerprint or owner_file(path) is not None:
             raise Matrix2ImError(_CHANGED_MSG)
         _overwrite_in_place(path, tmp2, backup, password)
+        state["written"] = True
     finally:
         shutil.rmtree(work, ignore_errors=True)   # best effort; folder milik run ini, tak boleh mengubah hasil
+
+
+def _acquire_lock(backup_dir: Path):
+    """Kunci file di folder cadangan untuk seluruh run: CLI dan server di PC yang sama tidak boleh menulis
+    bersamaan (kunci server hanya berlaku di dalam satu proses). None bila proses lain memegangnya."""
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    handle = open(backup_dir / LOCK_NAME, "a+b")
+    if fcntl is not None:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            handle.close()
+            return None
+    return handle
+
+
+def _interrupted(exc: BaseException, state: dict) -> str:
+    """Pesan log untuk Ctrl+C/SIGTERM yang jujur tentang keadaan file asli."""
+    notes = " ".join(getattr(exc, "__notes__", []))
+    if notes:
+        tail = notes
+    elif state["written"]:
+        tail = "IM MASTER sudah diperbarui sebelum dihentikan."
+    else:
+        tail = "File asli tidak diubah."
+    return f"Penulisan dihentikan paksa ({type(exc).__name__}). {tail}"
 
 
 def commit_write(preview: WritePreview, final: dict, settings: Settings, password: str, user: str,
@@ -359,29 +396,45 @@ def commit_write(preview: WritePreview, final: dict, settings: Settings, passwor
     if settings.backup_dir is None:
         raise Matrix2ImError("Setting backup_dir belum diisi")
     log_file = settings.backup_dir / LOG_NAME
-    state: dict = {"backup": None, "warnings": []}
+    state: dict = {"backup": None, "warnings": [], "written": False}
+    lock = None
+
+    def record(ok: bool, message: str) -> WriteReport:
+        if password:
+            message = message.replace(password, "***")
+        backup = state["backup"]
+        entry = {"waktu": datetime.now().isoformat(timespec="seconds"), "user": user, "matrix": matrix_name,
+                 "im_master": str(preview.im_master), "engine": preview.engine, "summary": preview.summary,
+                 "backup": str(backup) if backup else None, "hasil": "ok" if ok else "gagal", "pesan": message}
+        if not _log(log_file, entry):
+            message += " (catatan log gagal ditulis)"
+        return WriteReport(ok, message, preview.summary, backup, log_file, time.monotonic() - start,
+                           _inserted_rows(preview.inserts) if ok else [])
+
     try:
-        _execute(preview, final, settings, password, progress, inserter, state)
-        ok = True
-        message = (f"IM MASTER diperbarui: {preview.summary['cells_changed']} sel diubah, "
-                   f"{preview.summary['rows_inserted']} baris disisipkan.")
-        message += "".join(f" PERINGATAN: {w}." for w in state["warnings"])
-    except Matrix2ImError as exc:
-        ok, message = False, str(exc)
-    except Exception as exc:  # noqa: BLE001 - apa pun harus berakhir sebagai laporan, bukan crash
-        ok, message = False, f"Gagal tak terduga: {type(exc).__name__}: {exc}"
-        trace = "".join(traceback.format_exception(exc))
-        logging.getLogger(__name__).error("commit_write gagal: %s",
-                                          trace.replace(password, "***") if password else trace)
-    if password:
-        message = message.replace(password, "***")
-    backup = state["backup"]
-    entry = {"waktu": datetime.now().isoformat(timespec="seconds"), "user": user, "matrix": matrix_name,
-             "im_master": str(preview.im_master), "engine": preview.engine, "summary": preview.summary,
-             "backup": str(backup) if backup else None, "hasil": "ok" if ok else "gagal", "pesan": message}
-    if not _log(log_file, entry):
-        message += " (catatan log gagal ditulis)"
-    if ok:
+        try:
+            lock = _acquire_lock(settings.backup_dir)
+            if lock is None:
+                raise Matrix2ImError(_LOCKED_MSG)     # sebelum menyentuh apa pun
+            _execute(preview, final, settings, password, progress, inserter, state)
+            ok = True
+            message = (f"IM MASTER diperbarui: {preview.summary['cells_changed']} sel diubah, "
+                       f"{preview.summary['rows_inserted']} baris disisipkan.")
+            message += "".join(f" PERINGATAN: {w}." for w in state["warnings"])
+        except Matrix2ImError as exc:
+            ok, message = False, str(exc)
+        except Exception as exc:  # noqa: BLE001 - apa pun harus berakhir sebagai laporan, bukan crash
+            ok, message = False, f"Gagal tak terduga: {type(exc).__name__}: {exc}"
+            trace = "".join(traceback.format_exception(exc))
+            logging.getLogger(__name__).error("commit_write gagal: %s",
+                                              trace.replace(password, "***") if password else trace)
+        except BaseException as exc:   # Ctrl+C/SIGTERM: catat dulu, lalu teruskan
+            record(False, _interrupted(exc, state))
+            raise
+        report = record(ok, message)
+    finally:
+        if lock is not None:
+            lock.close()                # menutup file melepas flock
+    if report.ok:
         progress("selesai")
-    return WriteReport(ok, message, preview.summary, backup, log_file, time.monotonic() - start,
-                       _inserted_rows(preview.inserts) if ok else [])
+    return report

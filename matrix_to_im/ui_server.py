@@ -146,7 +146,8 @@ class WriteCoordinator:
                 return False
             self._status = {"state": "running", "phase": "mulai", "user": user,
                             "started": time.strftime("%Y-%m-%dT%H:%M:%S")}
-        self._thread = threading.Thread(target=self._run, args=(job,), daemon=True, name="tulis-im")
+        # Bukan daemon: proses tidak boleh berakhir di tengah menimpa IM MASTER (serve juga menunggunya).
+        self._thread = threading.Thread(target=self._run, args=(job,), daemon=False, name="tulis-im")
         self._thread.start()
         return True
 

@@ -123,6 +123,7 @@ Langkah ini dikerjakan sendiri oleh pengelola (menyangkut pengaturan sistem), bu
 
 - Tiap penulisan lebih dulu membuat cadangan `<nama> <tanggal jam> sebelum matrix2im.xlsx` di `backup_dir`. Folder `kerja` di sana hanya berisi salinan sementara dan dibersihkan sendiri.
 - Log berupa file `matrix2im-log.jsonl` di `backup_dir`, satu baris JSON per penulisan: waktu, nama user, nama file MATRIX yang diupload (di UI) atau nama file `final.json` (di CLI), ringkasan rencana, hasil (ok/gagal), pesan, dan path cadangan. Password tidak pernah dicatat. Penulisan yang gagal pun dicatat.
+- Selama menulis, tool memegang kunci file `matrix2im.lock` di `backup_dir`, supaya dua proses di PC yang sama (mis. CLI dan server) tidak menulis bersamaan; proses kedua langsung berhenti dengan pesan "Ada penulisan lain yang sedang berjalan (proses lain di PC ini)" tanpa menyentuh apa pun. Bila penulisan dihentikan paksa (Ctrl+C) saat isi IM MASTER sedang ditimpa, tool memulihkan isinya dari cadangan, memeriksa sha256-nya, dan mencatatnya di log.
 - **Memulihkan:** tutup IM MASTER di semua PC, lalu salin isi file cadangan menimpa file IM MASTER (isi ditimpa, bukan file diganti, supaya link Google Drive tetap). Di Google Drive, lebih baik pakai riwayat versi (klik kanan file, Kelola versi).
 
 ### Batasan

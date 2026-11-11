@@ -650,3 +650,83 @@ def test_cf_count_streams_and_counts_token_across_chunk_boundary(tmp_path):
         z.writestr("xl/styles.xml", token)          # bukan worksheet: tidak dihitung
     with zipfile.ZipFile(path) as z:
         assert im_writer._count_token(z, token) == 3
+
+
+# ---------- M1: dihentikan paksa saat menimpa; M4: kunci antarproses ----------
+
+def _lock_free(st):
+    import fcntl
+    with open(st.backup_dir / "matrix2im.lock", "a+b") as fd:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return False
+        return True
+
+
+def test_keyboard_interrupt_during_in_place_write_restores_logs_and_reraises(tmp_path, monkeypatch):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    real, calls = os.fsync, []
+
+    def interrupt(fd):
+        calls.append(fd)
+        if len(calls) == 1:
+            assert im.read_bytes() != before     # byte baru sudah masuk ke file asli
+            raise KeyboardInterrupt
+        return real(fd)
+
+    monkeypatch.setattr(im_writer.os, "fsync", interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        commit_write(p, final, st, PW, "andi", "m.xlsx")
+    assert im.read_bytes() == before and os.stat(im).st_ino == ino
+    last = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
+    assert last["hasil"] == "gagal" and "KeyboardInterrupt" in last["pesan"]
+    assert "File asli sudah dipulihkan dari cadangan" in last["pesan"]
+    assert _kerja_empty(st) and _lock_free(st)
+
+
+def test_keyboard_interrupt_before_step9_says_original_untouched(tmp_path, excel_on):
+    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a"]])], "excel")
+    final = {"records": [_rec("AAA", ["x1"]), _rec("AAA", ["x2"], n=2)]}
+    p = prepare_write(final, st, PW)
+    before = im.read_bytes()
+
+    def stop(*a, **k):
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=stop)
+    last = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
+    assert last["hasil"] == "gagal" and "File asli tidak diubah" in last["pesan"]
+    assert im.read_bytes() == before and _kerja_empty(st)
+
+
+def test_commit_refuses_while_other_process_holds_lock(tmp_path):
+    import fcntl
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    before = im.read_bytes()
+    st.backup_dir.mkdir(parents=True)
+    with open(st.backup_dir / "matrix2im.lock", "a+b") as other:      # proses lain di PC ini
+        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    assert not rep.ok and rep.message == "Ada penulisan lain yang sedang berjalan (proses lain di PC ini)"
+    assert im.read_bytes() == before and rep.backup is None
+    assert not list(st.backup_dir.glob("*sebelum matrix2im*")) and not (st.backup_dir / "kerja").exists()
+    last = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
+    assert last["hasil"] == "gagal" and last["pesan"] == rep.message
+    rep2 = commit_write(p, final, st, PW, "andi", "m.xlsx")          # kunci dilepas: boleh lagi
+    assert rep2.ok, rep2.message
+
+
+def test_lock_held_during_run_and_released_after(tmp_path):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    seen = []
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", progress=lambda ph: seen.append(_lock_free(st)))
+    assert rep.ok and seen and not any(seen[:-1])
+    assert _lock_free(st)
+    bad = commit_write(p, final, st, "salah-sandi", "andi", "m.xlsx")
+    assert not bad.ok and _lock_free(st)
