@@ -256,7 +256,7 @@ def _check_excel_kept(backup: Path, tmp: Path) -> list[str]:
 
 def _verify_written(tmp: Path, tmp2: Path, password: str, changes: list, fills: list = (),
                     before_fills: dict | None = None) -> None:
-    """before_fills = warna WS TAG COLOR semua baris grup di tmp; sesudah ditulis harus sama kecuali yang direncanakan."""
+    """before_fills = warna WS TAG COLOR/WHS semua baris grup di tmp; sesudah ditulis harus sama kecuali yang direncanakan."""
     layout = read_layout(tmp2)
     for ch in changes:
         got = layout.values.get((ch.row, ch.col))
@@ -468,7 +468,7 @@ def commit_write(preview: WritePreview, final: dict, settings: Settings, passwor
             _execute(preview, final, settings, password, progress, inserter, state)
             ok = True
             message = (f"IM MASTER diperbarui: {preview.summary['cells_changed']} sel diubah, "
-                       f"{preview.summary['fills_changed']} warna WS TAG COLOR diubah, "
+                       f"{preview.summary['fills_changed']} warna latar diubah (WS TAG COLOR dan WHS), "
                        f"{preview.summary['rows_inserted']} baris disisipkan.")
             if missing := len(preview.values.missing_styles):
                 message += f" {missing} style MATRIX tidak ada di IM (tidak ditulis)."

@@ -10,7 +10,8 @@ from openpyxl.utils import get_column_letter
 
 from .errors import Matrix2ImError
 from .im_layout import ImGroup, ImLayout, normalize
-from .legend_config import IM_ACCESSORY_RE, IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS, WHS_VALUES, WS_TAG_FILL_BY_WHS
+from .legend_config import (EXTRA_ROW_FILL, FILL_BY_WHS, IM_ACCESSORY_RE, IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS,
+                            WHS_VALUES)
 
 _REF_RE = re.compile(r"^(?P<sheet>.+?)(?: \((?P<section>[^)]*)\))? No\.(?P<no>.+?) \| ")
 _WHS_BY_SET = {parts: name for name, parts in WHS_SETS.items()}
@@ -216,7 +217,7 @@ class CellChange:
 
 @dataclass(frozen=True)
 class FillChange:
-    """Warna latar satu sel (WS TAG COLOR) yang berubah; kode 6 hex (mis. "FF99FF"), None = tanpa warna."""
+    """Warna latar satu sel (WS TAG COLOR atau WHS) yang berubah; kode 6 hex (mis. "FF99FF"), None = tanpa warna."""
     row: int
     col: int
     old: str | None
@@ -229,7 +230,7 @@ class ValuePlan:
     changed_colorway_rows: list[int] = field(default_factory=list)
     short_groups: list[str] = field(default_factory=list)
     extra_rows: list[int] = field(default_factory=list)   # baris grup melebihi jumlah colorway MATRIX
-    fills: list[FillChange] = field(default_factory=list)  # warna latar WS TAG COLOR yang berubah
+    fills: list[FillChange] = field(default_factory=list)  # warna latar WS TAG COLOR / WHS yang berubah
     unmatched_im_styles: list[str] = field(default_factory=list)
     missing_styles: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -284,17 +285,19 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
                 elif (None if _blank(old) else str(old)) != new and not (_blank(old) and new is None):
                     plan.changes.append(CellChange(row, col, old, new))
 
-            def paint(new: str | None) -> None:
-                old = layout.fills.get((row, cols.ws_tag))
-                if old != new:
-                    plan.fills.append(FillChange(row, cols.ws_tag, old, new))
+            def paint(new: str) -> None:
+                """Warna latar WS TAG COLOR dan WHS baris ini."""
+                for col in (cols.ws_tag, cols.whs):
+                    old = layout.fills.get((row, col))
+                    if old != new:
+                        plan.fills.append(FillChange(row, col, old, new))
 
             if i >= n:
-                # Baris lebih: WS TAG COLOR dan WHS dikosongkan tanpa warna, COLOR dibiarkan (keputusan user 11 Nov 2026).
+                # Baris lebih: WS TAG COLOR dan WHS dikosongkan berlatar kuning, COLOR dibiarkan (keputusan user 11 Nov 2026).
                 plan.extra_rows.append(row)
                 put(cols.ws_tag, None)
                 put(cols.whs, None)
-                paint(None)
+                paint(EXTRA_ROW_FILL)
                 continue
             cw = cws[i]
             yarns = cw.colors[:len(cols.colors)]
@@ -317,8 +320,8 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
                 put(cols.ws_tag, cw.ws_tag)
             if cw.whs is not None:
                 put(cols.whs, cw.whs)
-            if cw.whs in WS_TAG_FILL_BY_WHS:
-                paint(WS_TAG_FILL_BY_WHS[cw.whs])
+            if cw.whs in FILL_BY_WHS:
+                paint(FILL_BY_WHS[cw.whs])
     plan.unmatched_im_styles = sorted(unmatched)
     plan.missing_styles = [s for s in colorways if s not in matched]
     return plan

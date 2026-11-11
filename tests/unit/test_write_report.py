@@ -113,7 +113,7 @@ def test_extra_rows_listed(tmp_path, monkeypatch):
     p = prepare_write({"records": [_rec("AAA", ["a"], 1, ws="T", whs="000")]}, st, TEST_PASSWORD)
     kinds = _by_kind(report_rows(p))
     assert kinds["baris lebih"] == [("AAA - K", "", "56", "", "",
-                                     "colorway MATRIX lebih sedikit; WS TAG COLOR dan WHS dikosongkan",
+                                     "colorway MATRIX lebih sedikit; WS TAG COLOR dan WHS dikosongkan, latar kuning",
                                      "baris lebih")]
     assert {r[1] for r in kinds["ubah"]} == {"X56", "Y56"}
 
@@ -128,4 +128,6 @@ def test_fill_rows_show_old_and_new_color(tmp_path, monkeypatch):
     kinds = _by_kind(report_rows(p))
     assert kinds["warna"] == [
         ("AAA - K", "X55", "55", "WS TAG COLOR (warna latar)", "FFFF00", "969696", "warna"),
-        ("AAA - K", "X56", "56", "WS TAG COLOR (warna latar)", "FFCC99", "tanpa warna", "warna")]
+        ("AAA - K", "Y55", "55", "WHS (warna latar)", "tanpa warna", "969696", "warna"),
+        ("AAA - K", "X56", "56", "WS TAG COLOR (warna latar)", "FFCC99", "FFFF00", "warna"),
+        ("AAA - K", "Y56", "56", "WHS (warna latar)", "tanpa warna", "FFFF00", "warna")]

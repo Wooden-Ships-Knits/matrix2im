@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 REPORT_HEADER = ("DESCRIPTION", "sel", "baris", "kolom", "lama", "baru", "jenis")
 REPORT_SHEET = "Laporan"
 _BARIS = REPORT_HEADER.index("baris")
-EXTRA_ROW_NOTE = "colorway MATRIX lebih sedikit; WS TAG COLOR dan WHS dikosongkan"
+EXTRA_ROW_NOTE = "colorway MATRIX lebih sedikit; WS TAG COLOR dan WHS dikosongkan, latar kuning"
 NO_FILL = "tanpa warna"
 
 

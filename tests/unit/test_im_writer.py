@@ -869,7 +869,8 @@ def test_skipped_style_not_counted_as_unmatched_im_style(tmp_path):
 
 def _painted(tmp_path, engine="none", groups=None):
     groups = groups or [GroupSpec("AAA - K", [["a1"], ["a2"], ["a3"]], ws_tags=["T1", "T2", "OLD"],
-                                  whs=["000", "SY", "000"], ws_tag_fills=["FF99FF", "FFFF00", "FF99FF"])]
+                                  whs=["000", "SY", "000"], ws_tag_fills=["FF99FF", "FFFF00", "FF99FF"],
+                                  whs_fills=["FF99FF", None, None])]
     im, st = _make(tmp_path, groups, engine)
     final = {"records": [_rec("AAA", ["a1"], "T1", "000", 1), _rec("AAA", ["a2"], "T2", "BOTH WHS", 2)]}
     return im, st, final
@@ -878,12 +879,14 @@ def _painted(tmp_path, engine="none", groups=None):
 def test_commit_paints_ws_tag_by_whs_and_clears_extra_row(tmp_path):
     im, st, final = _painted(tmp_path)
     p = prepare_write(final, st, PW)
-    assert p.summary["fills_changed"] == 2 and p.summary["extra_rows"] == 1
+    assert p.summary["fills_changed"] == 4 and p.summary["extra_rows"] == 1   # 56 dua kolom, 57 dua kolom
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
     assert rep.ok, rep.message
-    assert "2 warna WS TAG COLOR diubah" in rep.message
-    assert read_fills(im, "F27", [(55, 24), (56, 24), (57, 24)]) == {
-        (55, 24): "FF99FF", (56, 24): "969696", (57, 24): None}
+    assert "4 warna latar diubah" in rep.message
+    cells = [(r, c) for r in (55, 56, 57) for c in (24, 25)]
+    assert read_fills(im, "F27", cells) == {
+        (55, 24): "FF99FF", (56, 24): "969696", (57, 24): "FFFF00",
+        (55, 25): "FF99FF", (56, 25): "969696", (57, 25): "FFFF00"}
     assert _values(im, 56) == ["a2", "T2", "BOTH WHS"]
     assert _values(im, 57) == ["a3", None, None]                       # COLOR baris lebih dibiarkan
     with zipfile.ZipFile(rep.backup) as a, zipfile.ZipFile(im) as b:
@@ -895,10 +898,12 @@ def test_commit_inserted_rows_get_whs_fill(tmp_path, excel_on):
     groups = [GroupSpec("AAA - K", [["a1"]], ws_tags=["T1"], whs=["000"], ws_tag_fills=["FFFF00"])]
     im, st, final = _painted(tmp_path, "excel", groups)
     p = prepare_write(final, st, PW)
-    assert [(f.row, f.old, f.new) for f in p.values.fills] == [(55, "FFFF00", "FF99FF"), (56, "FFFF00", "969696")]
+    assert [(f.row, f.col, f.old, f.new) for f in p.values.fills] == [
+        (55, 24, "FFFF00", "FF99FF"), (55, 25, None, "FF99FF"), (56, 24, "FFFF00", "969696"), (56, 25, None, "969696")]
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=fake_inserter)
     assert rep.ok, rep.message
-    assert read_fills(im, "F27", [(55, 24), (56, 24)]) == {(55, 24): "FF99FF", (56, 24): "969696"}
+    assert read_fills(im, "F27", [(55, 24), (56, 24), (55, 25), (56, 25)]) == {
+        (55, 24): "FF99FF", (56, 24): "969696", (55, 25): "FF99FF", (56, 25): "969696"}
 
 
 def test_commit_aborts_when_fill_not_written_as_planned(tmp_path, monkeypatch):
