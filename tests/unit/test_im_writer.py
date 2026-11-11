@@ -366,6 +366,7 @@ def _patch_apply(monkeypatch, mutate_changes=None, mutate_out=None):
     ("value", "Verifikasi gagal: sel"),
     ("lock", "tidak dikunci"),
     ("other_entry", "bagian lain"),
+    ("read_only", "readOnlyRecommended"),
 ])
 def test_commit_aborts_on_step8_verification(tmp_path, monkeypatch, case, text):
     im, st, final = _simple(tmp_path)
@@ -376,6 +377,9 @@ def test_commit_aborts_on_step8_verification(tmp_path, monkeypatch, case, text):
     elif case == "lock":
         _patch_apply(monkeypatch, mutate_out=lambda dst: _rewrite_entry(
             dst, "xl/workbook.xml", lambda d: re.sub(rb"<fileSharing[^>]*/>", b"", d)))
+    elif case == "read_only":
+        _patch_apply(monkeypatch, mutate_out=lambda dst: _rewrite_entry(
+            dst, "xl/workbook.xml", lambda d: d.replace(b' readOnlyRecommended="1"', b"")))
     else:
         _patch_apply(monkeypatch, mutate_out=lambda dst: _rewrite_entry(
             dst, "docProps/core.xml", lambda d: d + b"<!--x-->"))
@@ -530,3 +534,119 @@ def test_temp_copy_has_unique_name_per_run(tmp_path, excel_on):
     for path in seen:
         assert re.fullmatch(r"im-kerja-[0-9a-f]{8}\.xlsx", path.name), path.name
         assert path.parent.parent == st.backup_dir / "kerja"
+
+
+# ---------- I3: Excel tidak boleh menghilangkan bagian file ----------
+
+_PARTS = {"xl/media/image1.png": b"\x89PNG-uji", "xl/drawings/drawing1.xml": b"<xdr:wsDr/>",
+          "xl/comments1.xml": b"<comments/>", "xl/externalLinks/externalLink1.xml": b"<externalLink/>"}
+_KEEP = ("xl/media/", "xl/drawings/", "xl/comments", "xl/threadedComments/", "xl/externalLinks/",
+         "xl/embeddings/")
+
+
+def _add_parts(path, parts):
+    """Tambahkan entri zip ke file sintetis (meniru gambar/drawing/comment di IM asli)."""
+    tmp = path.with_suffix(".parts")
+    with zipfile.ZipFile(path) as src, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as dst:
+        for item in src.infolist():
+            dst.writestr(item, src.read(item.filename))
+        for name, data in parts.items():
+            dst.writestr(name, data)
+    tmp.replace(path)
+
+
+def _drop_entry(path, name):
+    tmp = path.with_suffix(".drop")
+    with zipfile.ZipFile(path) as src, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as dst:
+        for item in src.infolist():
+            if item.filename != name:
+                dst.writestr(item, src.read(item.filename))
+    tmp.replace(path)
+
+
+def faithful_inserter(mutate=None):
+    """fake_inserter yang, seperti Excel, mempertahankan entri yang dibuang openpyxl; lalu mutasi opsional."""
+    def ins(path, password, ops, sheet, last_col):
+        with zipfile.ZipFile(path) as z:
+            keep = {n: z.read(n) for n in z.namelist() if n.startswith(_KEEP)}
+        fake_inserter(path, password, ops, sheet, last_col)
+        with zipfile.ZipFile(path) as z:
+            missing = {n: d for n, d in keep.items() if n not in z.namelist()}
+        if missing:
+            _add_parts(path, missing)
+        if mutate:
+            mutate(path)
+        return 0.1
+    return ins
+
+
+def _excel_env(tmp_path, cf=False):
+    im = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("AAA - K", [["a"]])])
+    if cf:
+        from openpyxl.formatting.rule import CellIsRule
+        from openpyxl.styles import PatternFill
+        wb = load_workbook(im)
+        wb["F27"].conditional_formatting.add(
+            "E55:E60", CellIsRule(operator="equal", formula=['"x1"'], fill=PatternFill("solid", fgColor="FFFF0000")))
+        wb.save(im)
+    add_file_sharing(im)
+    _add_parts(im, _PARTS)
+    st = Settings(im_master=im, backup_dir=tmp_path / "cadangan", insert_engine="excel")
+    final = {"records": [_rec("AAA", ["x1"]), _rec("AAA", ["x2"], n=2)]}
+    return im, st, final
+
+
+@pytest.mark.parametrize("mutate,names", [
+    (lambda p: _drop_entry(p, "xl/media/image1.png"), ("xl/media", "image1.png")),
+    (lambda p: _drop_entry(p, "xl/comments1.xml"), ("xl/comments", "comments1.xml")),
+    (lambda p: _rewrite_entry(p, "xl/workbook.xml", lambda d: d.replace(b' readOnlyRecommended="1"', b"")),
+     ("readOnlyRecommended",)),
+    (lambda p: _rewrite_entry(p, "xl/workbook.xml", lambda d: d.replace(b'userName="Tester"', b'userName="Excel"')),
+     ("userName",)),
+])
+def test_commit_aborts_when_excel_loses_parts_or_lock_attributes(tmp_path, excel_on, mutate, names):
+    im, st, final = _excel_env(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=faithful_inserter(mutate))
+    _aborted(st, rep, "Excel mengubah bagian IM MASTER yang harus utuh", im, before, ino)
+    for name in names:
+        assert name in rep.message, rep.message
+    assert "file asli tidak diubah" in rep.message
+
+
+def test_commit_keeps_parts_with_faithful_excel(tmp_path, excel_on):
+    im, st, final = _excel_env(tmp_path)
+    p = prepare_write(final, st, PW)
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=faithful_inserter())
+    assert rep.ok, rep.message
+    with zipfile.ZipFile(im) as z:
+        assert set(_PARTS) <= set(z.namelist())
+    assert "PERINGATAN" not in rep.message
+
+
+def test_cf_count_change_after_excel_is_warning_only(tmp_path, excel_on):
+    im, st, final = _excel_env(tmp_path, cf=True)
+    p = prepare_write(final, st, PW)
+
+    def drop_cf(path):
+        _rewrite_entry(path, "xl/worksheets/sheet1.xml",
+                       lambda d: re.sub(rb"<conditionalFormatting.*?</conditionalFormatting>", b"", d, flags=re.S))
+
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=faithful_inserter(drop_cf))
+    assert rep.ok, rep.message
+    assert "PERINGATAN" in rep.message and "conditional formatting" in rep.message and "1 menjadi 0" in rep.message
+    entry = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
+    assert entry["hasil"] == "ok" and "conditional formatting" in entry["pesan"]
+
+
+def test_cf_count_streams_and_counts_token_across_chunk_boundary(tmp_path):
+    path = tmp_path / "x.zip"
+    token = b"<conditionalFormatting"
+    body = b"a" * ((1 << 20) - 5) + token + b"b" * 10 + token
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("xl/worksheets/sheet1.xml", body)
+        z.writestr("xl/worksheets/sheet2.xml", token)
+        z.writestr("xl/styles.xml", token)          # bukan worksheet: tidak dihitung
+    with zipfile.ZipFile(path) as z:
+        assert im_writer._count_token(z, token) == 3

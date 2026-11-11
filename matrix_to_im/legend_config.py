@@ -63,4 +63,7 @@ OWNER_FILE_TRUNCATE = 2                    # Excel kadang memotong 2 huruf perta
 OWNER_NAME_MAX_LEN = 53                    # byte pertama file pemilik = panjang nama (maks 53)
 OWNER_NAME_FALLBACK = "seseorang"
 EXCEL_APP = "/Applications/Microsoft Excel.app"
+# Bagian xlsx yang tidak diubah tool; daftar namanya harus sama sebelum dan sesudah Excel menyisipkan baris.
+IM_KEEP_PARTS = ("xl/media/", "xl/drawings/", "xl/comments", "xl/threadedComments/", "xl/externalLinks/",
+                 "xl/embeddings/")
 EXCEL_TIMEOUT_S = 900

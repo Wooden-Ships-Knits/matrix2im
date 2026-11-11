@@ -9,6 +9,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import secrets
 import shutil
 import tempfile
@@ -26,8 +27,8 @@ from openpyxl.utils import get_column_letter
 from .errors import Matrix2ImError
 from .excel_mac import excel_available, run_excel_inserts
 from .im_layout import ImLayout, read_layout
-from .im_lock import check_modify_password, owner_file, owner_name
-from .legend_config import IM_SHEET
+from .im_lock import FileSharing, check_modify_password, owner_file, owner_name, read_file_sharing
+from .legend_config import IM_KEEP_PARTS, IM_SHEET
 from .settings import Settings
 from .write_plan import (
     InsertOp, Skip, ValuePlan, match_style, plan_inserts, plan_values, project_layout, style_colorways,
@@ -37,6 +38,13 @@ from .xlsx_cells import apply_cell_values, sheet_xml_path
 LOG_NAME = "matrix2im-log.jsonl"
 _CHANGED_MSG = "IM MASTER berubah atau sedang dibuka sejak rencana dibuat; buat rencana lagi"
 _UNREADABLE = (zipfile.BadZipFile, KeyError, ValueError, binascii.Error, ET.ParseError)
+_ABORT_NOTE = "penulisan dibatalkan, file asli tidak diubah"
+# Atribut FileSharing -> nama atribut XML, supaya pesan bisa dicocokkan langsung dengan workbook.xml.
+_SHARING_XML = {"user_name": "userName", "read_only_recommended": "readOnlyRecommended",
+                "algorithm": "algorithmName", "spin_count": "spinCount", "hash_value": "hashValue",
+                "salt_value": "saltValue", "legacy": "reservationPassword"}
+_CF_TOKEN = b"<conditionalFormatting"
+_WORKSHEET_RE = re.compile(r"xl/worksheets/[^/]+\.xml")
 
 
 class ImMasterBusy(Matrix2ImError):
@@ -166,6 +174,64 @@ def _structure(layout: ImLayout) -> list[tuple]:
     return [(g.description, g.rows, g.subtotal_row) for g in layout.groups]
 
 
+def _sharing_diff(a: FileSharing | None, b: FileSharing | None) -> list[str]:
+    """Nama atribut XML fileSharing yang berbeda antara dua file."""
+    if a is None or b is None:
+        return [] if a is b else ["fileSharing"]
+    return [xml for attr, xml in _SHARING_XML.items() if getattr(a, attr) != getattr(b, attr)]
+
+
+def _names(zf: zipfile.ZipFile, prefix: str) -> set[str]:
+    return {n for n in zf.namelist() if n.startswith(prefix)}
+
+
+def _short(names: list[str], limit: int = 5) -> str:
+    return ", ".join(names[:limit]) + (f" (+{len(names) - limit} lagi)" if len(names) > limit else "")
+
+
+def _count_token(zf: zipfile.ZipFile, token: bytes) -> int:
+    """Jumlah token di semua XML worksheet, dibaca bertahap: sheet F27 ~120 MB setelah diekstrak."""
+    total = 0
+    for name in zf.namelist():
+        if not _WORKSHEET_RE.fullmatch(name):
+            continue
+        tail = b""
+        with zf.open(name) as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                buf = tail + chunk
+                total += buf.count(token)
+                tail = buf[-(len(token) - 1):]   # token yang terpotong di batas potongan tetap terhitung
+    return total
+
+
+def _check_excel_kept(backup: Path, tmp: Path) -> list[str]:
+    """Bandingkan hasil Excel dengan cadangan (sha256 sudah terverifikasi); kembalikan peringatan.
+
+    Yang membatalkan: atribut fileSharing atau daftar nama media/drawing/comment/link/embedding berubah.
+    Jumlah blok conditional formatting yang berubah hanya peringatan. Isi bagian-bagian itu tidak dibandingkan.
+    """
+    try:
+        problems = []
+        if diff := _sharing_diff(read_file_sharing(backup), read_file_sharing(tmp)):
+            problems.append(f"fileSharing {', '.join(diff)}")
+        with zipfile.ZipFile(backup) as za, zipfile.ZipFile(tmp) as zb:
+            for prefix in IM_KEEP_PARTS:
+                old, new = _names(za, prefix), _names(zb, prefix)
+                if old != new:
+                    what = [f"hilang {_short(sorted(old - new))}"] if old - new else []
+                    what += [f"baru {_short(sorted(new - old))}"] if new - old else []
+                    problems.append(f"{prefix.rstrip('/')}: {', '.join(what)}")
+            cf_old, cf_new = _count_token(za, _CF_TOKEN), _count_token(zb, _CF_TOKEN)
+    except _UNREADABLE as exc:
+        raise Matrix2ImError(f"File hasil Excel tidak bisa dibaca ({exc}); {_ABORT_NOTE}") from exc
+    if problems:
+        raise Matrix2ImError(f"Excel mengubah bagian IM MASTER yang harus utuh ({'; '.join(problems)}); {_ABORT_NOTE}")
+    if cf_old != cf_new:
+        return [f"jumlah blok conditional formatting berubah setelah Excel ({cf_old} menjadi {cf_new}); "
+                "periksa warna kondisional di IM MASTER"]
+    return []
+
+
 def _verify_written(tmp: Path, tmp2: Path, password: str, changes: list) -> None:
     layout = read_layout(tmp2)
     for ch in changes:
@@ -174,6 +240,9 @@ def _verify_written(tmp: Path, tmp2: Path, password: str, changes: list) -> None
         if (ch.new is None and not blank) or (ch.new is not None and (blank or str(got) != ch.new)):
             raise Matrix2ImError(f"Verifikasi gagal: sel {get_column_letter(ch.col)}{ch.row} tidak sesuai rencana")
     _check_password(tmp2, password)
+    # workbook.xml dikecualikan dari cek CRC di bawah, jadi atribut kunci (mis. readOnlyRecommended) dicek di sini.
+    if diff := _sharing_diff(read_file_sharing(tmp), read_file_sharing(tmp2)):
+        raise Matrix2ImError(f"Verifikasi gagal: fileSharing berubah ({', '.join(diff)})")
     with zipfile.ZipFile(tmp) as a, zipfile.ZipFile(tmp2) as b:
         skip = {sheet_xml_path(a, IM_SHEET), "xl/workbook.xml"}
         crc_a = {i.filename: i.CRC for i in a.infolist() if i.filename not in skip}
@@ -260,6 +329,7 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
         if preview.inserts:
             progress("Excel: sisip baris")
             inserter(tmp, password, preview.inserts, IM_SHEET, get_column_letter(preview.projected.columns.last))
+            state["warnings"].extend(_check_excel_kept(backup, tmp))
         real = read_layout(tmp)
         if _structure(real) != _structure(preview.projected):
             raise Matrix2ImError("Tata letak IM MASTER setelah sisip baris tidak sama dengan rencana; "
@@ -289,12 +359,13 @@ def commit_write(preview: WritePreview, final: dict, settings: Settings, passwor
     if settings.backup_dir is None:
         raise Matrix2ImError("Setting backup_dir belum diisi")
     log_file = settings.backup_dir / LOG_NAME
-    state: dict = {"backup": None}
+    state: dict = {"backup": None, "warnings": []}
     try:
         _execute(preview, final, settings, password, progress, inserter, state)
         ok = True
         message = (f"IM MASTER diperbarui: {preview.summary['cells_changed']} sel diubah, "
                    f"{preview.summary['rows_inserted']} baris disisipkan.")
+        message += "".join(f" PERINGATAN: {w}." for w in state["warnings"])
     except Matrix2ImError as exc:
         ok, message = False, str(exc)
     except Exception as exc:  # noqa: BLE001 - apa pun harus berakhir sebagai laporan, bukan crash
