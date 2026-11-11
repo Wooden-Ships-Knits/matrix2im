@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
 
 from matrix_to_im import im_writer
 from matrix_to_im.errors import Matrix2ImError
@@ -944,3 +945,36 @@ def test_commit_aborts_when_fills_differ_from_plan(tmp_path, monkeypatch):
     monkeypatch.setattr(im_writer, "plan_values", other)
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
     _aborted(st, rep, "warna", im, before, ino)
+
+
+
+def _row_filled(tmp_path, rgb="FF99FF"):
+    """Grup 1 baris tanpa sel WS TAG di XML, tapi baris 55 berwarna lewat gaya baris (customFormat)."""
+    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a1"]])])
+    wb = load_workbook(im)
+    wb["F27"].row_dimensions[55].fill = PatternFill("solid", fgColor="FF" + rgb)
+    wb.save(im)
+    add_file_sharing(im)
+    return im, st
+
+
+def test_commit_keeps_inherited_fill_when_text_written_into_absent_cell(tmp_path):
+    im, st = _row_filled(tmp_path)
+    final = {"records": [_rec("AAA", ["a1"], "T1", "000", 1)]}
+    p = prepare_write(final, st, PW)
+    assert p.values.fills == [] and {(c.row, c.col) for c in p.values.changes} >= {(55, 24)}
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    assert rep.ok, rep.message
+    assert read_fills(im, "F27", [(55, 24)]) == {(55, 24): "FF99FF"}
+    assert _values(im, 55) == ["a1", "T1", "000"]
+
+
+def test_commit_aborts_on_unplanned_fill_change(tmp_path, monkeypatch):
+    """Verifikasi warna mencakup semua baris grup, bukan hanya sel di rencana."""
+    im, st, final = _painted(tmp_path)
+    p = prepare_write(final, st, PW)
+    assert (55, 24) not in {(f.row, f.col) for f in p.values.fills}
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    _patch_apply(monkeypatch, mutate_fills=lambda fs: [*fs, FillChange(55, 24, "FF99FF", "FFCC99")])
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, "Verifikasi gagal: warna sel X55", im, before, ino)

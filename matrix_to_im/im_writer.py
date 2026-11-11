@@ -254,16 +254,19 @@ def _check_excel_kept(backup: Path, tmp: Path) -> list[str]:
     return []
 
 
-def _verify_written(tmp: Path, tmp2: Path, password: str, changes: list, fills: list = ()) -> None:
+def _verify_written(tmp: Path, tmp2: Path, password: str, changes: list, fills: list = (),
+                    before_fills: dict | None = None) -> None:
+    """before_fills = warna WS TAG COLOR semua baris grup di tmp; sesudah ditulis harus sama kecuali yang direncanakan."""
     layout = read_layout(tmp2)
     for ch in changes:
         got = layout.values.get((ch.row, ch.col))
         blank = got is None or str(got).strip() == ""
         if (ch.new is None and not blank) or (ch.new is not None and (blank or str(got) != ch.new)):
             raise Matrix2ImError(f"Verifikasi gagal: sel {get_column_letter(ch.col)}{ch.row} tidak sesuai rencana")
-    for f in fills:
-        if layout.fills.get((f.row, f.col)) != f.new:
-            raise Matrix2ImError(f"Verifikasi gagal: warna sel {get_column_letter(f.col)}{f.row} tidak sesuai rencana")
+    expected = {**(before_fills or {}), **{(f.row, f.col): f.new for f in fills}}
+    for (row, col), want in sorted(expected.items()):
+        if (row, col) not in layout.fills or layout.fills[(row, col)] != want:
+            raise Matrix2ImError(f"Verifikasi gagal: warna sel {get_column_letter(col)}{row} tidak sesuai rencana")
     _check_password(tmp2, password)
     # workbook.xml dikecualikan dari cek CRC di bawah, jadi atribut kunci (mis. readOnlyRecommended) dicek di sini.
     if diff := _sharing_diff(read_file_sharing(tmp), read_file_sharing(tmp2)):
@@ -380,7 +383,7 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
                                  "penulisan dibatalkan, file asli tidak diubah")
         apply_cell_values(tmp, tmp2, IM_SHEET, preview.values.changes, preview.values.fills)
         progress("verifikasi")
-        _verify_written(tmp, tmp2, password, preview.values.changes, preview.values.fills)
+        _verify_written(tmp, tmp2, password, preview.values.changes, preview.values.fills, real.fills)
         progress("simpan ke IM MASTER")
         if fingerprint(path) != preview.fingerprint or owner_file(path) is not None:
             raise Matrix2ImError(_CHANGED_MSG)

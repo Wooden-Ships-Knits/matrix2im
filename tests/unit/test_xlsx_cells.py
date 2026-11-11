@@ -298,3 +298,14 @@ def test_no_fills_leaves_styles_untouched(im, tmp_path):
     apply_cell_values(im, dst, IM_SHEET, [CellChange(R1, 5, "RED", "NAVY")], [])
     with zipfile.ZipFile(im) as a, zipfile.ZipFile(dst) as b:
         assert a.read("xl/styles.xml") == b.read("xl/styles.xml")
+
+
+def test_value_into_absent_cell_keeps_row_style(tmp_path):
+    """Sel baru (tak ada di XML) mewarisi gaya baris/kolom; tanpa itu warna baris hilang diam-diam."""
+    p = _fill_wb(tmp_path)
+    dst = tmp_path / "out.xlsx"
+    apply_cell_values(p, dst, IM_SHEET, [CellChange(9, 24, None, "BARU"), CellChange(8, 24, None, "LAIN")])
+    assert read_fills(dst, IM_SHEET, [(9, 24), (8, 24)]) == {(9, 24): "969696", (8, 24): None}
+    ws = load_workbook(dst)[IM_SHEET]
+    assert (ws["X9"].value, ws["X8"].value) == ("BARU", "LAIN")
+    assert re.search(r'<c r="X8" t="inlineStr">', _sheet_xml(dst))      # gaya 0 tetap tanpa atribut s

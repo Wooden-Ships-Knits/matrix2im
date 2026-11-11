@@ -193,7 +193,9 @@ def _rewrite_row(data: bytes, row: int, edits: dict[int, str | None], frm: int =
             style = _S_ATTR.search(head)
             cells[col] = _cell_xml(ref, style.group(1) if style else None, text)
         elif text is not None:
-            cells[col] = _cell_xml(ref, None, text)
+            # Sel baru mewarisi gaya baris/kolom (mis. warna satu baris utuh); gaya 0 tanpa atribut s.
+            inherited = _cell_style(None, row_tag, cols or [], col)
+            cells[col] = _cell_xml(ref, b"%d" % inherited if inherited else None, text)
             tag = _SPANS_ATTR.sub(b"", tag)         # spans lama tak mencakup sel baru
     for col, key in (fills or {}).items():
         # Hanya atribut s yang diganti (juga di sel rumus); format baru = format lama dengan warna lain.
@@ -241,7 +243,7 @@ def apply_cell_values(src: Path, dst: Path, sheet_name: str, changes: Iterable[C
         data = zin.read(sheet_path)
         styles_path = styles_xml_path(zin) if fill_rows else None
         styles = StyleSheet(zin.read(styles_path)) if styles_path else None
-        cols = _col_styles(data) if fill_rows else []
+        cols = _col_styles(data)
         patches, cursor = [], 0
         for r in sorted(set(by_row) | set(fill_rows)):
             patch = _rewrite_row(data, r, by_row.get(r, {}), cursor, fill_rows.get(r), styles, cols)
