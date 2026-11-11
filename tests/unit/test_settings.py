@@ -44,3 +44,11 @@ def test_invalid_toml_raises(tmp_path):
     cfg.write_text("[im\n", encoding="utf-8")
     with pytest.raises(Matrix2ImError, match="tidak valid"):
         load_settings(cfg)
+
+
+@pytest.mark.parametrize("body", ["ui = 1\n", 'im = "x"\n'])
+def test_non_table_section_raises_indonesian_error(tmp_path, body):
+    cfg = tmp_path / "s.toml"
+    cfg.write_text(body, encoding="utf-8")
+    with pytest.raises(Matrix2ImError, match="harus berupa tabel"):
+        load_settings(cfg)

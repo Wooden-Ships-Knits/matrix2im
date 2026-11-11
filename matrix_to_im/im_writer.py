@@ -7,10 +7,12 @@ from __future__ import annotations
 import binascii
 import hashlib
 import json
+import logging
 import os
 import shutil
 import tempfile
 import time
+import traceback
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -38,6 +40,7 @@ _UNREADABLE = (zipfile.BadZipFile, KeyError, ValueError, binascii.Error, ET.Pars
 
 @dataclass(frozen=True)
 class Fingerprint:
+    """Sidik file IM MASTER saat rencana dibuat; beda berarti ada orang lain yang mengubahnya."""
     size: int
     mtime_ns: int
     sha256: str
@@ -52,12 +55,14 @@ def _sha256(path: Path) -> str:
 
 
 def fingerprint(path: Path) -> Fingerprint:
+    """Ukuran, mtime, dan sha256: pembanding murah-tapi-pasti bahwa file tidak berubah sejak rencana."""
     st = path.stat()
     return Fingerprint(st.st_size, st.st_mtime_ns, _sha256(path))
 
 
 @dataclass
 class WritePreview:
+    """Hasil dry-run: apa yang akan disisipkan dan diubah, dan sidik file yang dijadikan dasar rencana."""
     im_master: Path
     fingerprint: Fingerprint
     engine: str
@@ -70,6 +75,7 @@ class WritePreview:
 
 @dataclass
 class WriteReport:
+    """Hasil commit untuk UI/CLI; semua teks Indonesia dan bebas password."""
     ok: bool
     message: str
     summary: dict
@@ -170,11 +176,24 @@ def _verify_written(tmp: Path, tmp2: Path, password: str, changes: list) -> None
         raise Matrix2ImError("Verifikasi gagal: bagian lain dari file berubah selain sheet dan workbook.xml")
 
 
-def _overwrite_in_place(target: Path, source: Path, backup: Path) -> None:
-    """Timpa isi file asli di tempat (identitas file di Google Drive tetap); pulihkan dari cadangan bila gagal."""
+def _write_bytes_in_place(target: Path, data: bytes) -> None:
+    with open(target, "r+b") as f:
+        f.write(data)
+        f.truncate()
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def _overwrite_in_place(target: Path, source: Path, backup: Path, password: str = "") -> None:
+    """Timpa isi file asli di tempat (identitas file di Google Drive tetap); pulihkan dari cadangan bila gagal.
+
+    Pesan jujur: "tidak diubah" hanya bila belum ada byte tertulis, "dipulihkan" hanya bila sha256 cocok cadangan.
+    """
     data = source.read_bytes()
+    touched = False
     try:
         with open(target, "r+b") as f:
+            touched = True              # mulai dari sini file asli bisa sudah berubah
             f.write(data)
             f.truncate()
             f.flush()
@@ -182,16 +201,18 @@ def _overwrite_in_place(target: Path, source: Path, backup: Path) -> None:
         if _sha256(target) != hashlib.sha256(data).hexdigest():
             raise Matrix2ImError("hasil tulis tidak cocok dengan data yang dikirim")
     except Exception as exc:
-        try:
-            with open(target, "r+b") as f:
-                f.write(backup.read_bytes())
-                f.truncate()
-                f.flush()
-                os.fsync(f.fileno())
-            restored = "File asli sudah dipulihkan dari cadangan."
-        except OSError:
-            restored = f"File asli mungkin rusak; pulihkan manual dari cadangan {backup}."
-        raise Matrix2ImError(f"Gagal menyimpan ke IM MASTER ({exc}). {restored}") from exc
+        detail = str(exc).replace(password, "***") if password else str(exc)
+        if not touched:
+            note = "File asli tidak diubah."
+        else:
+            try:
+                _write_bytes_in_place(target, backup.read_bytes())
+                ok = _sha256(target) == _sha256(backup)
+            except Exception:  # noqa: BLE001 - pesan pemulihan manual harus selalu sampai
+                ok = False
+            note = ("File asli sudah dipulihkan dari cadangan." if ok else
+                    f"File asli mungkin rusak; pulihkan manual dari cadangan {backup}.")
+        raise Matrix2ImError(f"Gagal menyimpan ke IM MASTER ({detail}). {note}") from exc
 
 
 def _log(log_file: Path, entry: dict) -> bool:
@@ -208,6 +229,8 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
              progress: Callable[[str], None], inserter: Callable[..., float], state: dict) -> None:
     """Langkah 1-9; state["backup"] diisi segera setelah cadangan dibuat agar tercatat walau gagal sesudahnya."""
     path, backup_dir = preview.im_master, settings.backup_dir
+    if not path.is_file():
+        raise Matrix2ImError(f"IM MASTER tidak ditemukan: {path}")
     progress("cek password")
     _check_password(path, password)
     if fingerprint(path) != preview.fingerprint or owner_file(path) is not None:
@@ -225,7 +248,7 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
     work = Path(tempfile.mkdtemp(prefix="kerja-", dir=parent))
     tmp, tmp2 = work / f"im-kerja{path.suffix}", work / f"im-hasil{path.suffix}"
     try:
-        shutil.copyfile(path, tmp)
+        shutil.copyfile(backup, tmp)     # backup sudah lolos cek sha256: tmp pasti isi yang direncanakan
         if preview.inserts:
             progress("Excel: sisip baris")
             inserter(tmp, password, preview.inserts, IM_SHEET, get_column_letter(preview.projected.columns.last))
@@ -245,11 +268,9 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
         progress("simpan ke IM MASTER")
         if fingerprint(path) != preview.fingerprint or owner_file(path) is not None:
             raise Matrix2ImError(_CHANGED_MSG)
-        _overwrite_in_place(path, tmp2, backup)
+        _overwrite_in_place(path, tmp2, backup, password)
     finally:
-        for f in work.iterdir():       # folder ini dibuat run ini; isinya hanya milik run ini
-            f.unlink(missing_ok=True)
-        work.rmdir()
+        shutil.rmtree(work, ignore_errors=True)   # best effort; folder milik run ini, tak boleh mengubah hasil
 
 
 def commit_write(preview: WritePreview, final: dict, settings: Settings, password: str, user: str,
@@ -270,6 +291,9 @@ def commit_write(preview: WritePreview, final: dict, settings: Settings, passwor
         ok, message = False, str(exc)
     except Exception as exc:  # noqa: BLE001 - apa pun harus berakhir sebagai laporan, bukan crash
         ok, message = False, f"Gagal tak terduga: {type(exc).__name__}: {exc}"
+        trace = "".join(traceback.format_exception(exc))
+        logging.getLogger(__name__).error("commit_write gagal: %s",
+                                          trace.replace(password, "***") if password else trace)
     if password:
         message = message.replace(password, "***")
     backup = state["backup"]

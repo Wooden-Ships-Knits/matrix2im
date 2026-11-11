@@ -1,5 +1,10 @@
+import dataclasses
 import json
+import logging
 import os
+import re
+import shutil
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -8,6 +13,7 @@ from openpyxl import load_workbook
 from matrix_to_im import im_writer
 from matrix_to_im.errors import Matrix2ImError
 from matrix_to_im.im_layout import read_layout
+from matrix_to_im.write_plan import CellChange
 from matrix_to_im.im_lock import check_modify_password
 from matrix_to_im.im_writer import commit_write, fingerprint, prepare_write
 from matrix_to_im.settings import Settings
@@ -119,8 +125,8 @@ def test_prepare_summary_counts(tmp_path, excel_on):
     assert (s["styles"], s["groups"]) == (2, 2)
     assert (s["rows_inserted"], s["groups_inserted"], s["short_groups"]) == (1, 1, 0)
     assert s["unmatched_im_styles"] == 1 and s["missing_styles"] == 1 and s["skipped"] == 0
-    assert s["cells_changed"] == len(p.values.changes) > 0
-    assert s["changed_colorway_rows"] == len(p.values.changes and p.values.changed_colorway_rows)
+    assert s["cells_changed"] == len(p.values.changes) == 15      # 5 baris x (COLOR1, WS TAG, WHS)
+    assert s["changed_colorway_rows"] == 5
     assert s["warnings"] == len(p.values.warnings) == 1
     assert "grup hanya 1 baris" in p.values.warnings[0] and "AAA - K" in p.values.warnings[0]
     assert p.fingerprint == fingerprint(im) and p.im_master == im
@@ -276,3 +282,221 @@ def test_password_not_in_log_report_or_messages(tmp_path, excel_on):
     ok_rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=fake_inserter)
     assert ok_rep.ok, ok_rep.message
     assert PW not in repr(ok_rep) + (st.backup_dir / "matrix2im-log.jsonl").read_text()
+
+
+# ---------- jalur batal dan pemulihan ----------
+
+def _aborted(st, rep, text, im=None, expect=None, ino=None):
+    """Kontrak semua jalur batal: ok False, pesan Indonesia, folder kerja kosong, log 'gagal'."""
+    assert not rep.ok and text in rep.message, rep.message
+    assert _kerja_empty(st)
+    last = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
+    assert last["hasil"] == "gagal" and text in last["pesan"]
+    if im is not None:
+        assert im.read_bytes() == expect
+        if ino is not None:
+            assert os.stat(im).st_ino == ino
+
+
+def _rewrite_entry(path, name, fn):
+    """Ganti isi satu entri zip (fixture sintetis saja)."""
+    tmp = path.with_suffix(".rw")
+    with zipfile.ZipFile(path) as src, zipfile.ZipFile(tmp, "w") as dst:
+        for item in src.infolist():
+            data = src.read(item.filename)
+            dst.writestr(item.filename, fn(data) if item.filename == name else data)
+    tmp.replace(path)
+
+
+def test_commit_aborts_at_step9_recheck_when_owner_file_appears(tmp_path):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+
+    def progress(phase):
+        if phase == "simpan ke IM MASTER":
+            im.with_name("~$" + im.name).write_bytes(bytes([3]) + b"Ani")
+
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", progress=progress)
+    _aborted(st, rep, "berubah atau sedang dibuka", im, before, ino)
+
+
+def test_commit_aborts_at_step9_recheck_when_file_changed(tmp_path):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    ino = os.stat(im).st_ino
+
+    def progress(phase):
+        if phase == "simpan ke IM MASTER":
+            im.write_bytes(im.read_bytes() + b"x")
+
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", progress=progress)
+    _aborted(st, rep, "berubah atau sedang dibuka", im, p_bytes := im.read_bytes(), ino)
+    assert p_bytes.endswith(b"x") and rep.backup is not None and rep.backup.read_bytes() != p_bytes
+
+
+def test_commit_aborts_when_values_differ_from_plan(tmp_path, monkeypatch):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    real = im_writer.plan_values
+
+    def other(layout, colorways):
+        plan = real(layout, colorways)
+        return dataclasses.replace(plan, changes=[*plan.changes, CellChange(55, 5, None, "liar")])
+
+    monkeypatch.setattr(im_writer, "plan_values", other)
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, "Perubahan nilai", im, before, ino)
+
+
+def _patch_apply(monkeypatch, mutate_changes=None, mutate_out=None):
+    real = im_writer.apply_cell_values
+
+    def wrapped(src, dst, sheet, changes):
+        changes = list(changes)
+        real(src, dst, sheet, mutate_changes(changes) if mutate_changes else changes)
+        if mutate_out:
+            mutate_out(dst)
+
+    monkeypatch.setattr(im_writer, "apply_cell_values", wrapped)
+
+
+@pytest.mark.parametrize("case,text", [
+    ("value", "Verifikasi gagal: sel"),
+    ("lock", "tidak dikunci"),
+    ("other_entry", "bagian lain"),
+])
+def test_commit_aborts_on_step8_verification(tmp_path, monkeypatch, case, text):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    if case == "value":
+        _patch_apply(monkeypatch, mutate_changes=lambda ch: [dataclasses.replace(ch[0], new="lain"), *ch[1:]])
+    elif case == "lock":
+        _patch_apply(monkeypatch, mutate_out=lambda dst: _rewrite_entry(
+            dst, "xl/workbook.xml", lambda d: re.sub(rb"<fileSharing[^>]*/>", b"", d)))
+    else:
+        _patch_apply(monkeypatch, mutate_out=lambda dst: _rewrite_entry(
+            dst, "docProps/core.xml", lambda d: d + b"<!--x-->"))
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, text, im, before, ino)
+
+
+def test_step9_write_failure_restores_original(tmp_path, monkeypatch):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    real, calls = os.fsync, []
+
+    def flaky(fd):
+        calls.append(fd)
+        if len(calls) == 1:
+            raise OSError("disk penuh")
+        return real(fd)
+
+    monkeypatch.setattr(im_writer.os, "fsync", flaky)
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, "File asli sudah dipulihkan dari cadangan", im, before, ino)
+
+
+def test_step9_restore_failure_says_may_be_damaged_with_backup_path(tmp_path, monkeypatch):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+
+    def always(fd):
+        raise OSError("disk rusak")
+
+    monkeypatch.setattr(im_writer.os, "fsync", always)
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    assert not rep.ok and "mungkin rusak" in rep.message and str(rep.backup) in rep.message
+    assert "dipulihkan dari" not in rep.message and _kerja_empty(st)
+
+
+def test_step9_open_failure_says_original_not_changed(tmp_path, monkeypatch):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    before, ino = im.read_bytes(), os.stat(im).st_ino
+    import builtins
+
+    def fake_open(file, mode="r", *a, **k):
+        if mode == "r+b" and Path(file) == im:
+            raise PermissionError("ditolak")
+        return builtins.open(file, mode, *a, **k)
+
+    monkeypatch.setattr(im_writer, "open", fake_open, raising=False)
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, "File asli tidak diubah", im, before, ino)
+    assert "rusak" not in rep.message
+
+
+def test_commit_aborts_when_backup_is_corrupt(tmp_path, monkeypatch):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    before = im.read_bytes()
+    real = shutil.copyfile
+
+    def corrupt(src, dst, *a, **k):
+        out = real(src, dst, *a, **k)
+        if Path(dst).parent == st.backup_dir:
+            with open(dst, "ab") as f:
+                f.write(b"x")
+        return out
+
+    monkeypatch.setattr(im_writer.shutil, "copyfile", corrupt)
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    _aborted(st, rep, "berubah atau sedang dibuka", im, before)
+    assert rep.backup is None and not [f for f in st.backup_dir.glob("*.xlsx")]
+
+
+def _littering(inner=fake_inserter, then_raise=None):
+    def ins(path, password, ops, sheet, last_col):
+        (path.parent / "~$im-kerja.xlsx").write_bytes(b"sisa")
+        sub = path.parent / "sub"
+        sub.mkdir()
+        (sub / "x").write_bytes(b"1")
+        if then_raise:
+            raise Matrix2ImError(then_raise)
+        return inner(path, password, ops, sheet, last_col)
+    return ins
+
+
+def test_cleanup_leftovers_do_not_change_success(tmp_path, excel_on):
+    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a"]])], "excel")
+    final = {"records": [_rec("AAA", ["x1"]), _rec("AAA", ["x2"], n=2)]}
+    p = prepare_write(final, st, PW)
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=_littering())
+    assert rep.ok, rep.message
+    assert json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text())["hasil"] == "ok"
+    assert _kerja_empty(st)
+
+
+def test_cleanup_leftovers_keep_real_abort_message(tmp_path, excel_on):
+    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a"]])], "excel")
+    final = {"records": [_rec("AAA", ["x1"]), _rec("AAA", ["x2"], n=2)]}
+    p = prepare_write(final, st, PW)
+    before = im.read_bytes()
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=_littering(then_raise="Excel gagal: macet"))
+    _aborted(st, rep, "Excel gagal: macet", im, before)
+
+
+def test_commit_missing_im_master_gives_indonesian_message(tmp_path):
+    im, st, final = _simple(tmp_path)
+    p = prepare_write(final, st, PW)
+    im.unlink()
+    rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
+    assert not rep.ok and rep.message == f"IM MASTER tidak ditemukan: {im}"
+
+
+def test_unexpected_error_logs_scrubbed_traceback(tmp_path, excel_on, caplog):
+    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a"]])], "excel")
+    final = {"records": [_rec("AAA", ["x1"]), _rec("AAA", ["x2"], n=2)]}
+    p = prepare_write(final, st, PW)
+
+    def leaky(*a, **k):
+        raise RuntimeError(f"sandi {PW}")
+
+    with caplog.at_level(logging.ERROR):
+        rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=leaky)
+    assert not rep.ok and "Traceback" in caplog.text and "RuntimeError" in caplog.text
+    assert PW not in caplog.text

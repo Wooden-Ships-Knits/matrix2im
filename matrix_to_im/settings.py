@@ -13,6 +13,7 @@ _ENGINES = ("excel", "none")
 
 @dataclass(frozen=True)
 class Settings:
+    """Setting lokal tak berubah; None pada path berarti belum diisi (prepare_write menolaknya)."""
     im_master: Path | None = None
     backup_dir: Path | None = None
     host: str = "127.0.0.1"
@@ -41,6 +42,9 @@ def load_settings(path: Path | None = None) -> Settings:
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
         raise Matrix2ImError(f"File setting tidak valid: {path} ({exc})") from exc
     ui, im = data.get("ui", {}), data.get("im", {})
+    for name, table in (("ui", ui), ("im", im)):
+        if not isinstance(table, dict):
+            raise Matrix2ImError(f"File setting tidak valid: [{name}] harus berupa tabel, bukan nilai tunggal")
     base = Settings()
     engine = im.get("insert_engine", base.insert_engine)
     if engine not in _ENGINES:

@@ -95,23 +95,24 @@ def build_insert_script(ops: list[InsertOp], sheet: str, last_col: str,
     ])
 
 
-_CLOSE_SCRIPT = "\n".join([
-    "on run argv",
-    "  set p to item 1 of argv",
-    '  if application "Microsoft Excel" is not running then return "NONE"',
-    "  with timeout of 25 seconds",
-    '  tell application "Microsoft Excel"',
-    "    repeat with wb in (get every workbook)",
-    "      try",
-    "        if (full name of wb) is p then close wb saving no",
-    "      end try",
-    "    end repeat",
-    "  end tell",
-    "  end timeout",
-    '  return "OK"',
-    "end run",
-    "",
-])
+def _close_script(timeout_s: int) -> str:
+    return "\n".join([
+        "on run argv",
+        "  set p to item 1 of argv",
+        '  if application "Microsoft Excel" is not running then return "NONE"',
+        f"  with timeout of {max(timeout_s - 5, 1)} seconds",
+        '  tell application "Microsoft Excel"',
+        "    repeat with wb in (get every workbook)",
+        "      try",
+        "        if (full name of wb) is p then close wb saving no",
+        "      end try",
+        "    end repeat",
+        "  end tell",
+        "  end timeout",
+        '  return "OK"',
+        "end run",
+        "",
+    ])
 
 
 def close_workbook_if_open(path: Path, timeout_s: int = 30) -> None:
@@ -122,7 +123,7 @@ def close_workbook_if_open(path: Path, timeout_s: int = 30) -> None:
     workbook lain, tidak menutup Excel. Path lewat argv, bukan disisipkan ke skrip.
     """
     try:
-        subprocess.run(["osascript", "-", str(path)], input=_CLOSE_SCRIPT,
+        subprocess.run(["osascript", "-", str(path.resolve())], input=_close_script(timeout_s),
                        capture_output=True, text=True, timeout=timeout_s)
     except Exception:
         pass
@@ -136,7 +137,7 @@ def run_excel_inserts(path: Path, password: str, ops: list[InsertOp], sheet: str
     script = build_insert_script(ops, sheet, last_col, timeout_s)
     start = time.monotonic()
     try:
-        proc = subprocess.run(["osascript", "-", str(path)], input=script,
+        proc = subprocess.run(["osascript", "-", str(path.resolve())], input=script,
                               env={**os.environ, "MATRIX2IM_PW": password},
                               capture_output=True, text=True, timeout=timeout_s + 15)
     except subprocess.TimeoutExpired as exc:

@@ -117,11 +117,12 @@ def _record_runs(monkeypatch, first_result=None, first_exc=None, cleanup_exc=Non
 def _assert_cleanup(calls, path, pw="sandi-rahasia"):
     assert len(calls) == 2
     args, kw = calls[1]
-    assert str(path) in args
+    assert str(path.resolve()) in args
     assert pw not in " ".join(args) and pw not in kw["input"] and "MATRIX2IM_PW" not in kw["input"]
-    assert str(path) not in kw["input"]
+    assert str(path.resolve()) not in kw["input"]
     assert "saving no" in kw["input"] and "full name" in kw["input"]
-    assert "quit" not in kw["input"]
+    assert "quit" not in kw["input"] and "with timeout of 25 seconds" in kw["input"]
+    assert args[0] == "osascript" and calls[0][0][2] == str(path.resolve())
 
 
 def test_cleanup_after_timeout(monkeypatch, tmp_path):
