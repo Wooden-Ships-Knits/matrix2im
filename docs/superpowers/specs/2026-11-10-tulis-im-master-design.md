@@ -151,7 +151,7 @@ Tambahan:
 - **[Keputusan perancang]** Style di IM yang tidak ada di MATRIX tidak disentuh, dan didaftar di laporan.
 - **[Keputusan user]** Style yang muncul di lebih dari satu sheet MATRIX (contoh F27: HUTTON MOCK T NECK CHUNKY):
   - Bila **himpunan colorway-nya sama**, style ditulis sekali dengan urutan sheet yang pertama muncul di MATRIX.
-  - WHS yang berbeda antar-sheet digabung: `000` + `000 & SY` → `000 & SY`, `000` + `SY` → `000 & SY`.
+  - WHS yang berbeda antar-sheet digabung: `000` + `BOTH WHS` → `BOTH WHS`, `000` + `SY` → `BOTH WHS`.
   - Bila **colorway-nya berbeda**, style dilewati dan masuk laporan. Tidak ada tebakan.
   - Catatan: `final.json` tetap menyimpan record terpisah per sheet sesuai keputusan review. Penggabungan ini hanya terjadi di perencana.
 - **[Keputusan user]** Isi lama di baris IM ditimpa. Di salinan AI TEST V2, 844 dari 851 grup size berisi colorway yang berbeda dari MATRIX F27. User menyimpan file asli dan akan membandingkannya sendiri setelah penulisan. Kolom lain di baris itu (kancing/aksesoris di slot COLOR lain, C1 ENDS, COLOR SEQUENCE, REPS COLOR, dst.) tidak diubah tool. Karena itu laporan mencantumkan setiap baris yang colorway-nya berubah, supaya mudah dicek.

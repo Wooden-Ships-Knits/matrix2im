@@ -1,10 +1,10 @@
 """Aturan WHS (gudang): dari posisi warna terhadap garis merah + warna font, dibatasi WHS style."""
-from .legend_config import FONT_WHS_000, FONT_WHS_000_SY, WHS_SETS
+from .legend_config import FONT_WHS_000, FONT_WHS_000_SY, WHS_BOTH, WHS_SETS
 from .review import Code, Problem
 
 
 def color_whs(group: str, font_color: str) -> tuple[str | None, Problem | None]:
-    """WHS warna. Di bawah garis merah selalu SY; di atas, arti font memilih 000 atau 000 & SY.
+    """WHS warna. Di bawah garis merah selalu SY; di atas, arti font memilih 000 atau BOTH WHS.
 
     Font tanpa aturan (YR, HOLD, DISCONTINUED, tidak dikenal) tidak ditebak: None + review.
     """
@@ -12,7 +12,7 @@ def color_whs(group: str, font_color: str) -> tuple[str | None, Problem | None]:
         return None, Problem(Code.FONT_COLOR_NO_RULE, f'warna font "{font_color}" belum punya aturan WHS')
     if group == "below_red":
         return "SY", None
-    return ("000" if font_color in FONT_WHS_000 else "000 & SY"), None
+    return ("000" if font_color in FONT_WHS_000 else WHS_BOTH), None
 
 
 def final_whs(style_whs: str | None, col_whs: str | None) -> tuple[str | None, Problem | None]:
@@ -28,6 +28,6 @@ def final_whs(style_whs: str | None, col_whs: str | None) -> tuple[str | None, P
     inter = WHS_SETS[style_whs] & WHS_SETS[col_whs]
     if not inter:
         return None, Problem(Code.WHS_CONFLICT, f"WHS style {style_whs} bertentangan dengan WHS warna {col_whs}")
-    # Hasil yang lebih sempit dari WHS warna (mis. style 000 + warna 000 & SY -> 000) adalah aturan
+    # Hasil yang lebih sempit dari WHS warna (mis. style 000 + warna BOTH WHS -> 000) adalah aturan
     # biasa, bukan masalah: tidak masuk review (keputusan review 10 Nov 2026).
-    return ("000 & SY" if inter == WHS_SETS["000 & SY"] else next(iter(inter))), None
+    return (WHS_BOTH if inter == WHS_SETS[WHS_BOTH] else next(iter(inter))), None

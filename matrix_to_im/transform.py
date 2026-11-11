@@ -28,8 +28,8 @@ RULES = {
                     "STRIPED -> STRIPE; alias nama (mis. BLACK B -> BLACK); akhiran dobel (STRIPE STRIPE) "
                     "dijadikan satu; 'Need Review' bila TAG bersyarat/singkatan, Cn di luar jumlah benang, "
                     "TAG kosong, TAG belum diterjemahkan, atau COLOR berupa deskripsi (lihat needs_review)",
-    "WHS": "kolom CE. Warna: di bawah garis merah = SY; di atas garis merah = 000 & SY, "
-           "kecuali font ungu/pink = 000. Style (background No): ungu 000, abu/putih/tanpa warna 000 & SY, "
+    "WHS": "kolom CE. Warna: di bawah garis merah = SY; di atas garis merah = BOTH WHS, "
+           "kecuali font ungu/pink = 000. Style (background No): ungu 000, abu/putih/tanpa warna BOTH WHS, "
            "merah SY. WHS style = batas atas (irisan); null = belum ada aturan, tidak ditulis",
     "_ref": "asal di MATRIX: sheet (sub-koleksi) No | sel | posisi terhadap garis; tidak ditulis ke IM",
     "needs_review.code": "kode mesin: " + ", ".join(c.value for c in Code),

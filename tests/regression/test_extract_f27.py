@@ -34,7 +34,7 @@ def test_styles_identical_to_golden(f27_raw, golden_raw):
 
 def test_no_warnings_after_review_revision(f27_raw):
     # Revisi 10 Nov 2026: karakter nyasar G169/E227/D345 dibuang tanpa warning, dan background
-    # kosong D324 (MERRY STRIPED) = 000 & SY. Sebelumnya 4 warning.
+    # kosong D324 (MERRY STRIPED) = BOTH WHS. Sebelumnya 4 warning.
     assert f27_raw["warnings"] == []
 
 
@@ -52,7 +52,7 @@ def test_baseline_counts(f27_raw):
     assert (above, between, below) == (158, 390, 176)
     assert above + between + below == 724
     whs = Counter(s["style_whs"] for s in styles)
-    assert whs == {"000 & SY": 86, "000": 70, "SY": 59}
+    assert whs == {"BOTH WHS": 86, "000": 70, "SY": 59}
 
 
 def test_hutton_no20(f27_result):
@@ -61,7 +61,7 @@ def test_hutton_no20(f27_result):
     assert _names(card.above_black) == ["NIGHT NAVY"]
     assert _names(card.between) == ["PURE SNOW/ALMOND BUTTER", "GLASGOW", "FAWN", "RED CHILE"]
     assert _names(card.below_red) == ["BLACK", "DARK ROAST", "SCANDIA BLUE"]
-    assert card.style_whs == "000 & SY"
+    assert card.style_whs == "BOTH WHS"
 
 
 def test_jude_no21(f27_result):
@@ -106,7 +106,7 @@ def test_fa_la_la_s3_two_row_tag(f27_raw):
 def test_merry_striped_blank_background_is_000_and_sy(f27_raw):
     hits = [s for s in f27_raw["styles"]
             if s["sheet"] == "LUXE" and s["section"] == "CHRISTMAS - COTTON" and s["no"] == 4]
-    assert len(hits) == 1 and hits[0]["style_whs"] == "000 & SY"
+    assert len(hits) == 1 and hits[0]["style_whs"] == "BOTH WHS"
     assert not any("D324" in w for w in f27_raw["warnings"])
 
 

@@ -347,7 +347,7 @@ def _read_card(page: _Page, col: int, warnings: list[str]) -> Card | None:
     # WHS style = warna background sel nomor; kode rgb tanpa alpha, kunci theme apa adanya.
     style_whs = _STYLE_WHS_BY_FILL.get(rgb6(no_fill) or no_fill)
     if style_whs is None and no_fill is None and no is not None:
-        # Nomor ada tapi sel tanpa fill = tampil putih = 000 & SY (keputusan review 10 Nov 2026).
+        # Nomor ada tapi sel tanpa fill = tampil putih = BOTH WHS (keputusan review 10 Nov 2026).
         # Tanpa nomor, tidak ada sel kartu yang bisa dibaca warnanya: tetap tidak diketahui (D8).
         style_whs = STYLE_WHS_NO_FILL
 

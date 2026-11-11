@@ -88,9 +88,9 @@ def test_style_colorways_f27(golden_final):
     hutton = next(v for k, v in colorways.items() if k.startswith("HUTTON"))
     assert len(hutton) == 8
     by_color = {cw.colors: cw for cw in hutton}
-    # "000 & SY" adalah nilai WHS (bukan WS TAG COLOR, yang masih "Need Review" di golden)
-    assert by_color[("GLASGOW",)].whs == "000 & SY"
-    assert by_color[("FAWN",)].whs == "000 & SY"
+    # "BOTH WHS" adalah nilai WHS (bukan WS TAG COLOR, yang masih "Need Review" di golden)
+    assert by_color[("GLASGOW",)].whs == "BOTH WHS"
+    assert by_color[("FAWN",)].whs == "BOTH WHS"
     crop = colorways["CROP BOYFRIEND CREW COTTON"]
     assert len(crop) == 5
 

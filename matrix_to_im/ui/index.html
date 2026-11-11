@@ -247,7 +247,7 @@
         <input type="search" id="q-records" placeholder="Cari style, warna, WS TAG COLOR, sel… (atau #61)">
         <select id="f-whs" aria-label="Filter WHS">
           <option value="">Semua WHS</option><option value="000">000</option>
-          <option value="000 &amp; SY">000 &amp; SY</option><option value="SY">SY</option><option value="null">null</option>
+          <option value="BOTH WHS">BOTH WHS</option><option value="SY">SY</option><option value="null">null</option>
         </select>
         <label><input type="checkbox" id="f-review"> Hanya yang perlu review</label>
         <span class="shown" id="shown-records"></span>
@@ -503,7 +503,7 @@
     const raw = data.raw, s = data.final.summary;
     const counts = GROUPS.map(([key]) => raw.styles.reduce((n, st) => n + st[key].length, 0));
     const whs = s.WHS;
-    const whsKeys = ["000", "000 & SY", "SY", ...Object.keys(whs).filter((k) => !["000", "000 & SY", "SY"].includes(k))];
+    const whsKeys = ["000", "BOTH WHS", "SY", ...Object.keys(whs).filter((k) => !["000", "BOTH WHS", "SY"].includes(k))];
     $("#tiles").innerHTML = `
       <div class="tile"><div class="label">Kartu style</div><div class="value">${num(raw.total_styles)}</div>
         <div class="sub">${num(s.total_styles)} nama unik</div></div>

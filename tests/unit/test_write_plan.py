@@ -49,14 +49,14 @@ def test_cross_sheet_same_set_uses_first_order_and_unions_whs():
         _rec("HUTTON", ["N"], "S1 No.1 | B1 | g", whs="000"),
         _rec("HUTTON", ["P"], "S1 No.1 | B2 | g", whs="SY"),
         _rec("HUTTON", ["G"], "S1 No.1 | B3 | g", whs="000"),
-        _rec("HUTTON", ["G"], "S2 No.2 | B1 | g", whs="000 & SY"),
+        _rec("HUTTON", ["G"], "S2 No.2 | B1 | g", whs="BOTH WHS"),
         _rec("HUTTON", ["N"], "S2 No.2 | B2 | g", whs="000"),
         _rec("HUTTON", ["P"], "S2 No.2 | B3 | g", whs="SY"),
     )
     out, skips = style_colorways(final)
     assert skips == []
     assert [c.colors[0] for c in out["HUTTON"]] == ["N", "P", "G"]
-    assert [c.whs for c in out["HUTTON"]] == ["000", "SY", "000 & SY"]
+    assert [c.whs for c in out["HUTTON"]] == ["000", "SY", "BOTH WHS"]
 
 
 def test_cross_sheet_different_set_skipped():
@@ -324,3 +324,10 @@ def test_record_without_color_skips_style():
     out, skips = style_colorways(final)
     assert "AAA" not in out and list(out) == ["BBB"]
     assert skips == [Skip("AAA", "record tanpa COLOR")]
+
+
+def test_old_whs_label_rejected():
+    """final.json lama berlabel "000 & SY" tidak boleh menulis label lama ke IM; minta buat ulang."""
+    final = _final(_rec("HUTTON", ["A"], "S1 No.1 | B1 | g", whs="000 & SY"))
+    with pytest.raises(Matrix2ImError, match=r"WHS '000 & SY'.*buat ulang final\.json"):
+        style_colorways(final)

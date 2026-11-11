@@ -14,10 +14,12 @@ SECTION_EXCLUDE_WORDS = ("COLOR", "STYLE", "ORDER")
 LEGEND_LABELS = ("000 ONLY STYLE", "SY ONLY", "NEW COLOR", "REPEAT COLOR", "000 ONLY COLOR",
                  "000 REPEAT COLOR", "YR COLOR", "HOLD COLOR FOR SY", "DISCONTINUED COLOR FOR SY")
 # Kode rgb dibandingkan tanpa byte alpha (excel_reader.rgb6): openpyxl menulis "00", Excel "FF".
-# Putih / tanpa fill = abu = 000 & SY (keputusan review 10 Nov 2026, kasus MERRY STRIPED).
-STYLE_WHS_BY_FILL = {"FFFF66FF": "000", "theme0-0.15": "000 & SY", "FFD9D9D9": "000 & SY", "FFFF0000": "SY",
-                     "FFFFFFFF": "000 & SY", "theme0+0.00": "000 & SY"}
-STYLE_WHS_NO_FILL = "000 & SY"             # sel nomor berisi tapi tanpa fill (tampil putih)
+# Label WHS untuk gudang 000 dan SY sekaligus (dulu "000 & SY"; diganti atas permintaan user 11 Nov 2026).
+WHS_BOTH = "BOTH WHS"
+# Putih / tanpa fill = abu = WHS_BOTH (keputusan review 10 Nov 2026, kasus MERRY STRIPED).
+STYLE_WHS_BY_FILL = {"FFFF66FF": "000", "theme0-0.15": WHS_BOTH, "FFD9D9D9": WHS_BOTH, "FFFF0000": "SY",
+                     "FFFFFFFF": WHS_BOTH, "theme0+0.00": WHS_BOTH}
+STYLE_WHS_NO_FILL = WHS_BOTH               # sel nomor berisi tapi tanpa fill (tampil putih)
 FONT_MEANING = {"FF00B050": "NEW COLOR", "FFFF00FF": "000 ONLY COLOR", "FFFF99FF": "000 REPEAT COLOR",
                 "FF9900FF": "YR COLOR", "FFFF0000": "HOLD COLOR FOR SY", "FF0066FF": "DISCONTINUED COLOR FOR SY"}
 DEFAULT_FONT_MEANING = "REPEAT COLOR"      # tanpa warna / FF000000 / theme / indexed
@@ -40,7 +42,7 @@ DESCRIPTOR_RE = r"\b(STRIPE|STRIPED|MARL|MULTI)$"
 # Aksesoris di slot COLOR (mis. "XBP 729 2 CM-DARK ROAST", "XZIP") tidak boleh dihapus.
 IM_ACCESSORY_RE = r"^X[A-Z]+(\s|$)"
 IM_COLOR_KEYS = ("COLOR1", "COLOR2", "COLOR3", "COLOR 4") + tuple(f"COLOR{i}" for i in range(5, 19))
-WHS_VALUES = ("000", "SY", "000 & SY")
+WHS_VALUES = ("000", "SY", WHS_BOTH)
 IM_SHEET = "F27"
 IM_HEADER_ROW = 54
 IM_DESCRIPTION_KEY = "DESCRIPTION"
@@ -55,7 +57,7 @@ TARGET_NAME = "F27 IM MASTER (sheet F27, header baris 54)"
 # Arti font -> WHS warna di atas garis merah; di bawah garis merah selalu "SY".
 FONT_WHS_000 = frozenset({"000 ONLY COLOR", "000 REPEAT COLOR"})
 FONT_WHS_000_SY = frozenset({"NEW COLOR", "REPEAT COLOR"})
-WHS_SETS = {"000": frozenset({"000"}), "SY": frozenset({"SY"}), "000 & SY": frozenset({"000", "SY"})}
+WHS_SETS = {"000": frozenset({"000"}), "SY": frozenset({"SY"}), WHS_BOTH: frozenset({"000", "SY"})}
 # Kunci IM MASTER (Password to modify, ECMA-376 fileSharing).
 IM_LOCK_ALGORITHMS = {"SHA-512": "sha512", "SHA-384": "sha384", "SHA-256": "sha256", "SHA-1": "sha1"}
 OWNER_FILE_PREFIX = "~$"                   # file kunci Excel di folder yang sama dengan workbook

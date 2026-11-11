@@ -26,7 +26,7 @@ def test_needs_review_matches_golden(f27_final, golden_final):
 def test_baseline(f27_final):
     s = f27_final["summary"]
     assert s["total_records"] == 724 and s["total_styles"] == 211
-    assert s["WHS"] == {"000 & SY": 194, "000": 354, "SY": 176}
+    assert s["WHS"] == {"BOTH WHS": 194, "000": 354, "SY": 176}
     assert (s["WS_TAG_COLOR_filled"], s["WS_TAG_COLOR_need_review"], s["WS_TAG_COLOR_null"]) == (633, 91, 0)
     assert s["needs_review_items"] == 91
     assert s["needs_review_by_issue"] == {"TAG_CONDITIONAL": 57, "TAG_CN_OUT_OF_RANGE": 21,
@@ -66,7 +66,7 @@ def test_rihanna_striped_descriptor_is_need_review(f27_final):
 
 
 def test_merry_striped_whs_without_review(f27_final):
-    assert f27_final["records"][668]["WHS"] == "000 & SY" and f27_final["records"][669]["WHS"] == "000"
+    assert f27_final["records"][668]["WHS"] == "BOTH WHS" and f27_final["records"][669]["WHS"] == "000"
     assert _items(f27_final, "WHS_STYLE_UNKNOWN") == []
 
 

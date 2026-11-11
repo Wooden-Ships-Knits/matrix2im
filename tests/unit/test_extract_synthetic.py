@@ -24,8 +24,8 @@ def test_cards_and_order(synthetic):
 def test_numbers_section_style_whs(synthetic):
     a, b, c, d = synthetic.cards
     assert (a.no, a.style_whs, a.section) == (1, "000", "WINTER BEACH")
-    assert (b.no, b.style_whs) == (2, "000 & SY")
-    assert (c.no, c.style_whs, c.no_fill) == ("S2 - A", "000 & SY", None)    # tanpa fill = putih (keputusan 5)
+    assert (b.no, b.style_whs) == (2, "BOTH WHS")
+    assert (c.no, c.style_whs, c.no_fill) == ("S2 - A", "BOTH WHS", None)    # tanpa fill = putih (keputusan 5)
     assert (d.no, d.style_whs, d.section) == (1, "SY", None)
 
 
@@ -62,7 +62,7 @@ def test_red_line_on_first_colour_row_puts_all_below(synthetic):
 def test_warnings(synthetic):
     w = "\n".join(synthetic.warnings)
     assert "A19" not in w and "karakter" not in w                 # tanda baca dibuang tanpa warning (keputusan 8)
-    assert "C9" not in w and "background nomor" not in w         # tanpa fill = 000 & SY (keputusan 5)
+    assert "C9" not in w and "background nomor" not in w         # tanpa fill = BOTH WHS (keputusan 5)
     assert "C17" in w and "TAG" in w                          # D10
     assert "A37" in w and "FF123456" in w                     # D9
     assert "garis hitam tidak ditemukan" in w                 # kartu B dan C
@@ -145,9 +145,9 @@ def test_number_row_with_only_uncached_formulas_is_fatal(tmp_path):
 def test_missing_number_with_known_fill_says_whs_from_background(tmp_path):   # D8 teks
     result = extract_workbook(_variant(tmp_path, "b9_kosong.xlsx", B9=None))
     b = result.cards[1]
-    assert (b.no, b.no_cell, b.style_whs) == (None, "B9", "000 & SY")
+    assert (b.no, b.no_cell, b.style_whs) == (None, "B9", "BOTH WHS")
     assert [w for w in result.warnings if "B9" in w] == [
-        "TEST B9 JUDE T NECK: nomor style tidak ditemukan, WHS style 000 & SY diambil dari warna background"]
+        "TEST B9 JUDE T NECK: nomor style tidak ditemukan, WHS style BOTH WHS diambil dari warna background"]
 
 
 def _with_cache(monkeypatch, path, cache):
@@ -218,7 +218,7 @@ def _fill_variant(tmp_path, name, ref, rgb, value="keep"):
 
 def test_white_number_background_is_000_and_sy(tmp_path):                   # keputusan 5
     result = extract_workbook(_fill_variant(tmp_path, "putih.xlsx", "A9", "FFFFFFFF"))
-    assert result.cards[0].style_whs == "000 & SY"
+    assert result.cards[0].style_whs == "BOTH WHS"
     assert not [w for w in result.warnings if "A9" in w]
 
 

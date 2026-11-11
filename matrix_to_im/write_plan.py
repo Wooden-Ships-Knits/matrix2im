@@ -10,7 +10,7 @@ from openpyxl.utils import get_column_letter
 
 from .errors import Matrix2ImError
 from .im_layout import ImGroup, ImLayout, normalize
-from .legend_config import IM_ACCESSORY_RE, IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS
+from .legend_config import IM_ACCESSORY_RE, IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS, WHS_VALUES
 
 _REF_RE = re.compile(r"^(?P<sheet>.+?)(?: \((?P<section>[^)]*)\))? No\.(?P<no>.+?) \| ")
 _WHS_BY_SET = {parts: name for name, parts in WHS_SETS.items()}
@@ -83,6 +83,10 @@ def style_colorways(final: dict) -> tuple[dict[str, list[Colorway]], list[Skip]]
     """Satu daftar colorway terurut per style (key = DESCRIPTION ternormalisasi)."""
     grouped: dict[str, dict[str, list[Colorway]]] = {}
     for rec in final["records"]:
+        whs = rec.get("WHS")
+        if whs is not None and whs not in WHS_VALUES:   # mis. label lama "000 & SY" dari final.json lama
+            raise Matrix2ImError(f"WHS '{whs}' di final.json bukan salah satu dari {list(WHS_VALUES)}; "
+                                 "buat ulang final.json dari MATRIX")
         sheet, _card = parse_ref(rec["_ref"])
         style = normalize(rec["DESCRIPTION"])
         grouped.setdefault(style, {}).setdefault(sheet, []).append(_colorway(rec))

@@ -82,7 +82,7 @@ Tahap ini membaca setiap kartu style dan menyalin isinya apa adanya, ditambah ar
 | `no` | nilai hasil formula di baris nomor; angka, atau teks seperti S1, S2 - A, 1A |
 | `section` | teks kolom A tepat di atas baris nomor; null bila tidak ada |
 | `style` | sel tepat di atas baris yang isinya persis NEW / EXACT REPEAT / REPEAT / UPDATE / REPEAT WITH UPDATE. Harus cocok persis, supaya nama seperti "NEWPORT …" tidak terbaca sebagai label |
-| `style_whs` | warna background sel nomor: ungu (FF66FF) → 000; abu (theme −15% atau D9D9D9), putih (FFFFFF / theme putih), atau tanpa warna → 000 & SY; merah (FF0000) → SY; warna lain → null + warning. Kartu yang sel nomornya tidak ditemukan → null + warning |
+| `style_whs` | warna background sel nomor: ungu (FF66FF) → 000; abu (theme −15% atau D9D9D9), putih (FFFFFF / theme putih), atau tanpa warna → BOTH WHS; merah (FF0000) → SY; warna lain → null + warning. Kartu yang sel nomornya tidak ditemukan → null + warning |
 | `tag` | sel di bawah nama style yang berawalan "TAG". TAG beberapa baris digabung dengan " \| ". Sel "TAG …" yang ada di area warna tidak dihitung sebagai colorway |
 | garis hitam | border tebal (medium/thick) berwarna auto, indexed 64, theme 1, atau hitam |
 | garis merah | border tebal berwarna merah (FF0000, E40500, C00000); kalau tidak ditemukan di kartu itu, dipakai baris garis merah mayoritas di halaman |
@@ -97,7 +97,7 @@ Contoh raw JSON untuk satu style:
 {
   "no": 20,
   "style": "HUTTON MOCK T NECK CHUNKY",
-  "style_whs": "000 & SY",
+  "style_whs": "BOTH WHS",
   "tag": "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)",
   "color_above_black_line": [
     {"colorway": "NIGHT NAVY", "yarns": ["NIGHT NAVY"], "font_color": "NEW COLOR", "cell": "C163", "comment": null}
@@ -132,10 +132,10 @@ WHS warna ditentukan dari posisi colorway dan warna fontnya. Garis hitam tidak m
 | --- | --- | --- |
 | di bawah garis merah | apa pun | SY |
 | di atas garis merah | ungu (000 ONLY COLOR) atau pink (000 REPEAT COLOR) | 000 |
-| di atas garis merah | hijau (NEW COLOR) atau hitam (REPEAT COLOR) | 000 & SY |
+| di atas garis merah | hijau (NEW COLOR) atau hitam (REPEAT COLOR) | BOTH WHS |
 | apa pun | YR COLOR, HOLD COLOR FOR SY, DISCONTINUED COLOR FOR SY | null + review |
 
-WHS final = irisan WHS style dan WHS warna, karena warna tidak bisa dijual di WHS tempat style-nya tidak dijual. Contoh: style 000 + warna 000 & SY → 000 (bukan masalah, tidak masuk review). Kalau irisannya kosong → null + review. Kalau WHS style tidak diketahui (warna background di luar legend) → dipakai WHS warna + review.
+WHS final = irisan WHS style dan WHS warna, karena warna tidak bisa dijual di WHS tempat style-nya tidak dijual. Contoh: style 000 + warna BOTH WHS → 000 (bukan masalah, tidak masuk review). Kalau irisannya kosong → null + review. Kalau WHS style tidak diketahui (warna background di luar legend) → dipakai WHS warna + review.
 
 Struktur final JSON:
 
@@ -169,7 +169,7 @@ Setiap kali dijalankan, sistem memeriksa hasilnya sendiri dan mengumpulkan semua
 Pemeriksaan otomatis:
 
 - Semua key di `records` ada di header IM MASTER baris 54.
-- WHS hanya berisi "000", "SY", atau "000 & SY".
+- WHS hanya berisi "000", "SY", atau "BOTH WHS".
 - Jumlah colorway di raw JSON sama dengan jumlah record di final JSON.
 - Setiap kartu punya nomor, nama, TAG, dan minimal satu colorway; kalau tidak, masuk `warnings`.
 - Setiap WS TAG COLOR berisi `Need Review` punya item `needs_review` dengan kode TAG_* atau COLOR_IS_DESCRIPTOR.
@@ -246,7 +246,7 @@ Semua item ini sudah ditandai di `needs_review`, jadi sistem tetap bisa berjalan
 - [ ] Cara memicu sistem setelah automation Image → MATRIX MASTER selesai.
 - [ ] Arti garis hitam. Garis ini tidak memengaruhi WHS, jadi saat ini hanya disimpan sebagai posisi di `_ref`.
 
-Sudah diputuskan (revisi 10 November 2026): style yang muncul di dua sheet dicatat terpisah; background nomor putih/tanpa warna = 000 & SY (MERRY STRIPED).
+Sudah diputuskan (revisi 10 November 2026): style yang muncul di dua sheet dicatat terpisah; background nomor putih/tanpa warna = BOTH WHS (MERRY STRIPED).
 
 ## Kriteria penerimaan
 
@@ -255,7 +255,7 @@ Sistem dianggap siap kalau semua kriteria ini terpenuhi pada file F27:
 1. Semua kartu style terbaca tanpa error pencarian label.
 2. Jumlah colorway di raw JSON sama dengan jumlah record di final JSON.
 3. Semua key di `records` sama persis dengan header IM MASTER baris 54.
-4. WHS hanya berisi "000", "SY", atau "000 & SY".
+4. WHS hanya berisi "000", "SY", atau "BOTH WHS".
 5. Pembagian garis untuk HUTTON MOCK T NECK CHUNKY (No. 20) dan JUDE T NECK CHUNKY (No. 21) sama dengan tampilan di MATRIX.
 6. 25 record yang dipilih acak cocok dengan sel aslinya di MATRIX.
 7. Setiap nilai yang tidak bisa diputuskan aturan bernilai null (atau `Need Review` untuk WS TAG COLOR) dan punya item di `needs_review`.
@@ -266,9 +266,9 @@ Baseline F27 (setelah revisi 10 November 2026):
 | --- | --- |
 | Kartu style | 215 (211 nama unik) |
 | Colorway | 724: 158 di atas garis hitam, 390 di antara garis, 176 di bawah garis merah |
-| WHS style | 86 "000 & SY", 70 "000", 59 "SY", 0 tidak diketahui |
+| WHS style | 86 "BOTH WHS", 70 "000", 59 "SY", 0 tidak diketahui |
 | Warning ekstraksi | 0 |
-| WHS final per record | 354 "000", 194 "000 & SY", 176 "SY" |
+| WHS final per record | 354 "000", 194 "BOTH WHS", 176 "SY" |
 | WS TAG COLOR | 633 terisi, 91 `Need Review`, 0 null |
 | needs_review | 91: 57 TAG_CONDITIONAL, 21 TAG_CN_OUT_OF_RANGE, 7 TAG_UNRESOLVED, 6 COLOR_IS_DESCRIPTOR |
 | Waktu proses | sekitar 1,5 detik |
@@ -282,10 +282,10 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 | Tempat | Warna | Arti di legend | Dipakai sistem untuk |
 | --- | --- | --- | --- |
 | Background sel nomor | ungu (FF66FF) | 000 ONLY STYLE | WHS style = 000 |
-| Background sel nomor | abu (theme −15% / D9D9D9), putih, atau tanpa warna | tanpa penanda | WHS style = 000 & SY |
+| Background sel nomor | abu (theme −15% / D9D9D9), putih, atau tanpa warna | tanpa penanda | WHS style = BOTH WHS |
 | Background sel nomor | merah (FF0000) | SY ONLY | WHS style = SY |
-| Font colorway | hijau (00B050) | NEW COLOR | 000 & SY bila di atas garis merah |
-| Font colorway | hitam / otomatis | REPEAT COLOR | 000 & SY bila di atas garis merah |
+| Font colorway | hijau (00B050) | NEW COLOR | BOTH WHS bila di atas garis merah |
+| Font colorway | hitam / otomatis | REPEAT COLOR | BOTH WHS bila di atas garis merah |
 | Font colorway | ungu (FF00FF) | 000 ONLY COLOR | 000 |
 | Font colorway | pink (FF99FF) | 000 REPEAT COLOR | 000 |
 | Font colorway | ungu tua (9900FF) | YR COLOR | review (belum ada aturan) |
@@ -311,7 +311,7 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 2. WHS warna yang diturunkan oleh batas WHS style bukan masalah, jadi item `WHS_CAPPED_BY_STYLE` dihapus (−17 item). Nilai WHS tidak berubah.
 3. TAG bersyarat atau singkatan: WS TAG COLOR diisi `Need Review` (57 record), dan item review tetap.
 4. TAG yang meminta Cn melebihi jumlah benang: WS TAG COLOR diisi `Need Review` (21 record). Hal yang sama berlaku untuk TAG kosong.
-5. Background nomor putih atau tanpa warna = WHS style 000 & SY (MERRY STRIPED). Warning dan item `WHS_STYLE_UNKNOWN` untuk kasus ini hilang.
+5. Background nomor putih atau tanpa warna = WHS style BOTH WHS (MERRY STRIPED). Warning dan item `WHS_STYLE_UNKNOWN` untuk kasus ini hilang.
 6. COLOR berupa deskripsi: COLOR ditulis apa adanya, WS TAG COLOR diisi `Need Review` (6 record), dan item review tetap.
 7. Aturan baru `TAG_UNRESOLVED`: TAG yang setelah substitusi Cn masih berisi `C(…)` atau kata COLOR (instruksi belum diterjemahkan). WS TAG COLOR diisi `Need Review` (7 record). Kasus ini sebelumnya lolos tanpa review.
 8. Sel yang hanya berisi tanda baca diabaikan tanpa warning (−3 warning).

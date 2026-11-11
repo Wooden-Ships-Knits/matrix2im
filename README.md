@@ -154,7 +154,7 @@ Kode `needs_review`:
 | `TAG_CN_OUT_OF_RANGE` | TAG meminta Cn melebihi jumlah benang; WS TAG COLOR `Need Review` |
 | `TAG_EMPTY` | TAG kosong; WS TAG COLOR `Need Review` |
 | `TAG_UNRESOLVED` | TAG masih berisi instruksi belum diterjemahkan (`C(car)`, `GONDOLA color`); WS TAG COLOR `Need Review` |
-| `WHS_STYLE_UNKNOWN` | warna background nomor di luar legend; dipakai WHS warna (putih/tanpa warna = `000 & SY`, bukan masalah) |
+| `WHS_STYLE_UNKNOWN` | warna background nomor di luar legend; dipakai WHS warna (putih/tanpa warna = `BOTH WHS`, bukan masalah) |
 | `WHS_CONFLICT` | WHS colorway dan style tidak beririsan; WHS `null` |
 | `FONT_COLOR_NO_RULE` | warna font (mis. YR / HOLD / DISCONTINUED) belum punya aturan WHS; WHS `null` |
 | `COLOR_IS_DESCRIPTOR` | COLOR berupa deskripsi (STRIPE/MARL/MULTI), ditulis apa adanya; WS TAG COLOR `Need Review`; benang asli ada di comment sel |
@@ -190,4 +190,4 @@ Kasus berikut sengaja tetap `Need Review` / `null` dan masuk `needs_review`; tid
 - Aturan WHS untuk font YR / HOLD / DISCONTINUED.
 - Arti garis hitam (tidak memengaruhi WHS).
 
-Sudah diputuskan pada review 10 November 2026 (lihat Riwayat perubahan di PRD): style di dua sheet dicatat terpisah; WHS yang dibatasi style bukan masalah; background nomor putih/kosong = `000 & SY`; karakter nyasar dibuang tanpa warning.
+Sudah diputuskan pada review 10 November 2026 (lihat Riwayat perubahan di PRD): style di dua sheet dicatat terpisah; WHS yang dibatasi style bukan masalah; background nomor putih/kosong = `BOTH WHS`; karakter nyasar dibuang tanpa warning.

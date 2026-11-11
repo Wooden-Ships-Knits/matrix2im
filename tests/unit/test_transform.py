@@ -11,7 +11,7 @@ def cw(yarns, cell="A1", font="NEW COLOR", comment=None):
     return {"colorway": "/".join(yarns), "yarns": yarns, "font_color": font, "cell": cell, "comment": comment}
 
 
-def style(name="STYLE X", sheet="S1", section=None, no=1, whs="000 & SY", tag="TAG: C1/C2",
+def style(name="STYLE X", sheet="S1", section=None, no=1, whs="BOTH WHS", tag="TAG: C1/C2",
           above=(), between=(), below=()):
     return {"no": no, "style": name, "style_whs": whs, "tag": tag, "sheet": sheet, "section": section,
             "color_above_black_line": list(above), "color_between_black_and_red_line": list(between),
@@ -74,9 +74,9 @@ def test_descriptor_review_carries_comment():
 
 def test_style_in_two_sheets_are_separate_records_without_review():      # keputusan 1
     raw = raw_of(style(sheet="S1", whs="000", between=[cw(["A", "B"], font="REPEAT COLOR")]),
-                 style(sheet="S2", whs="000 & SY", between=[cw(["A", "B"], font="REPEAT COLOR")]))
+                 style(sheet="S2", whs="BOTH WHS", between=[cw(["A", "B"], font="REPEAT COLOR")]))
     doc = transform(raw)
-    assert [(r["WHS"], r["_ref"].split(" ")[0]) for r in doc["records"]] == [("000", "S1"), ("000 & SY", "S2")]
+    assert [(r["WHS"], r["_ref"].split(" ")[0]) for r in doc["records"]] == [("000", "S1"), ("BOTH WHS", "S2")]
     assert doc["needs_review"] == []
 
 
@@ -118,7 +118,7 @@ def test_summary_counts_by_code():
                  style(name="S2", tag="TAG: C1", below=[cw(["C STRIPE"])]), warnings=["w"])
     s = transform(raw)["summary"]
     assert s["total_records"] == 3 and s["total_styles"] == 2
-    assert s["WHS"] == {None: 1, "000 & SY": 1, "SY": 1}
+    assert s["WHS"] == {None: 1, "BOTH WHS": 1, "SY": 1}
     assert (s["WS_TAG_COLOR_filled"], s["WS_TAG_COLOR_need_review"], s["WS_TAG_COLOR_null"]) == (2, 1, 0)
     assert s["needs_review_by_issue"] == {"FONT_COLOR_NO_RULE": 1, "COLOR_IS_DESCRIPTOR": 1,
                                           "EXTRACTION_WARNING": 1}
