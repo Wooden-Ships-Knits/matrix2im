@@ -18,6 +18,7 @@ from matrix_to_im.im_lock import check_modify_password
 from matrix_to_im.im_writer import commit_write, fingerprint, prepare_write
 from matrix_to_im.settings import Settings
 from tests.helpers.im_factory import TEST_PASSWORD, GroupSpec, add_file_sharing, build_im_sheet
+from tests.helpers.report_reader import read_report, report_kinds
 
 PW = TEST_PASSWORD
 
@@ -451,7 +452,7 @@ def test_commit_aborts_when_backup_is_corrupt(tmp_path, monkeypatch):
     monkeypatch.setattr(im_writer.shutil, "copyfile", corrupt)
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
     _aborted(st, rep, "berubah atau sedang dibuka", im, before)
-    assert rep.backup is None and not [f for f in st.backup_dir.glob("*.xlsx")]
+    assert rep.backup is None and not list(st.backup_dir.glob("*sebelum matrix2im*"))
 
 
 def _littering(inner=fake_inserter, then_raise=None):
@@ -750,10 +751,10 @@ def test_final_message_without_missing_styles_has_no_count(tmp_path):
     assert rep.ok and "tidak ada di IM" not in rep.message
 
 
-# ---------- I4: laporan CSV tiap run ----------
+# ---------- I4/R18: laporan .xlsx tiap run ----------
 
 def _report_path(st, im):
-    found = sorted(st.backup_dir.glob(f"{im.stem} * laporan matrix2im.csv"))
+    found = sorted(st.backup_dir.glob(f"{im.stem} * laporan matrix2im.xlsx"))
     assert len(found) == 1, found
     return found[0]
 
@@ -766,14 +767,14 @@ def test_run_report_written_on_success_and_logged(tmp_path):
     path = _report_path(st, im)
     assert rep.laporan == path
     stamp = rep.backup.name.removeprefix(f"{im.stem} ").removesuffix(" sebelum matrix2im.xlsx")
-    assert path.name == f"{im.stem} {stamp} laporan matrix2im.csv"          # pasangan cadangan
+    assert path.name == f"{im.stem} {stamp} laporan matrix2im.xlsx"          # pasangan cadangan
     entry = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
     assert entry["laporan"] == str(path)
-    data = path.read_bytes()
-    assert data.startswith(b"\xef\xbb\xbf") and PW.encode() not in data
-    text = data.decode("utf-8-sig")
-    assert text.splitlines()[0] == "DESCRIPTION,sel,baris,kolom,lama,baru,jenis"
-    assert text.count(",ubah") == len(p.values.changes)
+    rows = read_report(path.read_bytes())
+    assert rows[0] == ("DESCRIPTION", "sel", "baris", "kolom", "lama", "baru", "jenis")
+    assert report_kinds(rows)["ubah"] == len(p.values.changes)
+    assert ("AAA - K", "E55", 55, "COLOR1", "a1", "x1", "ubah") in rows
+    assert all(PW not in str(v) for row in rows for v in row)
 
 
 def test_run_report_written_on_abort_with_reason(tmp_path, excel_on):
@@ -786,8 +787,9 @@ def test_run_report_written_on_abort_with_reason(tmp_path, excel_on):
 
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=boom)
     assert not rep.ok and rep.laporan is not None and rep.laporan == _report_path(st, im)
-    text = rep.laporan.read_text(encoding="utf-8-sig")
-    assert "Penulisan gagal: Excel gagal: macet" in text and ",sisip" in text
+    rows = read_report(rep.laporan.read_bytes())
+    assert ("", "", "", "", "", "Penulisan gagal: Excel gagal: macet", "peringatan") in rows
+    assert report_kinds(rows)["sisip"] == 1
     entry = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
     assert entry["laporan"] == str(rep.laporan)
 
@@ -797,7 +799,8 @@ def test_wrong_password_report_has_no_password(tmp_path):
     p = prepare_write(final, st, PW)
     rep = commit_write(p, final, st, "salah-sandi-77", "andi", "m.xlsx")
     assert not rep.ok and rep.laporan is not None
-    assert b"salah-sandi-77" not in rep.laporan.read_bytes() and PW.encode() not in rep.laporan.read_bytes()
+    cells = [str(v) for row in read_report(rep.laporan.read_bytes()) for v in row]
+    assert not [c for c in cells if "salah-sandi-77" in c or PW in c]
 
 
 def test_no_run_report_when_other_process_holds_lock(tmp_path):
@@ -809,7 +812,7 @@ def test_no_run_report_when_other_process_holds_lock(tmp_path):
         fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
         rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
     assert not rep.ok and rep.laporan is None
-    assert not list(st.backup_dir.glob("*laporan matrix2im.csv"))
+    assert not list(st.backup_dir.glob("*laporan matrix2im*"))
     entry = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text().splitlines()[-1])
     assert entry["laporan"] is None
 
@@ -836,3 +839,16 @@ def test_prepare_permission_error_points_to_drive_permission(tmp_path, monkeypat
     with pytest.raises(Matrix2ImError) as ei:
         prepare_write(final, st, PW)
     assert "izin akses folder Google Drive" in str(ei.value) and str(im) in str(ei.value)
+
+
+# ---------- R19: style dilewati bukan "IM tanpa MATRIX" ----------
+
+def test_skipped_style_not_counted_as_unmatched_im_style(tmp_path):
+    groups = [GroupSpec("AAA - K", [["a"]]), GroupSpec("BBB - K", [["b"]]), GroupSpec("CCC - K", [["c"]])]
+    im, st = _make(tmp_path, groups)
+    b1, b2 = _rec("BBB", ["b1"], n=3), _rec("BBB", ["b2"], n=4)
+    b2["_ref"] = "SHEET2 No.4 | B1 | x"                     # colorway beda antar-sheet -> dilewati
+    final = {"records": [_rec("AAA", ["x1"]), b1, b2]}
+    p = prepare_write(final, st, PW)
+    assert [k.style for k in p.skipped] == ["BBB"]
+    assert p.values.unmatched_im_styles == ["CCC"] and p.summary["unmatched_im_styles"] == 1

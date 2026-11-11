@@ -33,7 +33,7 @@ from .settings import Settings
 from .write_plan import (
     InsertOp, Skip, ValuePlan, match_style, plan_inserts, plan_values, project_layout, style_colorways,
 )
-from .write_report import inserted_rows, report_csv_bytes, report_rows
+from .write_report import inserted_rows, report_rows, report_xlsx_bytes
 from .xlsx_cells import apply_cell_values, sheet_xml_path
 
 try:
@@ -113,7 +113,7 @@ class WriteReport:
     log_file: Path
     seconds: float
     inserted_rows: list[int]
-    laporan: Path | None = None      # CSV laporan run di folder cadangan
+    laporan: Path | None = None      # laporan run (.xlsx) di folder cadangan
 
 
 def _check_password(path: Path, password: str) -> None:
@@ -158,6 +158,8 @@ def prepare_write(final: dict, settings: Settings, password: str) -> WritePrevie
     ops = plan_inserts(layout, colorways) if engine == "excel" else []
     projected = project_layout(layout, ops)
     values = plan_values(projected, colorways)
+    skipped_styles = {k.style for k in skipped}     # ada di MATRIX tapi dilewati: bukan "IM tanpa MATRIX"
+    values.unmatched_im_styles = [s for s in values.unmatched_im_styles if s not in skipped_styles]
     group_size = {r: len(g.rows) for g in layout.groups for r in g.rows}
     for op in ops:
         if group_size.get(op.fill_from) == 1:
@@ -387,11 +389,11 @@ def _acquire_lock(backup_dir: Path):
 
 
 def _write_run_report(preview: WritePreview, backup_dir: Path, stamp: str, notes: list[str]) -> Path | None:
-    """CSV laporan run, sepasang dengan nama cadangan; gagal menulis tidak boleh mengubah hasil penulisan."""
-    path = backup_dir / f"{preview.im_master.stem} {stamp} laporan matrix2im.csv"
+    """Laporan run (.xlsx), sepasang dengan nama cadangan; gagal menulis tidak boleh mengubah hasil penulisan."""
+    path = backup_dir / f"{preview.im_master.stem} {stamp} laporan matrix2im.xlsx"
     try:
-        path.write_bytes(report_csv_bytes(report_rows(preview, notes)))
-    except OSError:
+        path.write_bytes(report_xlsx_bytes(report_rows(preview, notes)))
+    except Exception:  # noqa: BLE001 - laporan pelengkap; IM MASTER mungkin sudah tertulis dengan benar
         return None
     return path
 
@@ -428,7 +430,7 @@ def commit_write(preview: WritePreview, final: dict, settings: Settings, passwor
             notes = state["warnings"] + ([] if ok else [f"Penulisan gagal: {message}"])
             laporan = _write_run_report(preview, settings.backup_dir, stamp, notes)
             if laporan is None:
-                message += " (laporan CSV gagal ditulis)"
+                message += " (laporan gagal ditulis)"
         backup = state["backup"]
         entry = {"waktu": datetime.now().isoformat(timespec="seconds"), "user": user, "matrix": matrix_name,
                  "im_master": str(preview.im_master), "engine": preview.engine, "summary": preview.summary,

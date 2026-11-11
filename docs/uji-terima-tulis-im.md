@@ -25,7 +25,7 @@ Tujuan: memastikan link dan riwayat versi file di Google Drive tidak putus setel
 2. [ ] Catat dua hal tentang salinan itu: link-nya (Bagikan, Salin link) dan jumlah versi di riwayat (klik kanan, Kelola versi).
 3. [ ] Arahkan `master` di `matrix2im.local.toml` ke salinan uji tadi, lalu mulai ulang server.
 4. [ ] Buka UI, upload MATRIX saja (IM MASTER tidak perlu diupload: tool menulis ke file `master` di setting; kotak upload IM hanya untuk validasi header), klik **Proses**, lalu di panel **Tulis ke IM MASTER** isi nama dan password, klik **Buat rencana**, periksa pratinjau, centang pernyataan, dan klik **Tulis semua ke IM**.
-5. [ ] Tunggu laporan. Yang harus terlihat: laporan berhasil, lokasi cadangan, lokasi laporan CSV, dan ringkasan jumlah sel serta baris.
+5. [ ] Tunggu laporan. Yang harus terlihat: laporan berhasil, lokasi cadangan, lokasi laporan Excel (`... laporan matrix2im.xlsx`), dan ringkasan jumlah sel serta baris.
 6. [ ] Buka link yang dicatat di langkah 2. **Yang harus sama:** link masih bekerja dan file yang terbuka adalah file yang sama (bukan file baru bernama lain).
 7. [ ] Buka Kelola versi. **Yang harus sama:** versi lama masih ada dan satu versi baru bertambah di atasnya.
 
@@ -63,6 +63,7 @@ Tujuan: memastikan isi yang ditulis tool sesuai harapan menurut cara pemeriksaan
 3. [ ] **Yang harus terlihat:** kolom yang diubah tool hanya COLOR, WS TAG COLOR, dan WHS; kolom rumus dan kolom lain tidak berubah. Tangga harga WHLS LINE PRICE tetap utuh, dan SUBTOTAL di grup yang disisipi baris mencakup baris-baris baru. Bandingkan dengan file asli: sebagian range SUBTOTAL di file asli memang sudah tidak mencakup seluruh blok, jadi itu bukan kesalahan tool.
 4. [ ] Gambar dan warna kondisional di salinan uji masih ada seperti di file asli.
 5. [ ] Periksa log `matrix2im-log.jsonl` di folder cadangan: ada satu baris untuk penulisan tadi (hasil "ok"), dan tidak ada password di dalamnya.
+6. [ ] Buka laporan Excel di folder cadangan (atau unduhan **Unduh semua perubahan (Excel)** dari pratinjau) di PC Windows: kolom terpisah dengan benar, dan baris `sisip` serta `baris colorway berubah` cocok dengan yang terlihat di file.
 
 Hasil: [ ] lulus  [ ] ada perbedaan. Catatan: ____________________
 

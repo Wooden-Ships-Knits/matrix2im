@@ -823,12 +823,12 @@
     ].join("");
 
     const shown = p.changes.length;
-    const csvLink = '<a class="btn" href="/api/write/preview.csv" download>⬇ Unduh semua perubahan (CSV)</a>';
+    const reportLink = '<a class="btn" href="/api/write/preview.xlsx" download>⬇ Unduh semua perubahan (Excel)</a>';
     $("#write-changes").innerHTML = shown ? `<h3>Perubahan sel</h3>
-      <p class="hint">Menampilkan ${num(shown)} dari ${num(p.changes_total)} perubahan${p.changes_total > shown ? " (sisanya tetap ditulis)" : ""}. ${csvLink}</p>
+      <p class="hint">Menampilkan ${num(shown)} dari ${num(p.changes_total)} perubahan${p.changes_total > shown ? " (sisanya tetap ditulis)" : ""}. ${reportLink}</p>
       <div class="table-wrap wtable-wrap"><table><thead><tr><th>DESCRIPTION</th><th>Sel</th><th>Lama</th><th>Baru</th></tr></thead><tbody>
       ${p.changes.map((c) => `<tr><td class="desc">${esc(c.description)}</td><td class="ref">${esc(c.cell)}</td><td>${cellVal(c.old)}</td><td>${cellVal(c.new)}</td></tr>`).join("")}
-      </tbody></table></div>` : `<p class="hint">${csvLink}</p>`;
+      </tbody></table></div>` : `<p class="hint">${reportLink}</p>`;
     $("#write-inserts").innerHTML = listBlock("Baris yang akan disisipkan", p.inserts, (x) => `${esc(x.description)} <span class="sub">· +${num(x.count)} baris</span>`);
     $("#write-skipped").innerHTML = listBlock("Style dilewati", p.skipped, (x) => `<b>${esc(x.style)}</b> <span class="sub">· ${esc(x.reason)}</span>`);
     $("#write-others").innerHTML = listBlock("Style MATRIX tidak ada di IM (tidak ditulis)", p.missing_styles || [], esc)

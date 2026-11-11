@@ -931,47 +931,53 @@ def test_prepare_returns_missing_styles_and_panel_shows_them(serve_with, session
     assert "p.missing_styles" in html and "s.missing_styles" in html
 
 
-# ---------- I4: CSV rencana per sesi ----------
+# ---------- I4/R18: laporan rencana (.xlsx) per sesi ----------
 
-def test_preview_csv_for_own_plan_only(serve_with, sessions, tmp_path):
+XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def test_preview_xlsx_for_own_plan_only(serve_with, sessions, tmp_path):
+    from tests.helpers.report_reader import read_report, report_kinds
     im, settings, final = _write_env(tmp_path)
     base = serve_with(settings)
     a, b = _new_session(base), _new_session(base)
-    status, headers, body = call(f"{base}/api/write/preview.csv", headers={"Cookie": a})
+    status, headers, body = call(f"{base}/api/write/preview.xlsx", headers={"Cookie": a})
     assert status == 404 and "rencana" in json.loads(body)["error"]      # belum ada rencana
     _inject(sessions, a, final)
     _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, a)
-    status, headers, body = call(f"{base}/api/write/preview.csv", headers={"Cookie": a})
-    assert status == 200
-    assert headers["Content-Type"].startswith("text/csv") and "attachment" in headers["Content-Disposition"]
-    assert body.startswith(b"\xef\xbb\xbf")
-    lines = body.decode("utf-8-sig").splitlines()
-    assert lines[0] == "DESCRIPTION,sel,baris,kolom,lama,baru,jenis"
-    assert sum(line.endswith(",ubah") for line in lines) == plan["changes_total"]
-    assert PW.encode() not in body and plan["token"].encode() not in body
-    status, _, _ = call(f"{base}/api/write/preview.csv", headers={"Cookie": b})   # sesi lain
+    status, headers, body = call(f"{base}/api/write/preview.xlsx", headers={"Cookie": a})
+    assert status == 200 and headers["Content-Type"] == XLSX_TYPE
+    assert headers["Content-Disposition"] == 'attachment; filename="rencana matrix2im.xlsx"'
+    rows = read_report(body)
+    assert rows[0] == ("DESCRIPTION", "sel", "baris", "kolom", "lama", "baru", "jenis")
+    assert report_kinds(rows)["ubah"] == plan["changes_total"]
+    cells = [str(v) for row in rows for v in row]
+    assert not [c for c in cells if PW in c or plan["token"] in c]
+    status, _, _ = call(f"{base}/api/write/preview.xlsx", headers={"Cookie": b})   # sesi lain
+    assert status == 404
+    status, _, _ = call(f"{base}/api/write/preview.csv", headers={"Cookie": a})    # rute CSV sudah tidak ada
     assert status == 404
 
 
-def test_panel_has_csv_link_and_run_report_path(serve_with, sessions, tmp_path):
+def test_panel_has_excel_link_and_run_report_path(serve_with, sessions, tmp_path):
     im, settings, final = _write_env(tmp_path)
     base = serve_with(settings)
     _, _, body = call(f"{base}/")
     html = body.decode("utf-8")
-    assert "Unduh semua perubahan (CSV)" in html and "/api/write/preview.csv" in html
+    assert "Unduh semua perubahan (Excel)" in html and "/api/write/preview.xlsx" in html
+    assert "CSV" not in html and "preview.csv" not in html
     assert "r.laporan" in html and "st.laporan" in html
     cookie = _new_session(base)
     _inject(sessions, cookie, final)
     _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
     post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, cookie)
     st = wait_state(base, cookie, ("done", "error"))
-    assert st["state"] == "done" and st["report"]["laporan"].endswith("laporan matrix2im.csv")
+    assert st["state"] == "done" and st["report"]["laporan"].endswith("laporan matrix2im.xlsx")
     assert Path(st["report"]["laporan"]).is_file()
-    post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
     _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
     post_json(base, "/api/write/commit", {"token": plan["token"], "password": "salah-pw"}, cookie)
     st = wait_state(base, cookie, ("error",))
-    assert st["laporan"] and st["laporan"].endswith("laporan matrix2im.csv")
+    assert st["laporan"] and st["laporan"].endswith("laporan matrix2im.xlsx")
 
 
 def test_panel_idle_after_own_write_is_unknown_status_not_missing_backup(base):

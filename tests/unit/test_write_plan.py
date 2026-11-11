@@ -297,12 +297,21 @@ def test_warns_matched_group_without_subtotal():
     assert plan.warnings == ["S - X/S (baris 5): grup tanpa baris subtotal"]
 
 
-def test_warns_same_key_in_several_blocks():
+def test_warns_same_key_in_separate_parts_of_sheet():
     lay = _vlayout([_grp("S - X/S", [5]), _grp("S - S/M", [7]), _grp("S - X/S", [20, 21]),
-                    _grp("ZED - X/S", [30]), _grp("ZED - X/S", [32])])
+                    _grp("ZED - X/S", [30]), _grp("ZED - S/M", [31]), _grp("ZED - X/S", [32])])
     plan = plan_values(lay, {"S": [_cw(["A"])]})
-    assert plan.warnings == ["S - X/S: muncul di 2 blok; semua blok diisi colorway yang sama"]
+    assert plan.warnings == ["S - X/S: muncul di 2 bagian sheet; semua bagian diisi colorway yang sama"]
     assert {c.row for c in plan.changes if c.col == 2} == {5, 7, 20, 21}
+
+
+def test_adjacent_blocks_of_same_key_are_one_part():
+    """Dua blok M/L berurutan (subtotal FAF lalu FAH) adalah bentuk normal F27: tidak diperingatkan."""
+    pair = [_grp("S - S/M", [3]), _grp("S - M/L", [5, 6]), _grp("S - M/L", [8, 9]), _grp("S - X/L", [11])]
+    assert plan_values(_vlayout(pair), {"S": [_cw(["A"])]}).warnings == []
+    again = _vlayout([*pair, _grp("T - M/L", [13]), _grp("S - M/L", [20])])
+    plan = plan_values(again, {"S": [_cw(["A"])], "T": [_cw(["B"])]})
+    assert plan.warnings == ["S - M/L: muncul di 2 bagian sheet; semua bagian diisi colorway yang sama"]
 
 
 def test_record_without_color_skips_style():

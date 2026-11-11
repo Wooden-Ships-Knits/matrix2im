@@ -231,10 +231,18 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
     cols = layout.columns
     matched: set[str] = set()
     unmatched: set[str] = set()
-    blocks = Counter(g.description for g in layout.groups if match_style(g.description, colorways))
-    for key, count in blocks.items():
-        if count > 1:   # mis. blok tambahan di bagian lain sheet; semuanya ikut diisi
-            plan.warnings.append(f"{key}: muncul di {count} blok; semua blok diisi colorway yang sama")
+    # Bagian = deret grup berurutan dengan kunci sama. Blok M/L berurutan (subtotal FAF lalu FAH) adalah satu
+    # bagian dan bentuk normal; kunci yang muncul lagi di bagian lain sheet diperingatkan (tetap diisi).
+    parts: Counter[str] = Counter()
+    prev: str | None = None
+    for g in layout.groups:
+        key = g.description if match_style(g.description, colorways) else None
+        if key is not None and key != prev:
+            parts[key] += 1
+        prev = key
+    for key, count in parts.items():
+        if count > 1:
+            plan.warnings.append(f"{key}: muncul di {count} bagian sheet; semua bagian diisi colorway yang sama")
     for g in layout.groups:
         style = match_style(g.description, colorways)
         if style is None:

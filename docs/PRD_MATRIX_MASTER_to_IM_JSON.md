@@ -302,7 +302,8 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 2. Pengaman: cocokkan password ubah dengan hash `fileSharing`, cek file `~$`, cadangan bertanggal, deteksi perubahan file sejak rencana, verifikasi hasil, dan log JSONL (`matrix2im-log.jsonl`, tanpa password).
 3. Sisip baris lewat Excel (baris utuh, `fill down` terbatas); nilai sel ditulis langsung di XML sheet. openpyxl tidak pernah menyimpan IM MASTER. Setting `insert_engine = "none"` hanya mengisi baris yang ada.
 4. Regression F27 pada salinan uji AI TEST V2: 211 style tanpa dilewati; 177 sisipan (286 baris, 20 di grup 1 baris) dan 179 style IM tanpa data MATRIX. Ketiganya sama dengan perkiraan spike (177 / 286 / 179); 16 label musim/judul satu segmen (DESCRIPTION tanpa " - ") tidak dihitung sebagai style. Baris subtotal dikenali dari rumus SUBTOTAL, bukan label, dan kunci grup IM adalah `STYLE - SIZE` (teks sesudahnya dianggap catatan).
-5. Dokumentasi: README bagian "Menulis ke IM MASTER" dan daftar uji terima `docs/uji-terima-tulis-im.md`.
+5. Laporan perubahan berupa file Excel (.xlsx, sheet `Laporan`): bisa diunduh dari pratinjau sebelum konfirmasi (atau `matrix2im write --report`), dan tiap penulisan menyimpan `<nama> <tanggal jam> laporan matrix2im.xlsx` di folder cadangan. Isinya setiap sel yang berubah, baris sisipan, baris yang colorway-nya berubah, style dilewati, style MATRIX yang tidak ada di IM, style IM tanpa MATRIX, dan peringatan.
+6. Dokumentasi: README bagian "Menulis ke IM MASTER" dan daftar uji terima `docs/uji-terima-tulis-im.md`.
 
 ### 10 November 2026: hasil review `needs_review`
 

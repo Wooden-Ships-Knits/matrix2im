@@ -17,7 +17,7 @@ from .settings import load_settings
 from .transform import transform
 from .ui_server import serve
 from .validate import read_im_header, validate
-from .write_report import report_csv_bytes, report_rows
+from .write_report import report_rows, report_xlsx_bytes
 
 log = logging.getLogger("matrix2im")
 _HANDLER_FLAG = "_matrix2im_handler"
@@ -159,12 +159,15 @@ def _read_password() -> str:
     return sys.stdin.readline().rstrip("\n").rstrip("\r")
 
 
-def _write_preview_csv(path: Path, preview: WritePreview) -> None:
-    """CSV semua perubahan rencana (tanpa batas baris), sama dengan unduhan di UI."""
+def _write_preview_report(path: Path, preview: WritePreview) -> Path:
+    """Laporan .xlsx semua perubahan rencana (tanpa batas baris), sama dengan unduhan di UI; path akhirnya."""
+    if path.suffix.lower() != ".xlsx":
+        path = path.with_name(path.name + ".xlsx")
     try:
-        path.write_bytes(report_csv_bytes(report_rows(preview)))
+        path.write_bytes(report_xlsx_bytes(report_rows(preview)))
     except OSError as exc:
-        raise Matrix2ImError(f"Laporan CSV tidak bisa ditulis: {path} ({exc})") from exc
+        raise Matrix2ImError(f"Laporan tidak bisa ditulis: {path} ({exc})") from exc
+    return path
 
 
 def _cmd_write(args: argparse.Namespace) -> int:
@@ -180,8 +183,7 @@ def _cmd_write(args: argparse.Namespace) -> int:
     preview = prepare_write(final, settings, password)
     print(format_write_preview(preview))
     if args.report:
-        _write_preview_csv(args.report, preview)
-        print(f"Laporan rencana (CSV): {args.report}")
+        print(f"Laporan rencana (Excel): {_write_preview_report(args.report, preview)}")
     if args.dry_run:
         print("Dry-run: IM MASTER tidak diubah.")
         return 0
@@ -256,7 +258,8 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--user", help="nama pengguna untuk log (default: user OS)")
     p.add_argument("--dry-run", action="store_true", help="tampilkan ringkasan saja, file tidak diubah")
     p.add_argument("--yes", action="store_true", help="tulis tanpa konfirmasi")
-    p.add_argument("--report", type=Path, help="tulis CSV semua perubahan rencana ke file ini (juga saat --dry-run)")
+    p.add_argument("--report", type=Path,
+                   help="tulis laporan .xlsx semua perubahan rencana ke file ini (juga saat --dry-run)")
     p.set_defaults(func=_cmd_write)
 
     p = sub.add_parser("ui", help="buka UI web untuk upload Excel dan melihat hasil")

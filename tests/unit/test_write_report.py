@@ -1,14 +1,12 @@
-"""Laporan CSV perubahan IM MASTER (spec §6): isi, jenis baris, dan encoding."""
-import csv
-import io
-
+"""Laporan perubahan IM MASTER (spec §6): isi, jenis baris, dan workbook .xlsx."""
 import pytest
 
 from matrix_to_im import im_writer
 from matrix_to_im.im_writer import prepare_write
 from matrix_to_im.settings import Settings
-from matrix_to_im.write_report import REPORT_HEADER, report_csv_bytes, report_rows
+from matrix_to_im.write_report import REPORT_HEADER, report_rows, report_xlsx_bytes
 from tests.helpers.im_factory import TEST_PASSWORD, GroupSpec, add_file_sharing, build_im_sheet
+from tests.helpers.report_reader import read_report, report_kinds
 
 
 def _rec(style, colors, n, sheet="SHEET", ws=None, whs=None):
@@ -50,7 +48,7 @@ def test_report_rows_cover_every_kind(preview):
     assert len(kinds["ubah"]) == len(preview.values.changes)
     assert kinds["dilewati"] == [("BBB", "", "", "", "", preview.skipped[0].reason, "dilewati")]
     assert [r[0] for r in kinds["tidak ada di IM"]] == ["ZZZ"]
-    assert "CCC" in [r[0] for r in kinds["IM tanpa MATRIX"]]
+    assert [r[0] for r in kinds["IM tanpa MATRIX"]] == ["CCC"]          # BBB dilewati, bukan "IM tanpa MATRIX"
     assert any("grup hanya 1 baris" in r[5] for r in kinds["peringatan"])
 
 
@@ -79,11 +77,27 @@ def test_notes_become_warning_rows(preview):
     assert ("", "", "", "", "", "Penulisan gagal: contoh", "peringatan") in rows
 
 
-def test_csv_bytes_utf8_bom_header_and_round_trip(preview):
+def test_xlsx_workbook_header_rows_and_known_change(preview):
     rows = report_rows(preview)
-    data = report_csv_bytes(rows)
-    assert data.startswith(b"\xef\xbb\xbf")
-    parsed = list(csv.reader(io.StringIO(data.decode("utf-8-sig"), newline="")))
-    assert tuple(parsed[0]) == REPORT_HEADER == ("DESCRIPTION", "sel", "baris", "kolom", "lama", "baru", "jenis")
-    assert [tuple(r) for r in parsed[1:]] == rows
-    assert TEST_PASSWORD.encode() not in data
+    data = report_xlsx_bytes(rows)
+    assert data[:2] == b"PK"
+    got = read_report(data)
+    assert got[0] == REPORT_HEADER == ("DESCRIPTION", "sel", "baris", "kolom", "lama", "baru", "jenis")
+    assert len(got) == len(rows) + 1
+    assert ("AAA - K", "E55", 55, "COLOR1", "old-a", "x1", "ubah") in got      # baris sebagai angka
+    expected = {}
+    for r in rows:
+        expected[r[-1]] = expected.get(r[-1], 0) + 1
+    assert report_kinds(got) == expected
+    assert all(TEST_PASSWORD not in str(v) for row in got for v in row)
+
+
+def test_xlsx_header_bold_text_kept_as_text_and_illegal_chars_dropped():
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+    rows = [("=SUM(A1)", "", "", "WHS", "000", "a\x0bb", "peringatan")]
+    wb = load_workbook(BytesIO(report_xlsx_bytes(rows)))          # bukan read_only: perlu font
+    ws = wb["Laporan"]
+    assert ws["A1"].font.b and ws["A2"].data_type == "s" and ws["A2"].value == "=SUM(A1)"
+    assert ws["E2"].value == "000" and ws["F2"].value == "ab" and ws["B2"].value is None
