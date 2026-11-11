@@ -26,6 +26,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Callable
 
+from openpyxl.utils import get_column_letter
+
 from .errors import Matrix2ImError
 from .legend_config import EXCEL_TIMEOUT_S
 from .im_lock import WrongPassword
@@ -155,7 +157,7 @@ class WriteCoordinator:
             thread.join(timeout)
 
     def _run(self, job: Callable[[Callable[[str], None]], WriteReport]) -> None:
-        fields: dict = {"state": "error", "error": "Gagal tak terduga: penulisan berhenti tanpa laporan"}
+        fields: dict = {"state": "error", "error": "Gagal tak terduga: penulisan berhenti tanpa laporan", "backup": None}
         try:   # state harus selalu keluar dari "running", apa pun yang terjadi
             try:
                 rep = job(self._set_phase)
@@ -164,12 +166,13 @@ class WriteCoordinator:
                         "backup": str(rep.backup) if rep.backup else None, "seconds": round(rep.seconds, 2),
                         "summary": rep.summary, "inserted_rows": rep.inserted_rows, "message": rep.message}}
                 else:
-                    fields = {"state": "error", "error": rep.message}
+                    fields = {"state": "error", "error": rep.message,
+                              "backup": str(rep.backup) if rep.backup else None}
             except Matrix2ImError as exc:
-                fields = {"state": "error", "error": str(exc)}
+                fields = {"state": "error", "error": str(exc), "backup": None}
             except Exception as exc:  # noqa: BLE001 - hanya nama tipe; pesan asli bisa memuat data sensitif
                 log.error("Job tulis IM MASTER gagal: %s", type(exc).__name__)
-                fields = {"state": "error", "error": f"Gagal tak terduga: {type(exc).__name__}"}
+                fields = {"state": "error", "error": f"Gagal tak terduga: {type(exc).__name__}", "backup": None}
         finally:
             self._finish(**fields)
 
@@ -431,9 +434,11 @@ class _Handler(BaseHTTPRequestHandler):
             state.write = {"preview": preview, "final": final, "user": name.strip(), "token": token,
                            "matrix": last.get("matrix_name") or "(tidak diketahui)"}
         values = preview.values
+        owner = {r: g.description for g in preview.projected.groups for r in g.rows}   # baris -> DESCRIPTION grup
         self._json(HTTPStatus.OK, {
             "summary": preview.summary,
-            "changes": [{"row": c.row, "col": c.col, "old": c.old, "new": c.new}
+            "changes": [{"row": c.row, "col": c.col, "old": c.old, "new": c.new,
+                         "cell": f"{get_column_letter(c.col)}{c.row}", "description": owner.get(c.row, "")}
                         for c in values.changes[:MAX_CHANGES_SHOWN]],
             "changes_total": len(values.changes),
             "inserts": [{"description": o.description, "count": o.count} for o in preview.inserts],

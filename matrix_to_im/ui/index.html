@@ -750,7 +750,6 @@
   const NET_ERR = "Koneksi ke server terputus. Pastikan `matrix2im ui` masih berjalan di terminal.";
   let writeCfg = null, writePlan = null, writePw = "", writeTimer = null, writeBusy = false, writeOwn = false;
 
-  const colLetter = (n) => { let s = ""; for (let c = Number(n); c > 0; c = Math.floor((c - 1) / 26)) s = String.fromCharCode(65 + ((c - 1) % 26)) + s; return s; };
   const cellVal = (v) => v === null || v === undefined || v === "" ? '<span class="null">kosong</span>' : esc(v);
 
   async function postJson(url, payload) {
@@ -825,8 +824,8 @@
     const shown = p.changes.length;
     $("#write-changes").innerHTML = shown ? `<h3>Perubahan sel</h3>
       <p class="hint">Menampilkan ${num(shown)} dari ${num(p.changes_total)} perubahan${p.changes_total > shown ? " (sisanya tetap ditulis)" : ""}.</p>
-      <div class="table-wrap wtable-wrap"><table><thead><tr><th>Sel</th><th>Lama</th><th>Baru</th></tr></thead><tbody>
-      ${p.changes.map((c) => `<tr><td class="ref">${colLetter(c.col)}${c.row}</td><td>${cellVal(c.old)}</td><td>${cellVal(c.new)}</td></tr>`).join("")}
+      <div class="table-wrap wtable-wrap"><table><thead><tr><th>DESCRIPTION</th><th>Sel</th><th>Lama</th><th>Baru</th></tr></thead><tbody>
+      ${p.changes.map((c) => `<tr><td class="desc">${esc(c.description)}</td><td class="ref">${esc(c.cell)}</td><td>${cellVal(c.old)}</td><td>${cellVal(c.new)}</td></tr>`).join("")}
       </tbody></table></div>` : "";
     $("#write-inserts").innerHTML = listBlock("Baris yang akan disisipkan", p.inserts, (x) => `${esc(x.description)} <span class="sub">· +${num(x.count)} baris</span>`);
     $("#write-skipped").innerHTML = listBlock("Style dilewati", p.skipped, (x) => `<b>${esc(x.style)}</b> <span class="sub">· ${esc(x.reason)}</span>`);
@@ -896,8 +895,8 @@
         <dt>Durasi</dt><dd>${esc(String(r.seconds ?? "").replace(".", ","))} detik</dd></dl></div>`;
     } else {
       box.innerHTML = `<div class="alert error"><strong>Penulisan gagal</strong>${esc(st.error || "Penulisan gagal")}
-        <div class="files">IM MASTER asli tidak diubah bila gagal sebelum langkah simpan. Cadangan terakhir ada di folder cadangan (backup_dir) dan
-        catatan lengkap di berkas log di folder yang sama. Buat rencana lagi untuk mencoba ulang.</div></div>`;
+        <dl><dt>Cadangan</dt><dd class="mono">${st.backup ? esc(st.backup) : "belum dibuat (gagal sebelum langkah cadangan)"}</dd></dl>
+        <div class="files">Catatan lengkap ada di berkas log di folder cadangan. Buat rencana lagi untuk mencoba ulang.</div></div>`;
     }
     box.hidden = false;
   }

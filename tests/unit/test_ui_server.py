@@ -863,3 +863,35 @@ def test_prepare_shows_inserts_and_skipped(serve_with, sessions, tmp_path, monke
     _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
     assert plan["inserts"] == [{"description": "AAA - K", "count": 2}]
     assert plan["skipped"] == [{"style": "ZZZ", "reason": "tidak ada di IM"}]
+
+
+def test_prepare_changes_have_cell_and_description(serve_with, sessions, tmp_path):
+    im, settings, final = _write_env(tmp_path)
+    base = serve_with(settings)
+    cookie = _new_session(base)
+    _inject(sessions, cookie, final)
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
+    ch = plan["changes"][0]
+    assert ch["description"] == "AAA - K"
+    assert ch["cell"] == f"{'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[ch['col'] - 1]}{ch['row']}"
+    assert {"row", "col", "old", "new"} <= set(ch)
+
+
+def test_failed_commit_status_carries_backup(serve_with, sessions, tmp_path, monkeypatch):
+    from matrix_to_im import ui_server
+    from matrix_to_im.im_writer import WriteReport
+
+    im, settings, final = _write_env(tmp_path)
+    bak = tmp_path / "cadangan" / "x.xlsx"
+
+    def failing(preview, final, settings, password, user, matrix, progress=None):
+        return WriteReport(False, "gagal simpan", {}, bak, tmp_path / "log", 0.1, [])
+
+    monkeypatch.setattr(ui_server, "commit_write", failing)
+    base = serve_with(settings)
+    cookie = _new_session(base)
+    _inject(sessions, cookie, final)
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
+    post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, cookie)
+    st = wait_state(base, cookie, ("done", "error"))
+    assert st["state"] == "error" and st["error"] == "gagal simpan" and st["backup"] == str(bak)
