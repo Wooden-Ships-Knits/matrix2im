@@ -20,7 +20,9 @@ WHS_BOTH = "BOTH WHS"
 STYLE_WHS_BY_FILL = {"FFFF66FF": "000", "theme0-0.15": WHS_BOTH, "FFD9D9D9": WHS_BOTH, "FFFF0000": "SY",
                      "FFFFFFFF": WHS_BOTH, "theme0+0.00": WHS_BOTH}
 STYLE_WHS_NO_FILL = WHS_BOTH               # sel nomor berisi tapi tanpa fill (tampil putih)
+# FFF19EF9 (pink lain) = 000 REPEAT COLOR, dipakai di MATRIX F27 versi 11 Nov 2026 (keputusan user).
 FONT_MEANING = {"FF00B050": "NEW COLOR", "FFFF00FF": "000 ONLY COLOR", "FFFF99FF": "000 REPEAT COLOR",
+                "FFF19EF9": "000 REPEAT COLOR",
                 "FF9900FF": "YR COLOR", "FFFF0000": "HOLD COLOR FOR SY", "FF0066FF": "DISCONTINUED COLOR FOR SY"}
 DEFAULT_FONT_MEANING = "REPEAT COLOR"      # tanpa warna / FF000000 / theme / indexed
 BLACK_FONT_RGB = frozenset({"FF000000"})

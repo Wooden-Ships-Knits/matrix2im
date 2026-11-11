@@ -289,7 +289,7 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 | Font colorway | hijau (00B050) | NEW COLOR | BOTH WHS bila di atas garis merah |
 | Font colorway | hitam / otomatis | REPEAT COLOR | BOTH WHS bila di atas garis merah |
 | Font colorway | ungu (FF00FF) | 000 ONLY COLOR | 000 |
-| Font colorway | pink (FF99FF) | 000 REPEAT COLOR | 000 |
+| Font colorway | pink (FF99FF, atau F19EF9 sejak 11 November 2026) | 000 REPEAT COLOR | 000 |
 | Font colorway | ungu tua (9900FF) | YR COLOR | review (belum ada aturan) |
 | Font colorway | merah (FF0000) | HOLD COLOR FOR SY | review (belum ada aturan) |
 | Font colorway | biru (0066FF) | DISCONTINUED COLOR FOR SY | review (belum ada aturan) |
@@ -297,6 +297,10 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 | Border | garis merah tebal | — | colorway di bawahnya = SY |
 
 ## Riwayat perubahan
+
+### 11 November 2026: warna font F19EF9
+
+1. Font pink `FFF19EF9` (di MATRIX F27 yang diperbarui) berarti 000 REPEAT COLOR, sama seperti `FFFF99FF`, jadi WHS warnanya 000 (keputusan user). Sebelumnya warna ini masuk review `FONT_COLOR_NO_RULE` dengan WHS null; di MATRIX versi 11 November ada 10 colorway (MIA L/S TOP, LARA MARL TRIM CREW, PURL-KNIT GAME DAY CREW).
 
 ### 11 November 2026: TAG bersyarat
 

@@ -67,3 +67,9 @@ def test_join_tag_cells():
     assert join_tag_cells(["TAG: C1 (For Solid)\n\nTAG: SNOW MARL\n(For PURE SNOW/ALMOND BUTTER)"]) == \
         "TAG: C1 (For Solid) | TAG: SNOW MARL (For PURE SNOW/ALMOND BUTTER)"
     assert join_tag_cells([]) is None
+
+
+def test_font_f19ef9_is_000_repeat():
+    """Pink FFF19EF9 di MATRIX baru = 000 REPEAT COLOR (keputusan user 11 Nov 2026), jadi WHS warna 000."""
+    assert font_meaning("FFF19EF9") == ("000 REPEAT COLOR", True)
+    assert font_meaning("00F19EF9") == ("000 REPEAT COLOR", True)
