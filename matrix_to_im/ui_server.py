@@ -1,7 +1,8 @@
 """UI web lokal untuk mencoba matrix2im: upload Excel di browser, lihat hasil kedua tahap.
 
-Hanya memakai standard library (http.server) supaya tidak menambah dependensi. Server
-sengaja hanya mendengarkan 127.0.0.1: file MATRIX berisi data produk internal. File yang
+Hanya memakai standard library (http.server) supaya tidak menambah dependensi. Secara
+default server hanya mendengarkan 127.0.0.1: file MATRIX berisi data produk internal. PC
+pusat boleh memilih host LAN lewat matrix2im.local.toml atau `ui --host`. File yang
 diupload disimpan sebagai salinan di folder kerja sementara, jadi file asli pengguna tidak
 pernah disentuh, dan folder itu dihapus saat server berhenti.
 """
@@ -22,6 +23,7 @@ from importlib import resources
 from pathlib import Path
 
 from .errors import Matrix2ImError
+from .settings import Settings
 from .extract import extract
 from .transform import transform
 from .validate import read_im_header, validate
@@ -36,8 +38,9 @@ _CHUNK = 1024 * 1024
 class UiState:
     """State satu sesi UI: salinan file upload dan hasil run terakhir (untuk download)."""
 
-    def __init__(self, workdir: Path) -> None:
+    def __init__(self, workdir: Path, settings: Settings | None = None) -> None:
         self.workdir = workdir
+        self.settings = settings   # dipakai endpoint tulis IM MASTER
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.uploads: dict[str, tuple[Path, str]] = {}   # kind -> (salinan, nama asli)
         self.last: dict | None = None
@@ -220,19 +223,35 @@ def _stop_on_sigterm(signum: int, frame: object) -> None:
     raise KeyboardInterrupt
 
 
-def serve(port: int = 8765, open_browser: bool = True) -> None:
-    """Jalankan UI di http://127.0.0.1:<port>/ sampai Ctrl+C, lalu hapus folder kerja."""
+_LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
+_WILDCARD_HOSTS = ("0.0.0.0", "")
+
+
+def serve(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True,
+          settings: Settings | None = None) -> None:
+    """Jalankan UI di http://<host>:<port>/ sampai Ctrl+C, lalu hapus folder kerja.
+
+    Port yang terpakai hanya dialihkan ke port bebas untuk host loopback; server bersama
+    yang pindah port diam-diam akan memutus bookmark rekan kerja, jadi itu error.
+    """
     if threading.current_thread() is threading.main_thread():
         signal.signal(signal.SIGTERM, _stop_on_sigterm)
-    state = UiState(Path(tempfile.mkdtemp(prefix="matrix2im-ui-")))
+    state = UiState(Path(tempfile.mkdtemp(prefix="matrix2im-ui-")), settings)
     try:
         try:
-            server = make_server("127.0.0.1", port, state)
-        except OSError:
+            server = make_server(host, port, state)
+        except OSError as exc:
+            if host not in _LOOPBACK_HOSTS:
+                raise Matrix2ImError(f"Port {port} sudah dipakai di {host}; hentikan program lain "
+                                     "atau pilih port lain") from exc
             log.warning("Port %d sudah dipakai, memakai port lain yang bebas", port)
-            server = make_server("127.0.0.1", 0, state)
-        url = f"http://127.0.0.1:{server.server_address[1]}/"
+            server = make_server(host, 0, state)
+        actual_port = server.server_address[1]
+        local_host = "127.0.0.1" if host in _WILDCARD_HOSTS else host
+        url = f"http://{f'[{local_host}]' if ':' in local_host else local_host}:{actual_port}/"
         log.info("UI matrix2im berjalan di %s (tekan Ctrl+C untuk berhenti)", url)
+        if host in _WILDCARD_HOSTS:
+            log.info("PC lain di jaringan membuka http://<alamat IP PC ini>:%d/", actual_port)
         if open_browser:
             webbrowser.open(url)
         try:

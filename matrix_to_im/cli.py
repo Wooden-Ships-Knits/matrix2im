@@ -1,7 +1,9 @@
-"""Antarmuka command line `matrix2im`: extract, transform, run, ui."""
+"""Antarmuka command line `matrix2im`: extract, transform, run, write, ui."""
 from __future__ import annotations
 
 import argparse
+import dataclasses
+import getpass
 import logging
 import sys
 from pathlib import Path
@@ -9,7 +11,9 @@ from typing import NoReturn
 
 from .errors import Matrix2ImError
 from .extract import extract
+from .im_writer import WritePreview, commit_write, prepare_write
 from .io_utils import read_json, write_json
+from .settings import load_settings
 from .transform import transform
 from .ui_server import serve
 from .validate import read_im_header, validate
@@ -120,7 +124,65 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
 
 def _cmd_ui(args: argparse.Namespace) -> int:
-    serve(port=args.port, open_browser=not args.no_browser)
+    settings = load_settings(args.settings)
+    serve(host=args.host or settings.host, port=args.port or settings.port,
+          open_browser=not args.no_browser, settings=settings)
+    return 0
+
+
+_SUMMARY_LABELS = (("styles", "Style cocok"), ("groups", "Grup IM cocok"), ("cells_changed", "Sel diubah"),
+                   ("rows_inserted", "Baris disisipkan"), ("groups_inserted", "Grup yang disisipi"),
+                   ("changed_colorway_rows", "Baris colorway berubah"), ("short_groups", "Grup kekurangan baris"),
+                   ("skipped", "Style dilewati"), ("unmatched_im_styles", "Style IM tanpa data MATRIX"),
+                   ("missing_styles", "Style MATRIX tidak ada di IM"), ("warnings", "Peringatan"))
+
+
+def format_write_preview(preview: WritePreview) -> str:
+    """Ringkasan rencana tulis (sebelum konfirmasi dan pada --dry-run) dalam Bahasa Indonesia."""
+    lines = ["Rencana tulis ke IM MASTER:", f"  File IM MASTER: {preview.im_master}",
+             f"  Mesin sisip: {preview.engine}"]
+    lines += [f"  {label}: {preview.summary[key]}" for key, label in _SUMMARY_LABELS if key in preview.summary]
+    for warning in preview.values.warnings:
+        lines.append(f"  PERINGATAN: {warning}")
+    for skip in preview.skipped:
+        lines.append(f"  DILEWATI: {skip.style}: {skip.reason}")
+    return "\n".join(lines)
+
+
+def _read_password() -> str:
+    """Password hanya dari getpass (tty) atau baris pertama stdin; tidak pernah dari argv."""
+    if sys.stdin.isatty():
+        return getpass.getpass("Password IM MASTER: ")
+    return sys.stdin.readline().rstrip("\n").rstrip("\r")
+
+
+def _cmd_write(args: argparse.Namespace) -> int:
+    settings = load_settings(args.settings)
+    overrides = {k: v for k, v in (("im_master", args.im_master), ("backup_dir", args.backup_dir),
+                                   ("insert_engine", args.engine)) if v is not None}
+    settings = dataclasses.replace(settings, **overrides)
+    final = read_json(args.final_json)
+    interactive = sys.stdin.isatty()
+    if not interactive and not args.dry_run and not args.yes:
+        raise Matrix2ImError("Input bukan terminal; tambahkan --yes untuk menulis tanpa konfirmasi")
+    password = _read_password()
+    preview = prepare_write(final, settings, password)
+    print(format_write_preview(preview))
+    if args.dry_run:
+        print("Dry-run: IM MASTER tidak diubah.")
+        return 0
+    if not args.yes and input("Ketik 'ya' untuk menulis ke IM MASTER: ").strip() != "ya":
+        raise Matrix2ImError("Dibatalkan, IM MASTER tidak diubah")
+    report = commit_write(preview, final, settings, password, args.user or getpass.getuser(),
+                          args.final_json.name, progress=lambda phase: log.info("%s", phase))
+    if not report.ok:
+        log.error("%s", report.message)
+        log.error("Log: %s", report.log_file)
+        return 1
+    print(report.message)
+    if report.backup:
+        print(f"Cadangan: {report.backup}")
+    print(f"Log: {report.log_file}")
     return 0
 
 
@@ -167,8 +229,21 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--strict", action="store_true", help="exit 2 bila needs_review tidak kosong")
     p.set_defaults(func=_cmd_run)
 
-    p = sub.add_parser("ui", help="buka UI web lokal untuk upload Excel dan melihat hasil")
-    p.add_argument("--port", type=int, default=8765, help="port lokal (default 8765)")
+    p = sub.add_parser("write", help="tulis final.json ke IM MASTER (password dibaca dari prompt/stdin)")
+    p.add_argument("final_json", type=Path)
+    p.add_argument("--settings", type=Path, help="file setting (default matrix2im.local.toml)")
+    p.add_argument("--im-master", type=Path, help="timpa lokasi IM MASTER dari setting")
+    p.add_argument("--backup-dir", type=Path, help="timpa folder cadangan dari setting")
+    p.add_argument("--engine", choices=("excel", "none"), help="timpa mesin sisip baris")
+    p.add_argument("--user", help="nama pengguna untuk log (default: user OS)")
+    p.add_argument("--dry-run", action="store_true", help="tampilkan ringkasan saja, file tidak diubah")
+    p.add_argument("--yes", action="store_true", help="tulis tanpa konfirmasi")
+    p.set_defaults(func=_cmd_write)
+
+    p = sub.add_parser("ui", help="buka UI web untuk upload Excel dan melihat hasil")
+    p.add_argument("--port", type=int, default=None, help="port (default dari setting, lalu 8765)")
+    p.add_argument("--host", help="alamat bind (default dari setting, lalu 127.0.0.1)")
+    p.add_argument("--settings", type=Path, help="file setting (default matrix2im.local.toml)")
     p.add_argument("--no-browser", action="store_true", help="jangan buka browser otomatis")
     p.set_defaults(func=_cmd_ui)
     return parser

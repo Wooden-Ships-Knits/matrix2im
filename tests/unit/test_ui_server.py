@@ -144,11 +144,14 @@ def test_cleanup_removes_workdir(tmp_path):
     assert not st.workdir.exists()
 
 
-def test_cli_ui_subcommand_calls_serve(monkeypatch):
+def test_cli_ui_subcommand_calls_serve(monkeypatch, tmp_path):
     calls = []
     monkeypatch.setattr("matrix_to_im.cli.serve", lambda **kw: calls.append(kw))
+    monkeypatch.chdir(tmp_path)
     assert main(["ui", "--port", "9999", "--no-browser"]) == 0
-    assert calls == [{"port": 9999, "open_browser": False}]
+    assert len(calls) == 1
+    assert calls[0]["port"] == 9999 and calls[0]["open_browser"] is False
+    assert calls[0]["host"] == "127.0.0.1"
 
 
 def test_sigterm_handler_stops_like_ctrl_c():
@@ -156,3 +159,56 @@ def test_sigterm_handler_stops_like_ctrl_c():
 
     with pytest.raises(KeyboardInterrupt):
         _stop_on_sigterm(15, None)
+
+
+def _fake_server_factory(record, fail_first=True):
+    class _Srv:
+        server_address = ("127.0.0.1", 5555)
+
+        def serve_forever(self):
+            raise KeyboardInterrupt
+
+        def server_close(self):
+            pass
+
+    def fake(host, port, state):
+        record.append((host, port))
+        if fail_first and len(record) == 1:
+            raise OSError("in use")
+        return _Srv()
+
+    return fake
+
+
+def test_ui_non_loopback_port_in_use_raises(monkeypatch):
+    from matrix_to_im.errors import Matrix2ImError
+    from matrix_to_im.ui_server import serve
+
+    record = []
+    monkeypatch.setattr("matrix_to_im.ui_server.make_server", _fake_server_factory(record))
+    with pytest.raises(Matrix2ImError, match="Port 8765 sudah dipakai di 192.0.2.1"):
+        serve(host="192.0.2.1", port=8765, open_browser=False)
+    assert record == [("192.0.2.1", 8765)]
+
+
+def test_ui_loopback_port_in_use_falls_back(monkeypatch):
+    from matrix_to_im.ui_server import serve
+
+    record = []
+    monkeypatch.setattr("matrix_to_im.ui_server.make_server", _fake_server_factory(record))
+    serve(host="localhost", port=8765, open_browser=False)
+    assert record == [("localhost", 8765), ("localhost", 0)]
+
+
+def test_ui_wildcard_host_opens_loopback_url(monkeypatch, caplog):
+    from matrix_to_im.settings import Settings
+    from matrix_to_im.ui_server import serve
+
+    record, opened = [], []
+    monkeypatch.setattr("matrix_to_im.ui_server.make_server", _fake_server_factory(record, fail_first=False))
+    monkeypatch.setattr("matrix_to_im.ui_server.webbrowser.open", opened.append)
+    caplog.set_level("INFO")
+    serve(host="0.0.0.0", port=8765, open_browser=True, settings=Settings())
+    assert record == [("0.0.0.0", 8765)]
+    assert opened == ["http://127.0.0.1:5555/"]
+    assert "PC lain" in caplog.text and ":5555/" in caplog.text

@@ -1,8 +1,12 @@
+import hashlib
+import io
 import json
 
 import pytest
+from helpers.im_factory import TEST_PASSWORD, GroupSpec, add_file_sharing, build_im_sheet
 from helpers.matrix_factory import build_im, build_matrix, build_no_pages
 
+from matrix_to_im.errors import Matrix2ImError
 from matrix_to_im.cli import format_summary, main
 
 
@@ -193,3 +197,151 @@ def test_format_summary_contents():
     assert "WS TAG COLOR: 4 terisi, 2 Need Review, 1 null" in text
     for needle in ("4", "7", "SY", "null", "terisi", "TAG_CONDITIONAL", "TAG_EMPTY", "needs_review"):
         assert needle in text
+
+
+# ---------- write ----------
+class _Tty(io.StringIO):
+    def isatty(self):
+        return True
+
+
+def _rec(style, colors, ws=None, whs=None, n=1):
+    rec = {"DESCRIPTION": style}
+    for i, c in enumerate(colors, 1):
+        rec[f"COLOR{i}"] = c
+    rec["WS TAG COLOR"], rec["WHS"] = ws, whs
+    rec["_ref"] = f"SHEET No.{n} | B1 | x"
+    return rec
+
+
+@pytest.fixture
+def write_env(tmp_path, monkeypatch):
+    im = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("AAA - K", [["a1"], ["a2"]])])
+    add_file_sharing(im)
+    final = tmp_path / "final.json"
+    final.write_text(json.dumps({"records": [_rec("AAA", ["x1"], "T1", "000", 1),
+                                             _rec("AAA", ["x2"], "T2", "SY", 2)]}), encoding="utf-8")
+    argv = ["write", str(final), "--im-master", str(im), "--backup-dir", str(tmp_path / "cadangan"),
+            "--engine", "none", "--user", "andi"]
+    monkeypatch.setattr("sys.stdin", io.StringIO(TEST_PASSWORD + "\n"))
+    return im, argv
+
+
+def _sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_write_dry_run_prints_summary_and_leaves_file(write_env, capsys):
+    im, argv = write_env
+    before = _sha(im)
+    assert main(argv + ["--dry-run"]) == 0
+    out = capsys.readouterr()
+    assert _sha(im) == before
+    assert str(im) in out.out and "none" in out.out
+    assert "Traceback" not in out.err
+
+
+def test_write_wrong_password_exit_1(write_env, monkeypatch, capsys):
+    im, argv = write_env
+    before = _sha(im)
+    monkeypatch.setattr("sys.stdin", io.StringIO("salah\n"))
+    assert main(argv + ["--yes"]) == 1
+    assert _sha(im) == before
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_write_yes_writes_engine_none(write_env, tmp_path, capsys):
+    im, argv = write_env
+    before = _sha(im)
+    assert main(argv + ["--yes"]) == 0
+    assert _sha(im) != before
+    assert "IM MASTER diperbarui" in capsys.readouterr().out
+    assert (tmp_path / "cadangan").is_dir()
+
+
+def test_write_non_tty_without_yes_exit_1(write_env, capsys):
+    im, argv = write_env
+    before = _sha(im)
+    assert main(argv) == 1
+    assert _sha(im) == before
+    assert "--yes" in capsys.readouterr().err
+
+
+def test_write_tty_confirmation(write_env, monkeypatch, capsys):
+    im, argv = write_env
+    before = _sha(im)
+    monkeypatch.setattr("sys.stdin", _Tty())
+    monkeypatch.setattr("getpass.getpass", lambda prompt="": TEST_PASSWORD)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "tidak")
+    assert main(argv) == 1
+    assert _sha(im) == before
+    assert "Dibatalkan, IM MASTER tidak diubah" in capsys.readouterr().err
+    monkeypatch.setattr("builtins.input", lambda prompt="": "ya")
+    assert main(argv) == 0
+    assert _sha(im) != before
+
+
+def test_write_report_not_ok_exit_1(write_env, monkeypatch, capsys):
+    from pathlib import Path
+
+    from matrix_to_im.im_writer import WriteReport
+    im, argv = write_env
+    monkeypatch.setattr("matrix_to_im.cli.commit_write", lambda *a, **k: WriteReport(
+        False, "Gagal contoh", {}, None, Path("/x/log.jsonl"), 0.1, []))
+    assert main(argv + ["--yes"]) == 1
+    err = capsys.readouterr()
+    assert "Gagal contoh" in err.err + err.out and "log.jsonl" in err.err + err.out
+
+
+def test_write_options_override_settings_file(write_env, tmp_path, monkeypatch):
+    im, argv = write_env
+    toml = tmp_path / "s.toml"
+    toml.write_text('[im]\nmaster = "/tidak/ada.xlsx"\ninsert_engine = "excel"\n', encoding="utf-8")
+    seen = {}
+
+    def fake_prepare(final, settings, password):
+        seen["settings"] = settings
+        raise Matrix2ImError("stop")
+
+    monkeypatch.setattr("matrix_to_im.cli.prepare_write", fake_prepare)
+    assert main(argv + ["--settings", str(toml), "--dry-run"]) == 1
+    assert seen["settings"].im_master == im and seen["settings"].insert_engine == "none"
+
+
+def test_write_missing_settings_exit_1(tmp_path, monkeypatch, capsys):
+    final = tmp_path / "final.json"
+    final.write_text('{"records": []}', encoding="utf-8")
+    monkeypatch.setattr("sys.stdin", io.StringIO("x\n"))
+    monkeypatch.chdir(tmp_path)
+    assert main(["write", str(final), "--dry-run"]) == 1
+    err = capsys.readouterr().err
+    assert "belum diisi" in err and "Traceback" not in err
+
+
+def test_password_never_in_output(write_env, monkeypatch, capsys):
+    im, argv = write_env
+    assert main(argv + ["--yes"]) == 0
+    out = capsys.readouterr()
+    assert TEST_PASSWORD not in out.out + out.err
+    monkeypatch.setattr("sys.stdin", io.StringIO(TEST_PASSWORD + "-salah\n"))
+    assert main(argv + ["--yes"]) == 1
+    out = capsys.readouterr()
+    assert TEST_PASSWORD not in out.out + out.err
+
+
+def test_no_password_option():
+    with pytest.raises(SystemExit):
+        main(["write", "f.json", "--password", "x"])
+
+
+# ---------- ui ----------
+def test_ui_passes_host_and_settings(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr("matrix_to_im.cli.serve", lambda **kw: calls.append(kw))
+    toml = tmp_path / "s.toml"
+    toml.write_text('[ui]\nhost = "0.0.0.0"\nport = 9000\n', encoding="utf-8")
+    assert main(["ui", "--settings", str(toml), "--no-browser"]) == 0
+    assert calls[0]["host"] == "0.0.0.0" and calls[0]["port"] == 9000
+    assert calls[0]["settings"].port == 9000
+    assert main(["ui", "--settings", str(toml), "--host", "127.0.0.1", "--port", "9100", "--no-browser"]) == 0
+    assert calls[1]["host"] == "127.0.0.1" and calls[1]["port"] == 9100
