@@ -209,7 +209,7 @@ Final JSON dipakai oleh penulis IM MASTER (fase 2, sudah dibangun; lihat spec `d
 
 Sudah disepakati:
 
-1. Setiap record dicocokkan ke semua baris IM yang DESCRIPTION-nya "&lt;style&gt; - &lt;size&gt; …". Yang diisi hanya baris colorway; baris subtotal ("… - BOTH WHS", "… - 000 ONLY", "… - SHOPIFY ONLY") tidak diisi warnanya.
+1. Setiap record dicocokkan ke semua baris IM yang DESCRIPTION-nya (baris subtotal dikenali dari rumus SUBTOTAL; kunci grup adalah dua segmen pertama, "STYLE - SIZE", dan teks sesudahnya dianggap catatan) "&lt;style&gt; - &lt;size&gt; …". Yang diisi hanya baris colorway; baris subtotal ("… - BOTH WHS", "… - 000 ONLY", "… - SHOPIFY ONLY") tidak diisi warnanya.
 2. Semua grup size (X/S, S/M, M/L FAF, M/L FAH, X/L) mendapat daftar colorway yang sama, dengan urutan sesuai MATRIX.
 3. Baris ke-1 sampai ke-N di setiap grup diisi colorway berurutan (N = jumlah colorway).
 4. Kalau baris lebih dari N, sisa baris diisi colorway terakhir. Jumlah baris tetap, sehingga tangga harga WHLS LINE PRICE (+1 per baris) tetap utuh.
@@ -301,7 +301,7 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 1. Ditambahkan penulis IM MASTER: `matrix2im write` dan panel **Tulis ke IM MASTER** di UI (multi-sesi, satu penulis pada satu waktu). Aturan 1 sampai 7 di "Fase berikutnya" berlaku penuh.
 2. Pengaman: cocokkan password ubah dengan hash `fileSharing`, cek file `~$`, cadangan bertanggal, deteksi perubahan file sejak rencana, verifikasi hasil, dan log JSONL (`matrix2im-log.jsonl`, tanpa password).
 3. Sisip baris lewat Excel (baris utuh, `fill down` terbatas); nilai sel ditulis langsung di XML sheet. openpyxl tidak pernah menyimpan IM MASTER. Setting `insert_engine = "none"` hanya mengisi baris yang ada.
-4. Regression F27 pada salinan uji AI TEST V2: 211 style tanpa dilewati; 177 sisipan (286 baris, 20 di grup 1 baris) dan 195 style IM tanpa data MATRIX. Jumlah sisipan dan baris sama dengan perkiraan spike (177 / 286); style IM tanpa data MATRIX 195 (perkiraan spike 179). Baris subtotal dikenali dari rumus SUBTOTAL, bukan label, dan kunci grup IM adalah `STYLE - SIZE` (teks sesudahnya dianggap catatan).
+4. Regression F27 pada salinan uji AI TEST V2: 211 style tanpa dilewati; 177 sisipan (286 baris, 20 di grup 1 baris) dan 195 style IM tanpa data MATRIX (179 style IM yang tidak ada di MATRIX ditambah 16 label musim/judul satu segmen). Jumlah sisipan dan baris sama dengan perkiraan spike (177 / 286); style IM tanpa data MATRIX 195 (perkiraan spike 179). Baris subtotal dikenali dari rumus SUBTOTAL, bukan label, dan kunci grup IM adalah `STYLE - SIZE` (teks sesudahnya dianggap catatan).
 5. Dokumentasi: README bagian "Menulis ke IM MASTER" dan daftar uji terima `docs/uji-terima-tulis-im.md`.
 
 ### 10 November 2026: hasil review `needs_review`

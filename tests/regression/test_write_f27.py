@@ -19,11 +19,13 @@ from matrix_to_im.xlsx_cells import apply_cell_values, sheet_xml_path
 
 pytestmark = pytest.mark.regression
 
-# Angka rencana sisip F27 (salinan uji "AI TEST V2"), setelah R14 (baris subtotal = baris ber-rumus
-# SUBTOTAL) dan R15 (kunci grup = "STYLE - SIZE"; teks sesudahnya adalah catatan). Hasil nyata:
-# 177 op dan 286 baris (sama dengan perkiraan spike), 20 op grup 1 baris (perkiraan spike 27 memakai
-# pengelompokan lain), dan 195 style IM tak cocok (perkiraan spike 179; sisanya label musim/judul
-# satu segmen seperti GRASSY/FALL, belum direkonsiliasi). Rincian: .superpowers/sdd/2026-11-10-tulis-im-master/task-12-report.md
+# Angka rencana sisip F27 (salinan uji "AI TEST V2") setelah R14 (baris subtotal = baris ber-rumus
+# SUBTOTAL) dan R15 (kunci grup = "STYLE - SIZE"; teks sesudahnya adalah catatan).
+# Rekonsiliasi dengan perkiraan spike awal (yang mengelompokkan menurut label):
+#  - 27 op grup 1 baris di spike = 20 + 7 baris subtotal yang salah dibaca sebagai grup 1 baris oleh
+#    aturan label lama (ANSEL x4 di 9305/9314/9323/9332, OLIVIA 2976, WRAP 3298, CHIN-CHIN 5632);
+#  - 184 op / 321 baris (hasil aturan label) menjadi 177 / 286, sama dengan spike;
+#  - 179 style IM tak cocok di spike = 195 - 16 label satu segmen (GRASSY, FALL, COTTON, dst.).
 EXPECTED_OPS = 177
 EXPECTED_ROWS = 286
 EXPECTED_SINGLE_ROW_OPS = 20
@@ -55,7 +57,7 @@ def test_subtotal_rows_by_formula_f27(im_write_path, layout):
     group_rows = {r for g in layout.groups for r in g.rows}
     assert not sub_rows & group_rows
     assigned = {g.subtotal_row for g in layout.groups if g.subtotal_row is not None}
-    assert assigned <= sub_rows
+    assert assigned == sub_rows
     assert {2976, 9305} <= sub_rows        # label varian "-BOTH WHS" dan "- SY ONLY" yang dulu terlewat
     assert 8207 in group_rows and 8207 not in sub_rows   # WHITNEY ... BOTH WHS - ALT 1: baris data
     assert {2976, 9305} <= assigned
@@ -136,8 +138,9 @@ def _count(zf: zipfile.ZipFile, pattern: str) -> int:
 
 
 def _xml_count(zf: zipfile.ZipFile, token: bytes) -> int:
-    part = _sheet_part(zf)
-    return zf.read(part).count(token)
+    """Jumlah token di semua sheet XML (bukan hanya F27)."""
+    return sum(zf.read(n).count(token) for n in zf.namelist()
+               if re.fullmatch(r"xl/worksheets/[^/]+\.xml", n))
 
 
 @pytest.mark.excel
@@ -163,12 +166,16 @@ def test_full_write_on_copy(tmp_path, im_write_path, golden_final):
         assert _count(out, r"xl/drawings/drawing[^/]*\.xml") == _count(src, r"xl/drawings/drawing[^/]*\.xml")
         for token in (b"<conditionalFormatting", b"<cfRule"):
             assert _xml_count(out, token) == _xml_count(src, token), token
-    desc = "BOYFRIEND RAGLAN CREW CHUNKY COTTON - X/L"
-    before = [g for g in read_layout(im_write_path).groups if g.description == desc and g.rows[0] == 229]
-    assert before and len(before[0].rows) == 1
+    # baris 229 di file sumber (grup 1 baris) setelah semua sisipan di atasnya
+    src_group = next(g for g in read_layout(im_write_path).groups if g.rows == (229,))
+    assert src_group.description == "BOYFRIEND RAGLAN CREW CHUNKY COTTON - X/L"
+    shifted = 229 + sum(o.count for o in preview.inserts if o.at_row <= 229)
+    planned = next(g for g in preview.projected.groups if shifted in g.rows)
+    assert planned.description == src_group.description and len(planned.rows) == 5
     after = read_layout(target)
-    grp = next(g for g in after.groups if g.description == desc and g.subtotal_row is not None
-               and len(g.rows) > 1)
+    grp = next(g for g in after.groups if shifted in g.rows)
+    assert grp.rows == planned.rows and grp.subtotal_row == planned.subtotal_row is not None
     first, last = grp.rows[0], grp.rows[-1]
     formulas = after.subtotal_formulas[grp.subtotal_row].values()
     assert any(re.search(rf"[A-Z]{first}:[A-Z]+\$?{last}\b", f) for f in formulas), (first, last)
+    check_modify_password(target, password)

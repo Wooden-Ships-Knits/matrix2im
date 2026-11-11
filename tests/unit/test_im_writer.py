@@ -500,3 +500,15 @@ def test_unexpected_error_logs_scrubbed_traceback(tmp_path, excel_on, caplog):
         rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=leaky)
     assert not rep.ok and "Traceback" in caplog.text and "RuntimeError" in caplog.text
     assert PW not in caplog.text
+
+
+def test_single_row_warning_only_for_single_row_groups(tmp_path, excel_on):
+    groups = [GroupSpec("AAA - K", [["a"]]),                          # 1 baris, butuh 3
+              GroupSpec("BBB - K", [["b1"], ["b2"]])]                 # 2 baris, butuh 3
+    im, st = _make(tmp_path, groups, "excel")
+    final = {"records": [_rec("AAA", [f"x{i}"], "T", "000", i) for i in range(3)]
+             + [_rec("BBB", [f"y{i}"], "T", "000", 10 + i) for i in range(3)]}
+    p = prepare_write(final, st, PW)
+    assert len(p.inserts) == 2
+    warns = [w for w in p.values.warnings if "grup hanya 1 baris" in w]
+    assert len(warns) == 1 and "AAA - K" in warns[0]

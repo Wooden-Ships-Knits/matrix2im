@@ -65,6 +65,8 @@ def build_insert_script(ops: list[InsertOp], sheet: str, last_col: str,
         "  set wb to missing value",
         f"  with timeout of {timeout_s} seconds",
         '  tell application "Microsoft Excel"',
+        # Alert Excel di PC pusat tanpa pengawas memblokir Excel dan server; hasil sudah diverifikasi commit_write.
+        "    set display alerts to false",
         "    try",
         "      open workbook workbook file name f write reserved password pw "
         "update links do not update links ignore read only recommended true",
@@ -77,11 +79,15 @@ def build_insert_script(ops: list[InsertOp], sheet: str, last_col: str,
         "      set screen updating to true",
         "      save wb",
         "      close wb saving no",
+        "      try",
+        "        set display alerts to true",
+        "      end try",
         '      return "OK"',
         "    on error errMsg number errNum",
         "      try",
         "        set calculation to calculation automatic",
         "        set screen updating to true",
+        "        set display alerts to true",
         "      end try",
         "      try",
         "        if wb is not missing value then close wb saving no",
@@ -102,11 +108,15 @@ def _close_script(timeout_s: int) -> str:
         '  if application "Microsoft Excel" is not running then return "NONE"',
         f"  with timeout of {max(timeout_s - 5, 1)} seconds",
         '  tell application "Microsoft Excel"',
+        "    set display alerts to false",     # alasan sama dengan skrip sisip
         "    repeat with wb in (get every workbook)",
         "      try",
         "        if (full name of wb) is p then close wb saving no",
         "      end try",
         "    end repeat",
+        "    try",
+        "      set display alerts to true",
+        "    end try",
         "  end tell",
         "  end timeout",
         '  return "OK"',
@@ -147,10 +157,9 @@ def run_excel_inserts(path: Path, password: str, ops: list[InsertOp], sheet: str
             "Periksa apakah ada dialog terbuka di Excel PC pusat.") from exc
     out = (proc.stdout or "").strip()
     if proc.returncode != 0 or out.startswith("ERROR"):
-        if out.startswith("ERROR"):
-            close_workbook_if_open(path)
+        close_workbook_if_open(path)    # juga saat osascript mati/crash: workbook bisa tertinggal terbuka
         detail = out if out.startswith("ERROR") else (proc.stderr or out).strip()
-        msg = f"Excel gagal: {detail}"
+        msg = f"Excel gagal: {detail}" if detail else f"Excel berhenti tanpa pesan (kode {proc.returncode})"
         if "-1743" in detail:
             msg += (" Izinkan Terminal mengontrol Microsoft Excel di "
                     "System Settings → Privacy & Security → Automation.")

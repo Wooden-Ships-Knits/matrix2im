@@ -13,7 +13,7 @@ Langkah ini mengubah pengaturan sistem dan keamanan Mac, jadi harus Anda sendiri
 - [ ] **Folder `kerja`.** Excel memakai salinan sementara di folder `kerja` di dalam folder cadangan. Bila macOS bertanya apakah Excel boleh membuka file di folder itu, klik **Izinkan** (cukup sekali).
 - [ ] **Mac tidak tidur.** System Settings, Energy atau Lock Screen: matikan tidur otomatis selama PC pusat dipakai.
 - [ ] **Firewall.** System Settings, Network, Firewall: izinkan koneksi masuk untuk Python (port 8765) bila firewall menyala.
-- [ ] **Menjalankan server.** Di Terminal, di folder proyek: `.venv/bin/matrix2im ui --host 0.0.0.0 --no-browser`. Biarkan jendela Terminal tetap terbuka.
+- [ ] **Menjalankan server.** Di Terminal, di folder proyek: `.venv/bin/matrix2im ui --host 0.0.0.0 --no-browser`. Biarkan jendela Terminal tetap terbuka. Catatan: selama menulis, peringatan (alert) Excel dimatikan oleh tool dan dinyalakan lagi sesudahnya.
 - [ ] **Mencari alamat IP Mac.** Jalankan `ipconfig getifaddr en0` di Terminal (atau lihat System Settings, Network). Alamat UI untuk PC lain: `http://<alamat IP>:8765/`.
 - [ ] **File setting.** Buat `matrix2im.local.toml` (contoh di README, bagian "Setting `matrix2im.local.toml`"). Untuk uji ini, `master` menunjuk ke **salinan uji** (lihat uji 1), dan `backup_dir` ke folder cadangan di PC pusat.
 
@@ -37,7 +37,7 @@ Tujuan: mengetahui apakah tool di PC pusat menolak menulis ketika orang lain mem
 
 1. [ ] Di PC lain (bukan PC pusat), buka **salinan uji** di Excel dan biarkan terbuka. Jangan menyimpan.
 2. [ ] Tunggu sekitar satu menit supaya Google Drive menyinkronkan.
-3. [ ] Di PC pusat, di UI, klik **Buat rencana** (atau jalankan `matrix2im write final.json --dry-run`).
+3. [ ] Di PC pusat, di UI, klik **Buat rencana** (atau jalankan `.venv/bin/matrix2im write final.json --dry-run`).
 4. [ ] **Yang harus terlihat:** tool menolak dengan pesan "IM MASTER sedang dibuka oleh <nama orang itu>...". Bila pesan itu muncul, centang "terlihat".
 5. [ ] Bila tool **tidak** menolak, centang "tidak terlihat". Artinya pengecekan hanya melindungi dari Excel di PC pusat, dan TIM IM harus tetap berkoordinasi manual sebelum menulis.
 6. [ ] Tutup file di PC lain.
@@ -60,7 +60,7 @@ Tujuan: memastikan isi yang ditulis tool sesuai harapan menurut cara pemeriksaan
 
 1. [ ] Buka dua file berdampingan: salinan uji setelah ditulis (uji 1) dan file IM MASTER yang asli (yang tidak disentuh).
 2. [ ] Periksa dengan cara yang biasa Anda pakai (filter, rumus, atau perbandingan manual): COLOR1 dan seterusnya, WS TAG COLOR, dan WHS pada beberapa style, termasuk satu style yang bertambah barisnya.
-3. [ ] **Yang harus terlihat:** kolom yang diubah tool hanya COLOR, WS TAG COLOR, dan WHS; kolom rumus dan kolom lain tidak berubah. Tangga harga WHLS LINE PRICE tetap utuh, dan SUBTOTAL di grup yang disisipi baris mencakup semua baris colorway.
+3. [ ] **Yang harus terlihat:** kolom yang diubah tool hanya COLOR, WS TAG COLOR, dan WHS; kolom rumus dan kolom lain tidak berubah. Tangga harga WHLS LINE PRICE tetap utuh, dan SUBTOTAL di grup yang disisipi baris mencakup baris-baris baru. Bandingkan dengan file asli: sebagian range SUBTOTAL di file asli memang sudah tidak mencakup seluruh blok, jadi itu bukan kesalahan tool.
 4. [ ] Gambar dan warna kondisional di salinan uji masih ada seperti di file asli.
 5. [ ] Periksa log `matrix2im-log.jsonl` di folder cadangan: ada satu baris untuk penulisan tadi (hasil "ok"), dan tidak ada password di dalamnya.
 

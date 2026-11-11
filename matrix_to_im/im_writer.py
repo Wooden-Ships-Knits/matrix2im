@@ -128,8 +128,9 @@ def prepare_write(final: dict, settings: Settings, password: str) -> WritePrevie
     ops = plan_inserts(layout, colorways) if engine == "excel" else []
     projected = project_layout(layout, ops)
     values = plan_values(projected, colorways)
+    group_size = {r: len(g.rows) for g in layout.groups for r in g.rows}
     for op in ops:
-        if op.at_row == op.fill_from + 1:
+        if group_size.get(op.fill_from) == 1:
             warnings.append(f"{op.description}: grup hanya 1 baris, baris disisipkan di bawahnya; rumus di luar "
                             "baris subtotal yang merujuk baris itu tidak ikut melebar")
     values.warnings.extend(warnings)

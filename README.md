@@ -114,14 +114,14 @@ Langkah ini dikerjakan sendiri oleh pengelola (menyangkut pengaturan sistem), bu
 - **Tidak sleep:** atur Mac supaya tidak tidur (System Settings, Energy / Lock Screen).
 - **Firewall:** izinkan koneksi masuk untuk Python di System Settings, Network, Firewall, untuk port server (default 8765).
 - **Jalankan server:** `.venv/bin/matrix2im ui --host 0.0.0.0 --no-browser`. Anggota TIM membuka `http://<alamat IP Mac>:8765/` dari browser (Mac atau Windows); alamat IP ada di System Settings, Network, atau lewat `ipconfig getifaddr en0`.
-- **Saat menulis:** Excel di PC pusat membuka dan menutup file sendiri. Jangan bekerja di Excel di PC itu selama penulisan. Bila Excel macet, tool hanya menutup workbook kerjanya sendiri.
+- **Saat menulis:** selama otomatisasi, peringatan (alert) Excel dimatikan dan dinyalakan lagi sesudahnya, supaya dialog tak terduga tidak membuat Excel dan server macet. Excel di PC pusat membuka dan menutup file sendiri. Jangan bekerja di Excel di PC itu selama penulisan. Bila Excel macet, tool hanya menutup workbook kerjanya sendiri.
 
 **Password di jaringan kantor.** UI memakai HTTP biasa, jadi password melewati jaringan kantor tanpa enkripsi. Pakai hanya di LAN kantor dan jangan pernah meneruskan (port forward) port ini ke internet. Tool tidak pernah menyimpan password: tidak di disk, log, laporan, maupun argumen perintah.
 
 ### Cadangan, log, dan pemulihan
 
 - Tiap penulisan lebih dulu membuat cadangan `<nama> <tanggal jam> sebelum matrix2im.xlsx` di `backup_dir`. Folder `kerja` di sana hanya berisi salinan sementara dan dibersihkan sendiri.
-- Log berupa file `matrix2im-log.jsonl` di `backup_dir`, satu baris JSON per penulisan: waktu, nama user, nama file MATRIX, ringkasan rencana, hasil (ok/gagal), pesan, dan path cadangan. Password tidak pernah dicatat. Penulisan yang gagal pun dicatat.
+- Log berupa file `matrix2im-log.jsonl` di `backup_dir`, satu baris JSON per penulisan: waktu, nama user, nama file MATRIX yang diupload (di UI) atau nama file `final.json` (di CLI), ringkasan rencana, hasil (ok/gagal), pesan, dan path cadangan. Password tidak pernah dicatat. Penulisan yang gagal pun dicatat.
 - **Memulihkan:** tutup IM MASTER di semua PC, lalu salin isi file cadangan menimpa file IM MASTER (isi ditimpa, bukan file diganti, supaya link Google Drive tetap). Di Google Drive, lebih baik pakai riwayat versi (klik kanan file, Kelola versi).
 
 ### Batasan

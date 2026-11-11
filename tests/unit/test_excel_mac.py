@@ -184,3 +184,33 @@ def test_real_excel_inserts_and_widens_subtotals(tmp_path):
     for row in (58, 59, 62, 63):
         assert ws.cell(row, 26).value == "catatan"
     check_modify_password(path, TEST_PASSWORD)
+
+
+def test_script_alerts_off_before_open_and_restored_on_both_paths():
+    script = build_insert_script([_op(57, 2, 56, 58)], "F27", "IJ")
+    assert script.index("set display alerts to false") < script.index("open workbook workbook file name")
+    assert script.index('tell application "Microsoft Excel"') < script.index("set display alerts to false")
+    restore = "set display alerts to true"
+    assert script.count(restore) == 2
+    assert script.index(restore) < script.index("save wb") or script.index(restore) < script.index('return "OK"')
+    assert script.rindex(restore) > script.index("on error")
+
+
+def test_close_script_alerts_off_and_restored():
+    script = excel_mac._close_script(30)
+    assert script.index("set display alerts to false") < script.index("close wb saving no")
+    assert script.index("set display alerts to true") > script.index("close wb saving no")
+
+
+def test_cleanup_after_nonzero_returncode_without_error_output(monkeypatch, tmp_path):
+    calls = _record_runs(monkeypatch, subprocess.CompletedProcess([], -9, stdout="", stderr=""))
+    with pytest.raises(Matrix2ImError):
+        run_excel_inserts(tmp_path / "a.xlsx", "sandi-rahasia", [], "F27", "IJ")
+    _assert_cleanup(calls, tmp_path / "a.xlsx")
+
+
+def test_empty_detail_message_has_return_code(monkeypatch, tmp_path):
+    _capture(monkeypatch, subprocess.CompletedProcess([], -9, stdout="", stderr=""))
+    with pytest.raises(Matrix2ImError) as ei:
+        run_excel_inserts(tmp_path / "a.xlsx", "pw", [], "F27", "IJ")
+    assert str(ei.value) == "Excel berhenti tanpa pesan (kode -9)"

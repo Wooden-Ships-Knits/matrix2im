@@ -128,3 +128,27 @@ def test_subtotal_formulas_captured(tmp_path):
     p = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("A", _cw(3))])
     lay = read_layout(p)
     assert lay.subtotal_formulas[58][2] == "=SUBTOTAL(9,B55:B57)"
+
+
+def _layout_with_formula(tmp_path, formula, label):
+    from openpyxl import load_workbook
+    path = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("AAA - K", _cw(2), subtotal=None)])
+    wb = load_workbook(path)
+    wb.active.cell(57, 1, label)
+    wb.active.cell(57, 2, formula)
+    wb.save(path)       # fixture sintetis (R2): boleh memakai openpyxl
+    return read_layout(path)
+
+
+def test_subtotal_formula_with_whitespace_counts(tmp_path):
+    assert _layout_with_formula(tmp_path, "= SUBTOTAL(9,B55:B56)", "apa saja").groups[0].subtotal_row == 57
+
+
+def test_blank_label_subtotal_still_closes_group(tmp_path):
+    lay = _layout_with_formula(tmp_path, "=SUBTOTAL(9,B55:B56)", None)
+    assert lay.groups[0].subtotal_row == 57 and 57 in lay.subtotal_formulas
+
+
+def test_wrapped_subtotal_is_not_a_subtotal_row(tmp_path):
+    lay = _layout_with_formula(tmp_path, "=ROUND(SUBTOTAL(9,B55:B56),0)", "AAA - K - BOTH WHS")
+    assert lay.subtotal_formulas == {} and lay.groups[0].subtotal_row is None
