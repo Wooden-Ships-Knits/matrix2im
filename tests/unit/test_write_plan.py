@@ -190,8 +190,9 @@ def _vlayout(groups, values=None):
     return ImLayout(_VCOLS, groups, values or {}, {})
 
 
-def _grp(desc, rows):
-    return ImGroup(desc, tuple(rows), None)
+def _grp(desc, rows, subtotal="auto"):
+    """Grup dengan baris subtotal tepat di bawahnya (bentuk normal); subtotal=None untuk grup tanpa subtotal."""
+    return ImGroup(desc, tuple(rows), rows[-1] + 1 if subtotal == "auto" else subtotal)
 
 
 def _cw(colors, ws=None, whs=None):
@@ -281,3 +282,36 @@ def test_whs_000_is_string():
     lay = _vlayout([_grp("S - X/S", [5])])
     c = _by_cell(plan_values(lay, {"S": [_cw(["A"], whs="000")]}))[(5, 21)]
     assert c.new == "000" and isinstance(c.new, str)
+
+
+def test_unmatched_excludes_one_segment_labels():
+    """Label musim/judul (DESCRIPTION tanpa " - ") bukan style; tidak dihitung sebagai style IM tanpa MATRIX."""
+    lay = _vlayout([_grp("FALL", [4]), _grp("ZED - X/S", [5]), _grp("S - X/S", [7])])
+    plan = plan_values(lay, {"S": [_cw(["A"])]})
+    assert plan.unmatched_im_styles == ["ZED"]
+
+
+def test_warns_matched_group_without_subtotal():
+    lay = _vlayout([_grp("S - X/S", [5, 6], subtotal=None), _grp("ZED - X/S", [9], subtotal=None)])
+    plan = plan_values(lay, {"S": [_cw(["A"])]})
+    assert plan.warnings == ["S - X/S (baris 5): grup tanpa baris subtotal"]
+
+
+def test_warns_same_key_in_several_blocks():
+    lay = _vlayout([_grp("S - X/S", [5]), _grp("S - S/M", [7]), _grp("S - X/S", [20, 21]),
+                    _grp("ZED - X/S", [30]), _grp("ZED - X/S", [32])])
+    plan = plan_values(lay, {"S": [_cw(["A"])]})
+    assert plan.warnings == ["S - X/S: muncul di 2 blok; semua blok diisi colorway yang sama"]
+    assert {c.row for c in plan.changes if c.col == 2} == {5, 7, 20, 21}
+
+
+def test_record_without_color_skips_style():
+    """Record tanpa COLOR akan mengosongkan benang lama; style itu dilewati, bukan ditebak."""
+    final = _final(
+        _rec("AAA", ["A"], "S1 No.1 | B1 | g"),
+        _rec("AAA", [], "S1 No.1 | B2 | g"),
+        _rec("BBB", ["B"], "S1 No.2 | B3 | g"),
+    )
+    out, skips = style_colorways(final)
+    assert "AAA" not in out and list(out) == ["BBB"]
+    assert skips == [Skip("AAA", "record tanpa COLOR")]

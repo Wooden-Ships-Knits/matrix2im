@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Iterable
 
@@ -88,6 +89,10 @@ def style_colorways(final: dict) -> tuple[dict[str, list[Colorway]], list[Skip]]
     result: dict[str, list[Colorway]] = {}
     skips: list[Skip] = []
     for style, by_sheet in grouped.items():
+        # Colorway tanpa benang akan mengosongkan semua benang lama di baris IM: lewati, jangan tebak.
+        if any(not cw.colors for cws in by_sheet.values() for cw in cws):
+            skips.append(Skip(style, "record tanpa COLOR"))
+            continue
         if len(by_sheet) == 1:
             result[style] = next(iter(by_sheet.values()))
             continue
@@ -225,12 +230,19 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
     cols = layout.columns
     matched: set[str] = set()
     unmatched: set[str] = set()
+    blocks = Counter(g.description for g in layout.groups if match_style(g.description, colorways))
+    for key, count in blocks.items():
+        if count > 1:   # mis. blok tambahan di bagian lain sheet; semuanya ikut diisi
+            plan.warnings.append(f"{key}: muncul di {count} blok; semua blok diisi colorway yang sama")
     for g in layout.groups:
         style = match_style(g.description, colorways)
         if style is None:
-            unmatched.add(g.description.split(" - ", 1)[0])
+            if " - " in g.description:   # tanpa " - " = label musim/judul, bukan style
+                unmatched.add(g.description.split(" - ", 1)[0])
             continue
         matched.add(style)
+        if g.subtotal_row is None:
+            plan.warnings.append(f"{g.description} (baris {g.rows[0]}): grup tanpa baris subtotal")
         cws = colorways[style]
         n, r = len(cws), len(g.rows)
         if r < n:

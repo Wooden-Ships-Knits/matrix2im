@@ -25,11 +25,16 @@ pytestmark = pytest.mark.regression
 #  - 27 op grup 1 baris di spike = 20 + 7 baris subtotal yang salah dibaca sebagai grup 1 baris oleh
 #    aturan label lama (ANSEL x4 di 9305/9314/9323/9332, OLIVIA 2976, WRAP 3298, CHIN-CHIN 5632);
 #  - 184 op / 321 baris (hasil aturan label) menjadi 177 / 286, sama dengan spike;
-#  - 179 style IM tak cocok di spike = 195 - 16 label satu segmen (GRASSY, FALL, COTTON, dst.).
+#  - 179 style IM tak cocok, sama dengan spike: 16 label satu segmen (GRASSY, FALL, COTTON, dst.) tidak
+#    dihitung sebagai style (dulu ikut terhitung sehingga 195).
+# Kunci grup di lebih dari satu blok (peringatan "muncul di N blok"): 211 kunci M/L (tiap style punya dua
+# blok M/L berurutan, subtotal "- FAF" dan "- FAH") + 39 kunci size lain dari 13 style yang muncul lagi di
+# bagian lain sheet (mis. ANSEL V LIGHTWEIGHT 1856-1900 dan 9297-9332). Tidak ada grup cocok tanpa subtotal.
 EXPECTED_OPS = 177
 EXPECTED_ROWS = 286
 EXPECTED_SINGLE_ROW_OPS = 20
-EXPECTED_UNMATCHED_IM_STYLES = 195
+EXPECTED_UNMATCHED_IM_STYLES = 179
+EXPECTED_MULTI_BLOCK_KEYS = 250
 
 
 @pytest.fixture(scope="module")
@@ -108,6 +113,11 @@ def test_value_plan_f27_runs_fast(im_write_path, colorways):
     assert elapsed < 60
     assert plan.missing_styles == []
     assert len(plan.unmatched_im_styles) == EXPECTED_UNMATCHED_IM_STYLES
+    labels = {g.description for g in layout.groups if " - " not in g.description}
+    assert len(labels) == 16 and not labels & set(plan.unmatched_im_styles)
+    multi = [w for w in plan.warnings if "blok; semua blok diisi colorway yang sama" in w]
+    assert len(multi) == EXPECTED_MULTI_BLOCK_KEYS
+    assert not [w for w in plan.warnings if "grup tanpa baris subtotal" in w]
 
 
 def test_apply_values_on_copy_keeps_parts(tmp_path, im_write_path, colorways, layout):
