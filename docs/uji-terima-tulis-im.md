@@ -60,10 +60,10 @@ Tujuan: memastikan isi yang ditulis tool sesuai harapan menurut cara pemeriksaan
 
 1. [ ] Buka dua file berdampingan: salinan uji setelah ditulis (uji 1) dan file IM MASTER yang asli (yang tidak disentuh).
 2. [ ] Periksa dengan cara yang biasa Anda pakai (filter, rumus, atau perbandingan manual): COLOR1 dan seterusnya, WS TAG COLOR, dan WHS pada beberapa style, termasuk satu style yang bertambah barisnya.
-3. [ ] **Yang harus terlihat:** kolom yang diubah tool hanya COLOR, WS TAG COLOR, dan WHS; kolom rumus dan kolom lain tidak berubah. Tangga harga WHLS LINE PRICE tetap utuh, dan SUBTOTAL di grup yang disisipi baris mencakup baris-baris baru. Bandingkan dengan file asli: sebagian range SUBTOTAL di file asli memang sudah tidak mencakup seluruh blok, jadi itu bukan kesalahan tool.
+3. [ ] **Yang harus terlihat:** kolom yang diubah tool hanya COLOR, WS TAG COLOR, dan WHS (plus warna latar WS TAG COLOR); kolom rumus dan kolom lain tidak berubah. Warna latar WS TAG COLOR: pink FF99FF untuk WHS 000, oranye muda FFCC99 untuk SY, abu 969696 untuk BOTH WHS. Di baris yang melebihi jumlah colorway MATRIX, WS TAG COLOR dan WHS kosong tanpa warna, sedangkan COLOR tetap seperti sebelumnya. Tangga harga WHLS LINE PRICE tetap utuh, dan SUBTOTAL di grup yang disisipi baris mencakup baris-baris baru. Bandingkan dengan file asli: sebagian range SUBTOTAL di file asli memang sudah tidak mencakup seluruh blok, jadi itu bukan kesalahan tool.
 4. [ ] Gambar dan warna kondisional di salinan uji masih ada seperti di file asli.
 5. [ ] Periksa log `matrix2im-log.jsonl` di folder cadangan: ada satu baris untuk penulisan tadi (hasil "ok"), dan tidak ada password di dalamnya.
-6. [ ] Buka laporan Excel di folder cadangan (atau unduhan **Unduh semua perubahan (Excel)** dari pratinjau) di PC Windows: kolom terpisah dengan benar, dan baris `sisip` serta `baris colorway berubah` cocok dengan yang terlihat di file.
+6. [ ] Buka laporan Excel di folder cadangan (atau unduhan **Unduh semua perubahan (Excel)** dari pratinjau) di PC Windows: kolom terpisah dengan benar, dan baris `sisip`, `baris lebih`, `warna`, serta `baris colorway berubah` cocok dengan yang terlihat di file.
 
 Hasil: [ ] lulus  [ ] ada perbedaan. Catatan: ____________________
 

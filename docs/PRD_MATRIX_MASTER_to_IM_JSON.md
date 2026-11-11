@@ -212,10 +212,11 @@ Sudah disepakati:
 1. Setiap record dicocokkan ke semua baris IM yang DESCRIPTION-nya (baris subtotal dikenali dari rumus SUBTOTAL; kunci grup adalah dua segmen pertama, "STYLE - SIZE", dan teks sesudahnya dianggap catatan) "&lt;style&gt; - &lt;size&gt; …". Yang diisi hanya baris colorway; baris subtotal ("… - BOTH WHS", "… - 000 ONLY", "… - SHOPIFY ONLY") tidak diisi warnanya.
 2. Semua grup size (X/S, S/M, M/L FAF, M/L FAH, X/L) mendapat daftar colorway yang sama, dengan urutan sesuai MATRIX.
 3. Baris ke-1 sampai ke-N di setiap grup diisi colorway berurutan (N = jumlah colorway).
-4. Kalau baris lebih dari N, sisa baris diisi colorway terakhir. Jumlah baris tetap, sehingga tangga harga WHLS LINE PRICE (+1 per baris) tetap utuh.
+4. Kalau baris lebih dari N, jumlah baris tetap (tangga harga WHLS LINE PRICE +1 per baris tetap utuh). Di sisa baris, WS TAG COLOR dan WHS dikosongkan dan warna latar WS TAG COLOR dihapus; COLOR dibiarkan. (Revisi 11 November 2026; sebelumnya sisa baris diisi colorway terakhir.)
 5. Kalau baris kurang dari N, baris ditambahkan di dalam grup, sebelum baris subtotal, dengan menyalin baris di atasnya. Formula dan range SUBTOTAL ikut menyesuaikan.
 6. WS TAG COLOR ditulis ke kolom CD, yang header-nya dicocokkan dari baris pertama ("WS TAG COLOR"). WHS ditulis ke kolom CE, bukan kolom G.
 7. Nilai null tidak ditulis, dan kolom formula tidak pernah disentuh.
+8. Warna latar sel WS TAG COLOR mengikuti WHS baris itu: 000 = FF99FF, SY = FFCC99, BOTH WHS = 969696 (revisi 11 November 2026). WHS null tidak mengubah warna.
 
 Usulan yang masih menunggu konfirmasi:
 
@@ -295,6 +296,12 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 | Border | garis merah tebal | — | colorway di bawahnya = SY |
 
 ## Riwayat perubahan
+
+### 11 November 2026: revisi user setelah penulisan pertama
+
+1. Label WHS `000 & SY` diganti `BOTH WHS` di raw JSON (`style_whs`), final JSON, UI, dan IM. Golden F27 ikut berubah (hanya label; jumlahnya sama). `final.json` lama yang masih berlabel `000 & SY` ditolak saat menulis ke IM dan perlu dibuat ulang.
+2. Warna latar WS TAG COLOR di IM mengikuti WHS (aturan 8 di "Fase berikutnya"). Warna ditulis dengan menambah format baru di `styles.xml`; format lama tidak diubah. Laporan mencatatnya sebagai jenis `warna`.
+3. Baris IM yang melebihi jumlah colorway MATRIX tidak lagi diisi colorway terakhir: WS TAG COLOR dan WHS dikosongkan, warna latar WS TAG COLOR dihapus, COLOR dibiarkan. Laporan mencatatnya sebagai jenis `baris lebih`.
 
 ### 11 November 2026: fase 2, penulisan ke IM MASTER
 

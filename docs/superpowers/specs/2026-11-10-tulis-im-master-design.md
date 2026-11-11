@@ -127,7 +127,7 @@ Aturan 1–7 di PRD bagian "Fase berikutnya: penulisan ke IM MASTER" berlaku pen
 
 - hanya baris colorway yang diisi;
 - semua grup size mendapat daftar colorway yang sama dengan urutan MATRIX;
-- baris berlebih diisi colorway terakhir;
+- baris berlebih: WS TAG COLOR dan WHS dikosongkan (lihat keputusan 11 November 2026 di bawah; menggantikan "diisi colorway terakhir");
 - baris yang kurang disisipkan di dalam grup dengan menyalin baris di atasnya, dan formula/SUBTOTAL ikut menyesuaikan;
 - WS TAG COLOR ke kolom CD dan WHS ke kolom CE, keduanya dicocokkan lewat nama header;
 - nilai null tidak ditulis;
@@ -167,6 +167,12 @@ Tambahan:
   - Grup diproses dari bawah ke atas supaya nomor baris grup di atasnya tidak bergeser selama proses.
 - **[Keputusan user]** Satu style dengan beberapa kartu di sheet yang sama (contoh F27: CROP BOYFRIEND CREW COTTON S2 - A/B, CHRISTMAS LABRADOR CREW CHUNKY 1A/1B, CHIN-CHIN CREW CHUNKY S9 - A/B) digabung menjadi satu daftar: colorway kartu A, lalu kartu B, sesuai urutan di MATRIX. Aturan lintas sheet di atas (HUTTON) tetap berlaku untuk style yang muncul di sheet berbeda.
 - **[Keputusan perancang, menunggu konfirmasi user]** File lain yang merujuk ke sel IM MASTER diperlakukan sama seperti saat TIM IM menyisipkan baris secara manual: tidak ada penanganan khusus. Laporan mencantumkan baris mana saja yang disisipkan.
+- **[Keputusan user, 11 November 2026]** Label WHS `000 & SY` diganti `BOTH WHS` (konstanta `WHS_BOTH`). `final.json` dengan label WHS di luar `000`/`SY`/`BOTH WHS` ditolak saat rencana dibuat, dengan pesan untuk membuat ulang `final.json`.
+- **[Keputusan user, 11 November 2026]** Warna latar sel WS TAG COLOR mengikuti WHS colorway: `000` = FF99FF, `SY` = FFCC99, `BOTH WHS` = 969696 (`WS_TAG_FILL_BY_WHS`, sama dengan kebiasaan di IM asli). Warna diterapkan di semua baris colorway yang dikelola tool, juga bila teksnya tidak berubah; WHS null tidak mengubah warna.
+  - **[Keputusan perancang]** Warna ditulis tanpa openpyxl: `styles.xml` hanya ditambah (warna dan format baru di akhir `fills`/`cellXfs`; format lama tidak diubah; format yang sama dipakai ulang, jadi menjalankan ulang tidak menumpuk format). Di sheet, hanya atribut `s` sel WS TAG COLOR yang diganti, juga di sel rumus.
+  - Baris sisipan mewarisi warna baris sumbernya (Excel `fill down` menyalin format); rencana warna dihitung ulang sesudah sisip dan harus sama dengan pratinjau.
+  - Laporan mencatat jenis `warna` (warna lama dan baru, "tanpa warna" bila kosong). Ringkasan menghitung `fills_changed`.
+- **[Keputusan user, 11 November 2026]** Baris grup IM yang melebihi jumlah colorway MATRIX ("baris lebih", 3.044 baris di 758 grup pada salinan AI TEST V2): WS TAG COLOR dan WHS dikosongkan, warna latar WS TAG COLOR dihapus (tanpa warna), dan COLOR dibiarkan apa adanya. Jumlah baris tidak diubah. Laporan mencatat jenis `baris lebih`; ringkasan menghitung `extra_rows`. Sel rumus tetap tidak ditulis (peringatan).
 - **[Terbuka]** Label subtotal otomatis (usulan PRD: semua 000 → "000 ONLY", semua SY → "SHOPIFY ONLY", campuran → "BOTH WHS"). Sampai diputuskan, label subtotal **tidak diubah**.
 
 ## 7. Pengaman
@@ -186,7 +192,7 @@ Tambahan:
 5. **Deteksi perubahan.**
    - Tool mencatat ukuran, waktu ubah, dan hash file saat rencana dibuat.
    - Tepat sebelum Excel membuka file, tool mengecek ulang. Bila berbeda, penulisan dibatalkan dan user diminta mengulang.
-6. **Verifikasi setelah menulis.** File dibaca ulang dengan openpyxl `read_only`. Nilai setiap sel dalam rencana harus sama, dan kunci `fileSharing` harus masih ada. Bila gagal, laporan menyebut sel yang berbeda dan lokasi cadangan.
+6. **Verifikasi setelah menulis.** File dibaca ulang dengan openpyxl `read_only`. Nilai setiap sel dalam rencana harus sama, dan kunci `fileSharing` harus masih ada. Warna latar setiap sel dalam rencana warna harus sama, dan `styles.xml` hanya boleh bertambah di akhir daftar warna/format (tanpa rencana warna, `styles.xml` harus identik). Bila gagal, laporan menyebut sel yang berbeda dan lokasi cadangan.
 7. **Log.** Setiap penulisan dicatat: waktu, nama user, nama file MATRIX, ringkasan rencana, hasil verifikasi, dan path cadangan. Formatnya satu baris JSON per penulisan, di file log di folder cadangan.
 
 Celah yang diterima: bila seseorang sudah membuka IM MASTER di Excel di PC lain sebelum tool menulis lalu menyimpan sesudahnya, penyimpanannya bisa menimpa hasil tool. Cadangan dan log menjadi jalan pemulihan.
