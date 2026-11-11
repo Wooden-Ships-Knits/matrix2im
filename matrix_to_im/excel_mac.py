@@ -95,6 +95,39 @@ def build_insert_script(ops: list[InsertOp], sheet: str, last_col: str,
     ])
 
 
+_CLOSE_SCRIPT = "\n".join([
+    "on run argv",
+    "  set p to item 1 of argv",
+    '  if application "Microsoft Excel" is not running then return "NONE"',
+    "  with timeout of 25 seconds",
+    '  tell application "Microsoft Excel"',
+    "    repeat with wb in (get every workbook)",
+    "      try",
+    "        if (full name of wb) is p then close wb saving no",
+    "      end try",
+    "    end repeat",
+    "  end tell",
+    "  end timeout",
+    '  return "OK"',
+    "end run",
+    "",
+])
+
+
+def close_workbook_if_open(path: Path, timeout_s: int = 30) -> None:
+    """Tutup (tanpa simpan) hanya workbook sementara kita bila Excel masih menahannya.
+
+    Bila osascript mati karena timeout, Excel tetap bekerja dan workbook yang terbuka memblokir
+    open workbook berikutnya tanpa pesan. Best effort: tidak pernah melempar, tidak menyentuh
+    workbook lain, tidak menutup Excel. Path lewat argv, bukan disisipkan ke skrip.
+    """
+    try:
+        subprocess.run(["osascript", "-", str(path)], input=_CLOSE_SCRIPT,
+                       capture_output=True, text=True, timeout=timeout_s)
+    except Exception:
+        pass
+
+
 def run_excel_inserts(path: Path, password: str, ops: list[InsertOp], sheet: str, last_col: str,
                       timeout_s: int = EXCEL_TIMEOUT_S) -> float:
     """Jalankan sisipan di path; password hanya lewat environment, bukan argumen atau skrip."""
@@ -107,11 +140,14 @@ def run_excel_inserts(path: Path, password: str, ops: list[InsertOp], sheet: str
                               env={**os.environ, "MATRIX2IM_PW": password},
                               capture_output=True, text=True, timeout=timeout_s + 15)
     except subprocess.TimeoutExpired as exc:
+        close_workbook_if_open(path)
         raise Matrix2ImError(
             f"Excel tidak merespons dalam {timeout_s} detik. "
             "Periksa apakah ada dialog terbuka di Excel PC pusat.") from exc
     out = (proc.stdout or "").strip()
     if proc.returncode != 0 or out.startswith("ERROR"):
+        if out.startswith("ERROR"):
+            close_workbook_if_open(path)
         detail = out if out.startswith("ERROR") else (proc.stderr or out).strip()
         msg = f"Excel gagal: {detail}"
         if "-1743" in detail:

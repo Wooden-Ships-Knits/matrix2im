@@ -24,3 +24,6 @@ dist/
 # Workspace superpowers
 .superpowers/
 .worktrees/
+
+# Setting lokal matrix2im (path IM MASTER, folder cadangan)
+matrix2im.local.toml

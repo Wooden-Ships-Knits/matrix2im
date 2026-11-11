@@ -95,6 +95,74 @@ def test_unavailable_raises(monkeypatch, tmp_path):
         run_excel_inserts(tmp_path / "a.xlsx", "pw", [], "F27", "IJ")
 
 
+def _record_runs(monkeypatch, first_result=None, first_exc=None, cleanup_exc=None):
+    """Panggilan subprocess.run: pertama skrip sisip, kedua (bila ada) skrip pembersih."""
+    calls = []
+
+    def fake_run(args, **kw):
+        calls.append((args, kw))
+        if len(calls) == 1:
+            if first_exc:
+                raise first_exc
+            return first_result
+        if cleanup_exc:
+            raise cleanup_exc
+        return subprocess.CompletedProcess(args, 0, stdout="OK\n", stderr="")
+
+    monkeypatch.setattr(excel_mac, "excel_available", lambda: True)
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    return calls
+
+
+def _assert_cleanup(calls, path, pw="sandi-rahasia"):
+    assert len(calls) == 2
+    args, kw = calls[1]
+    assert str(path) in args
+    assert pw not in " ".join(args) and pw not in kw["input"] and "MATRIX2IM_PW" not in kw["input"]
+    assert str(path) not in kw["input"]
+    assert "saving no" in kw["input"] and "full name" in kw["input"]
+    assert "quit" not in kw["input"]
+
+
+def test_cleanup_after_timeout(monkeypatch, tmp_path):
+    calls = _record_runs(monkeypatch, first_exc=subprocess.TimeoutExpired("osascript", 5))
+    with pytest.raises(Matrix2ImError, match="Excel tidak merespons"):
+        run_excel_inserts(tmp_path / "a.xlsx", "sandi-rahasia", [], "F27", "IJ", timeout_s=5)
+    _assert_cleanup(calls, tmp_path / "a.xlsx")
+
+
+def test_cleanup_after_error_output(monkeypatch, tmp_path):
+    calls = _record_runs(monkeypatch, subprocess.CompletedProcess([], 0, stdout="ERROR -50: x\n", stderr=""))
+    with pytest.raises(Matrix2ImError, match="Excel gagal: ERROR -50"):
+        run_excel_inserts(tmp_path / "a.xlsx", "sandi-rahasia", [], "F27", "IJ")
+    _assert_cleanup(calls, tmp_path / "a.xlsx")
+
+
+def test_failing_cleanup_does_not_mask_original_error(monkeypatch, tmp_path):
+    _record_runs(monkeypatch, first_exc=subprocess.TimeoutExpired("osascript", 5),
+                 cleanup_exc=subprocess.TimeoutExpired("osascript", 30))
+    with pytest.raises(Matrix2ImError, match="Excel tidak merespons"):
+        run_excel_inserts(tmp_path / "a.xlsx", "pw", [], "F27", "IJ", timeout_s=5)
+    _record_runs(monkeypatch, subprocess.CompletedProcess([], 0, stdout="ERROR -1: x", stderr=""),
+                 cleanup_exc=OSError("osascript hilang"))
+    with pytest.raises(Matrix2ImError, match="Excel gagal: ERROR -1"):
+        run_excel_inserts(tmp_path / "a.xlsx", "pw", [], "F27", "IJ")
+
+
+def test_close_workbook_if_open_never_raises(monkeypatch, tmp_path):
+    def boom(*a, **k):
+        raise OSError("tidak ada osascript")
+
+    monkeypatch.setattr(subprocess, "run", boom)
+    assert excel_mac.close_workbook_if_open(tmp_path / "a.xlsx") is None
+
+
+def test_success_does_not_run_cleanup(monkeypatch, tmp_path):
+    calls = _record_runs(monkeypatch, subprocess.CompletedProcess([], 0, stdout="OK\n", stderr=""))
+    run_excel_inserts(tmp_path / "a.xlsx", "pw", [], "F27", "IJ")
+    assert len(calls) == 1
+
+
 @pytest.mark.excel
 @pytest.mark.skipif(os.environ.get("MATRIX2IM_EXCEL_TESTS") != "1" or not excel_available(),
                     reason="butuh MATRIX2IM_EXCEL_TESTS=1 dan Microsoft Excel")

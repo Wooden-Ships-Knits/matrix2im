@@ -1,0 +1,9 @@
+# Salin ke matrix2im.local.toml lalu sesuaikan. File lokal tidak di-commit.
+[ui]
+host = "127.0.0.1"
+port = 8765
+
+[im]
+master = "~/Library/CloudStorage/.../F27 IM MASTER (AI TEST V2).xlsx"
+backup_dir = "~/matrix2im-cadangan"
+insert_engine = "excel"   # "excel" = sisip baris lewat Microsoft Excel; "none" = hanya isi baris yang ada
