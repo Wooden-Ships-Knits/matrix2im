@@ -38,6 +38,10 @@ _CHANGED_MSG = "IM MASTER berubah atau sedang dibuka sejak rencana dibuat; buat 
 _UNREADABLE = (zipfile.BadZipFile, KeyError, ValueError, binascii.Error, ET.ParseError)
 
 
+class ImMasterBusy(Matrix2ImError):
+    """IM MASTER sedang dibuka orang lain; UI memetakannya ke 409 tanpa mencocokkan teks pesan."""
+
+
 @dataclass(frozen=True)
 class Fingerprint:
     """Sidik file IM MASTER saat rencana dibuat; beda berarti ada orang lain yang mengubahnya."""
@@ -96,7 +100,7 @@ def _check_password(path: Path, password: str) -> None:
 def _no_owner(path: Path) -> None:
     owner = owner_file(path)
     if owner is not None:
-        raise Matrix2ImError(f"IM MASTER sedang dibuka oleh {owner_name(owner)}. "
+        raise ImMasterBusy(f"IM MASTER sedang dibuka oleh {owner_name(owner)}. "
                              "Minta yang bersangkutan menutup file, lalu coba lagi.")
 
 
