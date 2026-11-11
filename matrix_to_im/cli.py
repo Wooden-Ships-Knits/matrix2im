@@ -11,9 +11,10 @@ from typing import NoReturn
 
 from .errors import Matrix2ImError
 from .extract import extract
+from .im_lock import read_file_sharing
 from .im_writer import WritePreview, commit_write, prepare_write
 from .io_utils import read_json, write_json
-from .settings import load_settings
+from .settings import Settings, load_settings
 from .transform import transform
 from .ui_server import serve
 from .validate import read_im_header, validate
@@ -159,10 +160,28 @@ def _read_password() -> str:
     return sys.stdin.readline().rstrip("\n").rstrip("\r")
 
 
-def _write_preview_report(path: Path, preview: WritePreview) -> Path:
-    """Laporan .xlsx semua perubahan rencana (tanpa batas baris), sama dengan unduhan di UI; path akhirnya."""
+def _report_target(path: Path, settings: Settings) -> Path:
+    """Path akhir laporan --report; menolak IM MASTER atau workbook berkunci (mis. cadangan IM).
+
+    Salah ketik path laporan tidak boleh menimpa IM MASTER atau cadangannya: penulisan laporan terjadi
+    sebelum ada cadangan, bahkan saat --dry-run.
+    """
     if path.suffix.lower() != ".xlsx":
         path = path.with_name(path.name + ".xlsx")
+    target = path.expanduser().resolve()
+    refused = settings.im_master is not None and target == Path(settings.im_master).expanduser().resolve()
+    if not refused and target.is_file():
+        try:
+            refused = read_file_sharing(target) is not None
+        except Exception:   # bukan xlsx yang terbaca: bukan workbook IM, boleh ditimpa sebagai laporan
+            refused = False
+    if refused:
+        raise Matrix2ImError(f"Path --report harus file laporan baru, bukan IM MASTER atau cadangannya: {path}")
+    return path
+
+
+def _write_preview_report(path: Path, preview: WritePreview) -> Path:
+    """Laporan .xlsx semua perubahan rencana (tanpa batas baris), sama dengan unduhan di UI; path akhirnya."""
     try:
         path.write_bytes(report_xlsx_bytes(report_rows(preview)))
     except OSError as exc:
@@ -175,6 +194,7 @@ def _cmd_write(args: argparse.Namespace) -> int:
     overrides = {k: v for k, v in (("im_master", args.im_master), ("backup_dir", args.backup_dir),
                                    ("insert_engine", args.engine)) if v is not None}
     settings = dataclasses.replace(settings, **overrides)
+    report_path = _report_target(args.report, settings) if args.report else None
     final = read_json(args.final_json)
     interactive = sys.stdin.isatty()
     if not interactive and not args.dry_run and not args.yes:
@@ -182,8 +202,8 @@ def _cmd_write(args: argparse.Namespace) -> int:
     password = _read_password()
     preview = prepare_write(final, settings, password)
     print(format_write_preview(preview))
-    if args.report:
-        print(f"Laporan rencana (Excel): {_write_preview_report(args.report, preview)}")
+    if report_path is not None:
+        print(f"Laporan rencana (Excel): {_write_preview_report(report_path, preview)}")
     if args.dry_run:
         print("Dry-run: IM MASTER tidak diubah.")
         return 0

@@ -92,6 +92,8 @@ end tell
 
 Parameter `read only true` pada `open workbook` menghasilkan "Parameter error (-50)", jadi jangan dipakai.
 
+**[Diperbarui 11 November 2026, saat membangun]** Contoh di atas hanya catatan spike. Penjalan yang dibangun tidak memakai `active workbook`: setelah membuka, skrip mencari workbook yang `full name`-nya sama dengan path file kerja dan hanya menyentuh workbook itu. Selama otomatisasi, alert Excel dimatikan (`display alerts false`), lalu dinyalakan lagi. Alasannya, saat menyimpan setelah ratusan sisip baris, Excel menampilkan dialog yang memblokir PC pusat. Hasil Excel lalu diverifikasi terhadap cadangan.
+
 ## 5. Arsitektur
 
 **[Keputusan perancang]** Penulisan dibagi menjadi dua lapis, supaya logika bisa dites tanpa Excel dan penjalannya bisa diganti nanti:
@@ -134,6 +136,14 @@ Aturan 1–7 di PRD bagian "Fase berikutnya: penulisan ke IM MASTER" berlaku pen
 Tambahan:
 
 - **[Keputusan perancang]** Pencocokan DESCRIPTION IM dengan style mengabaikan spasi berlebih dan huruf besar/kecil.
+- **[Keputusan perancang, dari data F27, 11 November 2026]** Baris subtotal dikenali dari rumus `SUBTOTAL` di barisnya, bukan dari labelnya.
+  - Di F27 ada 10 baris subtotal berlabel tidak baku, misalnya "-BOTH WHS", "M/L- SHOPIFY ONLY" dan "SY ONLY".
+  - Ada juga 4 baris colorway yang namanya memuat "BOTH WHS".
+- **[Keputusan user, 11 November 2026]** Kunci grup = DESCRIPTION dipotong pada dua segmen pertama ("STYLE - SIZE"). Teks sesudahnya di baris colorway adalah catatan.
+  - Contoh: WHITNEY POCKET TUNIC CHUNKY "… - S/M - BOTH WHS - ALT 1 - FAF" dan "… - M/L - BOTH WHS - FAF - ALT 1/2/3 (INSET)".
+  - Baris itu masuk grup size-nya, dan kolom COLOR-nya ditimpa seperti baris lain.
+  - DESCRIPTION-nya tidak diubah.
+- **[Keputusan user, 11 November 2026]** Style yang bloknya muncul lebih dari sekali di sheet ikut ditulis di semua blok. Contoh: AUTUMN LEAF CREW CHUNKY, yang muncul lagi di section "ADDITIONAL FULL PRICE AND SALE O4 (DELETE THIS WHEN SENDING IM TO PAOLA)". Pratinjau memberi peringatan per kunci yang muncul di bagian sheet terpisah.
 - **[Keputusan perancang]** Kolom dicari lewat nama header di baris header IM (`IM_SHEET`, `IM_HEADER_ROW` di `legend_config.py`), bukan huruf kolom yang di-hardcode.
 - **[Keputusan perancang]** Header "WHS" muncul dua kali (kolom G dan CE). Sesuai aturan PRD no. 6, yang ditulis adalah WHS yang tepat di kanan "WS TAG COLOR" (CE). Kolom G tidak disentuh. Bila posisi itu tidak ditemukan, penulisan berhenti dengan error.
 - **[Keputusan perancang]** Nilai seperti `000` ditulis sebagai teks, bukan angka, supaya tidak berubah menjadi `0`. Verifikasi (§7 no. 6) memeriksanya.
@@ -149,6 +159,7 @@ Tambahan:
 - **[Keputusan user]** Menjalankan ulang:
   - Tool boleh menimpa nilai yang sudah ada, kecuali satu hal: sel yang sudah berisi tidak pernah diganti dengan `Need Review`. Ini supaya perbaikan tangan TIM IM tidak hilang.
   - Semua sel yang nilainya akan berubah ditampilkan di ringkasan sebelum konfirmasi.
+  - Cara memenuhinya: UI menampilkan 500 perubahan pertama. Daftar lengkapnya bisa diunduh sebagai laporan Excel. Setiap penulisan juga menyimpan laporan Excel di samping cadangan.
 - **[Keputusan user]** Baris sisipan menyalin seluruh isi baris di atasnya, termasuk kolom per colorway. Baris sisipan ditandai di laporan supaya dicek.
 - **[Keputusan perancang, dari spike]** Cara menyisipkan k baris pada grup dengan R baris:
   - R ≥ 2: sisip k baris utuh tepat di atas baris colorway terakhir, lalu `fill down` kolom A sampai kolom terpakai terakhir, dari baris di atas titik sisip sampai baris sisipan terakhir. Semua rujukan ke grup, termasuk SUBTOTAL, ikut melebar.

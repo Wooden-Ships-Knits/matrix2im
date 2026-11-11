@@ -391,6 +391,24 @@ def test_write_report_flag_appends_xlsx_suffix(write_env, tmp_path, capsys):
     assert f"Laporan rencana (Excel): {final}" in capsys.readouterr().out
 
 
+def test_write_report_refuses_im_master_path(write_env, capsys):
+    im, argv = write_env
+    before = _sha(im)
+    assert main(argv + ["--dry-run", "--report", str(im)]) == 1
+    assert _sha(im) == before
+    assert "bukan IM MASTER" in capsys.readouterr().err
+
+
+def test_write_report_refuses_existing_locked_workbook(write_env, tmp_path, capsys):
+    im, argv = write_env
+    other = tmp_path / "cadangan lama.xlsx"
+    other.write_bytes(im.read_bytes())   # mis. cadangan IM: berkunci fileSharing
+    before = _sha(other)
+    assert main(argv + ["--dry-run", "--report", str(other)]) == 1
+    assert _sha(other) == before
+    assert "bukan IM MASTER" in capsys.readouterr().err
+
+
 def test_write_failure_prints_run_report_path(write_env, monkeypatch, capsys):
     from pathlib import Path
 
