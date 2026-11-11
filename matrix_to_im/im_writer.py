@@ -101,7 +101,7 @@ def _no_owner(path: Path) -> None:
     owner = owner_file(path)
     if owner is not None:
         raise ImMasterBusy(f"IM MASTER sedang dibuka oleh {owner_name(owner)}. "
-                             "Minta yang bersangkutan menutup file, lalu coba lagi.")
+                           "Minta yang bersangkutan menutup file, lalu coba lagi.")
 
 
 def prepare_write(final: dict, settings: Settings, password: str) -> WritePreview:

@@ -20,7 +20,6 @@ import threading
 import time
 import urllib.parse
 import webbrowser
-from http.cookies import CookieError, SimpleCookie
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
@@ -28,6 +27,7 @@ from pathlib import Path
 from typing import Callable
 
 from .errors import Matrix2ImError
+from .legend_config import EXCEL_TIMEOUT_S
 from .im_lock import WrongPassword
 from .im_writer import ImMasterBusy, WritePreview, WriteReport, commit_write, prepare_write
 from .settings import Settings
@@ -48,9 +48,8 @@ COOKIE_NAME = "m2i_session"
 class UiState:
     """State satu sesi UI: salinan file upload dan hasil run terakhir (untuk download)."""
 
-    def __init__(self, workdir: Path, settings: Settings | None = None) -> None:
+    def __init__(self, workdir: Path) -> None:
         self.workdir = workdir
-        self.settings = settings   # dipakai endpoint tulis IM MASTER
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.uploads: dict[str, tuple[Path, str]] = {}   # kind -> (salinan, nama asli)
         self.last: dict | None = None
@@ -58,6 +57,15 @@ class UiState:
         # Rencana tulis (preview, final, user, matrix, token). Password sengaja tidak pernah disimpan.
         self.write: dict | None = None
         self.write_running = False     # sesi dengan job tulis berjalan tidak boleh dibersihkan
+        # Kunci kecil untuk write/write_running; tidak pernah dipegang saat I/O, beda dengan `lock`
+        # (yang dipegang upload/run berjam-jam) supaya penulis global bisa dilepas kapan saja.
+        self.wlock = threading.Lock()
+
+    def drop_plan(self) -> None:
+        """Upload atau run baru membuat rencana tulis lama basi; jangan sentuh bila job sedang jalan."""
+        with self.wlock:
+            if not self.write_running:
+                self.write = None
 
     def cleanup(self) -> None:
         shutil.rmtree(self.workdir, ignore_errors=True)
@@ -76,12 +84,11 @@ class SessionStore:
     def get(self, cookie_header: str | None) -> tuple[str, UiState, bool]:
         """(id, state, baru?). Cookie tak dikenal atau kedaluwarsa menghasilkan sesi baru."""
         sid = None
-        if cookie_header:
-            try:
-                jar = SimpleCookie(cookie_header)
-                sid = jar[COOKIE_NAME].value if COOKIE_NAME in jar else None
-            except CookieError:
-                sid = None
+        for part in (cookie_header or "").split(";"):   # manual: cookie lain yang rusak tak boleh menjatuhkan sesi
+            name, sep, value = part.strip().partition("=")
+            if sep and name == COOKIE_NAME:
+                sid = value.strip()
+                break
         with self._lock:
             entry = self._sessions.get(sid) if sid else None
             if entry is not None:
@@ -102,6 +109,7 @@ class SessionStore:
                     state.cleanup()
 
     def cleanup_all(self) -> None:
+        """Hapus semua sesi dan folder root; dipanggil saat server berhenti."""
         with self._lock:
             for state, _ in self._sessions.values():
                 state.cleanup()
@@ -115,6 +123,7 @@ class WriteCoordinator:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._status: dict = {"state": "idle", "phase": None, "user": None, "started": None}
+        self._thread: threading.Thread | None = None
 
     def status(self) -> dict:
         with self._lock:
@@ -135,24 +144,34 @@ class WriteCoordinator:
                 return False
             self._status = {"state": "running", "phase": "mulai", "user": user,
                             "started": time.strftime("%Y-%m-%dT%H:%M:%S")}
-        threading.Thread(target=self._run, args=(job,), daemon=True, name="tulis-im").start()
+        self._thread = threading.Thread(target=self._run, args=(job,), daemon=True, name="tulis-im")
+        self._thread.start()
         return True
 
+    def wait(self, timeout: float) -> None:
+        """Tunggu job yang sedang berjalan (dipakai saat server berhenti)."""
+        thread = self._thread
+        if thread is not None:
+            thread.join(timeout)
+
     def _run(self, job: Callable[[Callable[[str], None]], WriteReport]) -> None:
-        try:
-            rep = job(self._set_phase)
-        except Matrix2ImError as exc:
-            self._finish(state="error", error=str(exc))
-        except Exception as exc:  # noqa: BLE001 - hanya nama tipe; pesan asli bisa memuat data sensitif
-            log.error("Job tulis IM MASTER gagal: %s", type(exc).__name__)
-            self._finish(state="error", error=f"Gagal tak terduga: {type(exc).__name__}")
-        else:
-            if rep.ok:
-                self._finish(state="done", phase="selesai", report={
-                    "backup": str(rep.backup) if rep.backup else None, "seconds": round(rep.seconds, 2),
-                    "summary": rep.summary, "inserted_rows": rep.inserted_rows, "message": rep.message})
-            else:
-                self._finish(state="error", error=rep.message)
+        fields: dict = {"state": "error", "error": "Gagal tak terduga: penulisan berhenti tanpa laporan"}
+        try:   # state harus selalu keluar dari "running", apa pun yang terjadi
+            try:
+                rep = job(self._set_phase)
+                if rep.ok:
+                    fields = {"state": "done", "phase": "selesai", "report": {
+                        "backup": str(rep.backup) if rep.backup else None, "seconds": round(rep.seconds, 2),
+                        "summary": rep.summary, "inserted_rows": rep.inserted_rows, "message": rep.message}}
+                else:
+                    fields = {"state": "error", "error": rep.message}
+            except Matrix2ImError as exc:
+                fields = {"state": "error", "error": str(exc)}
+            except Exception as exc:  # noqa: BLE001 - hanya nama tipe; pesan asli bisa memuat data sensitif
+                log.error("Job tulis IM MASTER gagal: %s", type(exc).__name__)
+                fields = {"state": "error", "error": f"Gagal tak terduga: {type(exc).__name__}"}
+        finally:
+            self._finish(**fields)
 
 
 def _lan_address() -> str | None:
@@ -302,6 +321,7 @@ class _Handler(BaseHTTPRequestHandler):
                 state.uploads.pop(kind, None)
             else:
                 state.uploads[kind] = (target, name)
+        state.drop_plan()
         if remaining:
             self._error(HTTPStatus.BAD_REQUEST, "Upload terputus sebelum selesai")
             return
@@ -323,14 +343,17 @@ class _Handler(BaseHTTPRequestHandler):
                 result = run_pipeline(matrix[0], im[0] if im else None)
             except Matrix2ImError as exc:
                 state.last = None
+                state.drop_plan()
                 self._error(HTTPStatus.UNPROCESSABLE_ENTITY, str(exc))
                 return
             except Exception as exc:  # noqa: BLE001 - tampilkan di UI, bukan traceback
                 state.last = None
+                state.drop_plan()
                 log.exception("Error tidak terduga saat memproses")
                 self._error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Error tidak terduga: {type(exc).__name__}: {exc}")
                 return
-            state.last = result
+            state.last = {**result, "matrix_name": matrix[1]}
+        state.drop_plan()
         files = {"matrix": matrix[1], "im": im[1] if im else None}
         self._json(HTTPStatus.OK, {"files": files, **result})
 
@@ -373,9 +396,7 @@ class _Handler(BaseHTTPRequestHandler):
         if body is None:
             return
         state = self.state
-        with state.lock:
-            last = state.last
-            matrix = state.uploads.get("matrix")
+        last = state.last   # atribut biasa: jangan menunggu `lock` yang dipegang upload/run
         if last is None:
             self._error(HTTPStatus.BAD_REQUEST, "Jalankan proses dulu sebelum menulis ke IM MASTER")
             return
@@ -406,9 +427,9 @@ class _Handler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Error tidak terduga: {type(exc).__name__}")
             return
         token = secrets.token_urlsafe(16)
-        with state.lock:
+        with state.wlock:
             state.write = {"preview": preview, "final": final, "user": name.strip(), "token": token,
-                           "matrix": matrix[1] if matrix else "(tidak diketahui)"}
+                           "matrix": last.get("matrix_name") or "(tidak diketahui)"}
         values = preview.values
         self._json(HTTPStatus.OK, {
             "summary": preview.summary,
@@ -432,7 +453,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.CONFLICT, busy)
             return
         state, settings = self.state, self.server.settings
-        with state.lock:
+        with state.wlock:
             plan = state.write
             if plan is None or plan["token"] is None:
                 self._error(HTTPStatus.CONFLICT, "rencana sudah dipakai; buat rencana lagi")
@@ -449,12 +470,12 @@ class _Handler(BaseHTTPRequestHandler):
                 return commit_write(plan["preview"], plan["final"], settings, password, user,
                                     plan["matrix"], progress=progress)
             finally:
-                with state.lock:
+                with state.wlock:
                     state.write = None
                     state.write_running = False
 
         if not self.server.writer.start(user, job):   # balapan dengan sesi lain
-            with state.lock:
+            with state.wlock:
                 plan["token"] = token
                 state.write_running = False
             self._error(HTTPStatus.CONFLICT, self._busy_message() or "sedang ada penulisan oleh pengguna lain")
@@ -532,5 +553,8 @@ def serve(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True,
             log.info("UI dihentikan")
         finally:
             server.server_close()
+            if server.writer.status()["state"] == "running":   # jangan matikan penulisan di tengah jalan
+                log.info("Menunggu penulisan IM MASTER selesai sebelum berhenti…")
+                server.writer.wait(EXCEL_TIMEOUT_S + 120)
     finally:
         sessions.cleanup_all()

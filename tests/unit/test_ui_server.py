@@ -63,6 +63,14 @@ def call(url, method="GET", data=None, headers=None):
         return err.code, err.headers, err.read()
 
 
+@pytest.fixture(autouse=True)
+def _fresh_cookie_jar():
+    """Jar per test: nomor port 0 bisa dipakai ulang server lain dan membawa cookie basi."""
+    _COOKIES.clear()
+    yield
+    _COOKIES.clear()
+
+
 _COOKIES: dict[str, str] = {}
 
 
@@ -201,6 +209,7 @@ def test_sigterm_handler_stops_like_ctrl_c():
 def _fake_server_factory(record, fail_first=True):
     class _Srv:
         server_address = ("127.0.0.1", 5555)
+        writer = WriteCoordinator()
 
         def serve_forever(self):
             raise KeyboardInterrupt
@@ -376,7 +385,7 @@ def _write_env(tmp_path, engine="none"):
 
 def _inject(sessions, cookie, final, matrix_name="matrix.xlsx"):
     st = _state_of(sessions, cookie)
-    st.last = {"final": final, "raw": {}}
+    st.last = {"final": final, "raw": {}, "matrix_name": matrix_name}
     st.uploads["matrix"] = (st.workdir / "matrix.xlsx", matrix_name)
     return st
 
@@ -531,7 +540,7 @@ def test_commit_needs_matching_token_of_own_session(serve_with, sessions, tmp_pa
     _inject(sessions, a, final)
     _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, a)
     status, _ = post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, b)
-    assert status in (403, 409)
+    assert status == 409   # sesi B tidak punya rencana
     status, _ = post_json(base, "/api/write/commit", {"token": "salah", "password": PW}, a)
     assert status == 403
     status, _ = post_json(base, "/api/write/commit", {"password": PW}, a)
@@ -627,6 +636,7 @@ def test_password_not_logged(serve_with, sessions, tmp_path, caplog):
     _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
     post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, cookie)
     wait_state(base, cookie, ("done", "error"))
+    assert "/api/write/commit" in caplog.text   # ada log request, jadi assert di bawah tidak kosong
     assert secret not in caplog.text and PW not in caplog.text and plan["token"] not in caplog.text
 
 
@@ -693,3 +703,150 @@ def test_serve_logs_lan_address_for_wildcard(monkeypatch, caplog):
     caplog.set_level("INFO")
     serve(host="0.0.0.0", port=8765, open_browser=False)
     assert "http://192.168.7.9:5555/" in caplog.text
+
+
+def test_writer_released_even_if_session_lock_held(serve_with, sessions, tmp_path, monkeypatch):
+    """Upload/run memegang state.lock lama; selesainya penulisan tak boleh menunggunya."""
+    from matrix_to_im import ui_server
+    from matrix_to_im.im_writer import WriteReport
+
+    im, settings, final = _write_env(tmp_path)
+    gate = threading.Event()
+
+    def commit(preview, final, settings, password, user, matrix_name, progress=lambda s: None, **kw):
+        assert gate.wait(timeout=20)
+        return WriteReport(True, "ok", preview.summary, None, tmp_path / "log.jsonl", 0.1, [])
+
+    monkeypatch.setattr(ui_server, "commit_write", commit)
+    base = serve_with(settings)
+    cookie = _new_session(base)
+    st = _inject(sessions, cookie, final)
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
+    assert post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, cookie)[0] == 202
+    assert st.lock.acquire(timeout=10)   # simulasi upload yang sedang berjalan
+    try:
+        gate.set()
+        assert wait_state(base, cookie, ("done", "error"), timeout=10)["state"] == "done"
+        deadline = time.monotonic() + 10
+        while st.write_running and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert st.write_running is False
+    finally:
+        st.lock.release()
+
+
+@pytest.mark.parametrize("header", ['prefs={"x":1}; m2i_session=XYZ', "foo bar; m2i_session=XYZ",
+                                    "x=a b; m2i_session=XYZ", "m2i_session=XYZ"])
+def test_session_cookie_survives_malformed_other_cookies(sessions, header):
+    sid, st, _ = sessions.get(None)
+    sessions._sessions["XYZ"] = sessions._sessions.pop(sid)
+    got, st2, is_new = sessions.get(header)
+    assert (got, st2, is_new) == ("XYZ", st, False)
+
+
+def test_matrix_name_comes_from_run_and_new_upload_drops_plan(serve_with, tmp_path, monkeypatch):
+    from matrix_to_im import ui_server
+    from matrix_to_im.im_writer import WriteReport
+
+    im, settings, _ = _write_env(tmp_path)
+    seen = []
+
+    def commit(preview, final, settings, password, user, matrix_name, progress=lambda s: None, **kw):
+        seen.append(matrix_name)
+        return WriteReport(True, "ok", preview.summary, None, tmp_path / "log.jsonl", 0.1, [])
+
+    monkeypatch.setattr(ui_server, "commit_write", commit)
+    base = serve_with(settings)
+    own_cookie = own(base)["Cookie"]
+    m1, m2 = build_matrix(tmp_path / "m1.xlsx"), build_matrix(tmp_path / "m2.xlsx")
+    upload(base, "matrix", m1)
+    assert run(base)[0] == 200
+    upload(base, "matrix", m2)   # belum di-run: hasil run masih milik M1
+    # IM sintetis tulis tidak cocok dengan matrix sintetis, tapi prepare tetap jalan (nama gaya tak cocok saja)
+    status, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, own_cookie)
+    assert status == 200, plan
+    # upload baru membuat rencana basi
+    upload(base, "matrix", m2)
+    status, payload = post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, own_cookie)
+    assert status == 409 and payload["error"] == "rencana sudah dipakai; buat rencana lagi"
+    # prepare lagi tanpa run ulang: nama tetap M1
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, own_cookie)
+    assert post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, own_cookie)[0] == 202
+    wait_state(base, own_cookie, ("done", "error"))
+    assert seen == ["m1.xlsx"]
+    # run baru juga membuang rencana
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, own_cookie)
+    assert run(base)[0] == 200
+    status, payload = post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, own_cookie)
+    assert status == 409
+
+
+def test_coordinator_leaves_running_when_report_building_fails():
+    coord = WriteCoordinator()
+
+    class Odd:
+        ok = True
+        backup = None
+
+        @property
+        def seconds(self):
+            raise ValueError("rusak")
+
+    assert coord.start("andi", lambda progress: Odd()) is True
+    coord.wait(20)
+    st = coord.status()
+    assert st["state"] == "error" and "ValueError" in st["error"] and "rusak" not in st["error"]
+
+
+def test_serve_waits_for_running_write_before_cleanup(monkeypatch, caplog):
+    from matrix_to_im.im_writer import WriteReport
+    from matrix_to_im.ui_server import serve
+
+    record = []
+    factory = _fake_server_factory(record, fail_first=False)
+    writer = WriteCoordinator()
+    gate = threading.Event()
+    finished = []
+
+    def job(progress):
+        assert gate.wait(timeout=20)
+        finished.append(True)
+        return WriteReport(True, "ok", {}, None, Path("log"), 0.1, [])
+
+    assert writer.start("andi", job)
+
+    def fake(host, port, sessions, settings):
+        srv = factory(host, port, sessions, settings)
+        srv.writer = writer
+        return srv
+
+    monkeypatch.setattr("matrix_to_im.ui_server.make_server", fake)
+    cleaned = []
+    monkeypatch.setattr("matrix_to_im.ui_server.SessionStore.cleanup_all", lambda self: cleaned.append(finished[:]))
+    threading.Timer(0.3, gate.set).start()
+    caplog.set_level("INFO")
+    serve(host="127.0.0.1", port=8765, open_browser=False)
+    assert "Menunggu penulisan IM MASTER selesai sebelum berhenti" in caplog.text
+    assert cleaned == [[True]]   # cleanup baru jalan setelah job selesai
+
+
+def test_prepare_shows_inserts_and_skipped(serve_with, sessions, tmp_path, monkeypatch):
+    from matrix_to_im import ui_server
+    from matrix_to_im.write_plan import InsertOp, Skip
+
+    im, settings, final = _write_env(tmp_path)
+    real = ui_server.prepare_write
+
+    def with_ops(final, settings, password):
+        p = real(final, settings, password)
+        p.inserts = [InsertOp("AAA - K", 57, 2, 56, 56, None, {})]
+        p.skipped = [Skip("ZZZ", "tidak ada di IM")]
+        return p
+
+    monkeypatch.setattr(ui_server, "prepare_write", with_ops)
+    base = serve_with(settings)
+    cookie = _new_session(base)
+    _inject(sessions, cookie, final)
+    _, plan = post_json(base, "/api/write/prepare", {"name": "andi", "password": PW}, cookie)
+    assert plan["inserts"] == [{"description": "AAA - K", "count": 2}]
+    assert plan["skipped"] == [{"style": "ZZZ", "reason": "tidak ada di IM"}]
