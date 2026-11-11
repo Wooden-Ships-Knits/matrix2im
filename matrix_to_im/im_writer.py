@@ -9,6 +9,7 @@ import hashlib
 import json
 import logging
 import os
+import secrets
 import shutil
 import tempfile
 import time
@@ -251,7 +252,9 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
     parent = backup_dir / "kerja"
     parent.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="kerja-", dir=parent))
-    tmp, tmp2 = work / f"im-kerja{path.suffix}", work / f"im-hasil{path.suffix}"
+    # Nama unik per run: skrip Excel menolak bila workbook bernama sama sudah terbuka.
+    tmp = work / f"im-kerja-{secrets.token_hex(4)}{path.suffix}"
+    tmp2 = work / f"im-hasil{path.suffix}"
     try:
         shutil.copyfile(backup, tmp)     # backup sudah lolos cek sha256: tmp pasti isi yang direncanakan
         if preview.inserts:

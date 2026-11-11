@@ -512,3 +512,21 @@ def test_single_row_warning_only_for_single_row_groups(tmp_path, excel_on):
     assert len(p.inserts) == 2
     warns = [w for w in p.values.warnings if "grup hanya 1 baris" in w]
     assert len(warns) == 1 and "AAA - K" in warns[0]
+
+
+def test_temp_copy_has_unique_name_per_run(tmp_path, excel_on):
+    """Nama unik: workbook lain bernama sama di Excel tak mungkin tertukar dengan salinan kerja run ini."""
+    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a"]])], "excel")
+    final = {"records": [_rec("AAA", ["x1"]), _rec("AAA", ["x2"], n=2)]}
+    seen = []
+
+    def spy(path, password, ops, sheet, last_col):
+        seen.append(path)
+        raise Matrix2ImError("Excel gagal: berhenti di sini")
+
+    for _ in range(2):
+        commit_write(prepare_write(final, st, PW), final, st, PW, "andi", "m.xlsx", inserter=spy)
+    assert len(seen) == 2 and seen[0].name != seen[1].name
+    for path in seen:
+        assert re.fullmatch(r"im-kerja-[0-9a-f]{8}\.xlsx", path.name), path.name
+        assert path.parent.parent == st.backup_dir / "kerja"

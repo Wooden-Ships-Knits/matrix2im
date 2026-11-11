@@ -1,4 +1,5 @@
 import os
+import secrets
 import subprocess
 
 import pytest
@@ -38,12 +39,58 @@ def test_script_formula_fixes_grouped_in_runs_and_escaped():
     assert two.index('range "B62:C62"') < two.index('insert into range (range "10:10"')
 
 
-def test_script_opens_via_active_workbook_and_has_timeout():
+_OPEN = "open workbook workbook file name"
+
+
+def test_script_never_uses_active_workbook_and_has_timeout():
     script = build_insert_script([_op(57, 2, 56, 58)], "F27", "IJ", 180)
-    assert "set wb to active workbook" in script
+    assert "active workbook" not in script
     assert "set wb to open workbook" not in script
     assert "with timeout of 180 seconds" in script and "end timeout" in script
-    assert script.index("set wb to missing value") < script.index("open workbook workbook file name")
+    assert script.index("set wb to missing value") < script.index(_OPEN)
+
+
+def test_script_name_collision_guard_before_open_touches_nothing():
+    """Workbook lain bernama sama: Excel tak bisa membuka file kita; berhenti sebelum apa pun diubah."""
+    script = build_insert_script([_op(57, 2, 56, 58)], "F27", "IJ")
+    guard = ('if (name of w) is nm then return "ERROR 0: Excel sudah membuka workbook bernama " '
+             '& nm & "; tutup dulu"')
+    assert "set nm to item 2 of argv" in script
+    assert guard in script
+    assert script.index(guard) < script.index(_OPEN)
+    assert script.index(guard) < script.index("set display alerts to false")   # bahkan alert belum disentuh
+
+
+def test_script_verifies_full_name_after_open_before_setting_wb():
+    script = build_insert_script([_op(57, 2, 56, 58)], "F27", "IJ")
+    check = "if (full name of w) is p then set wb to contents of w"
+    assert "set p to item 1 of argv" in script and check in script
+    assert script.index(_OPEN) < script.index(check) < script.index('set ws to worksheet "F27" of wb')
+    sets = [line.strip() for line in script.splitlines() if line.strip().startswith("set wb to")]
+    assert sets == ["set wb to missing value", "set wb to missing value"]   # awal, dan sesudah ditutup
+    assert script.count("set wb to") == 3 and script.count(check) == 1
+    missing = 'if wb is missing value then error "workbook yang dibuka tidak ditemukan di Excel: " & p'
+    assert script.index(check) < script.index(missing) < script.index("set ws to worksheet")
+
+
+def test_script_closes_only_the_verified_workbook():
+    script = build_insert_script([_op(57, 2, 56, 58)], "F27", "IJ")
+    closes = [line.strip() for line in script.splitlines() if "close " in line]
+    assert closes == ["close wb saving no", "if wb is not missing value then close wb saving no"]
+    error_path = script[script.index("on error"):]
+    assert "if wb is not missing value then close wb saving no" in error_path
+    assert "save " not in error_path
+
+
+def test_script_error_path_restores_each_setting_in_own_try_alerts_first():
+    script = build_insert_script([_op(57, 2, 56, 58)], "F27", "IJ")
+    lines = [line.strip() for line in script[script.index("on error"):].splitlines()]
+    restores = ["set display alerts to true", "set calculation to calculation automatic",
+                "set screen updating to true", "if wb is not missing value then close wb saving no"]
+    pos = [lines.index(r) for r in restores]
+    assert pos == sorted(pos)
+    for i in pos:
+        assert lines[i - 1] == "try" and lines[i + 1] == "end try", lines[i - 1:i + 2]
 
 
 def _capture(monkeypatch, result=None, exc=None):
@@ -164,9 +211,38 @@ def test_success_does_not_run_cleanup(monkeypatch, tmp_path):
     assert len(calls) == 1
 
 
+_NEEDS_EXCEL = pytest.mark.skipif(os.environ.get("MATRIX2IM_EXCEL_TESTS") != "1" or not excel_available(),
+                                  reason="butuh MATRIX2IM_EXCEL_TESTS=1 dan Microsoft Excel")
+
+
+def _excel_full_names() -> list[str]:
+    """Full name semua workbook yang sedang terbuka di Excel (hanya untuk test bermarker excel)."""
+    script = "\n".join(['tell application "Microsoft Excel"', '  set out to ""',
+                        "  repeat with w in (get every workbook)",
+                        "    set out to out & (full name of w) & linefeed", "  end repeat",
+                        "  return out", "end tell", ""])
+    proc = subprocess.run(["osascript", "-"], input=script, capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    return [line for line in proc.stdout.splitlines() if line]
+
+
 @pytest.mark.excel
-@pytest.mark.skipif(os.environ.get("MATRIX2IM_EXCEL_TESTS") != "1" or not excel_available(),
-                    reason="butuh MATRIX2IM_EXCEL_TESTS=1 dan Microsoft Excel")
+@_NEEDS_EXCEL
+def test_real_excel_error_after_open_leaves_no_workbook_open(tmp_path):
+    """Error sesudah open berhasil (sheet tidak ada): workbook kita tertutup tanpa disimpan (I2 + R7)."""
+    path = tmp_path / f"im-kerja-{secrets.token_hex(4)}.xlsx"
+    build_im_sheet(path, [GroupSpec("AAA - K", [["a"], ["b"]])])
+    add_file_sharing(path)
+    before = path.read_bytes()
+    ops = [InsertOp("AAA - K", 56, 1, 55, 56, None, {})]
+    with pytest.raises(Matrix2ImError, match="Excel gagal: ERROR"):
+        run_excel_inserts(path, TEST_PASSWORD, ops, "SHEET TIDAK ADA", "Z", timeout_s=180)
+    assert str(path.resolve()) not in _excel_full_names()
+    assert path.read_bytes() == before
+
+
+@pytest.mark.excel
+@_NEEDS_EXCEL
 def test_real_excel_inserts_and_widens_subtotals(tmp_path):
     path = tmp_path / "im.xlsx"
     build_im_sheet(path, [GroupSpec("AAA - K", [["a"], ["b"], ["c"]]), GroupSpec("BBB - K", [["x"]])])
@@ -200,6 +276,21 @@ def test_close_script_alerts_off_and_restored():
     script = excel_mac._close_script(30)
     assert script.index("set display alerts to false") < script.index("close wb saving no")
     assert script.index("set display alerts to true") > script.index("close wb saving no")
+
+
+def test_close_script_loop_inside_try_so_alerts_always_restored():
+    lines = [line.strip() for line in excel_mac._close_script(30).splitlines()]
+    loop, end = lines.index("repeat with wb in (get every workbook)"), lines.index("end repeat")
+    assert lines[loop - 1] == "try" and lines[end + 1] == "end try"
+    restore = lines.index("set display alerts to true")
+    assert restore > end + 1 and lines[restore - 1] == "try"
+
+
+def test_insert_args_carry_resolved_path_and_name(monkeypatch, tmp_path):
+    seen = _capture(monkeypatch)
+    run_excel_inserts(tmp_path / "im-kerja-0a1b2c3d.xlsx", "pw", [_op(57, 2, 56, 58)], "F27", "IJ")
+    path = tmp_path / "im-kerja-0a1b2c3d.xlsx"
+    assert seen["args"] == ["osascript", "-", str(path.resolve()), "im-kerja-0a1b2c3d.xlsx"]
 
 
 def test_cleanup_after_nonzero_returncode_without_error_output(monkeypatch, tmp_path):
