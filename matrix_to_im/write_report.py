@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 REPORT_HEADER = ("DESCRIPTION", "sel", "baris", "kolom", "lama", "baru", "jenis")
 REPORT_SHEET = "Laporan"
 _BARIS = REPORT_HEADER.index("baris")
+EXTRA_ROW_NOTE = "colorway MATRIX lebih sedikit; WS TAG COLOR dan WHS dikosongkan"
 
 
 def inserted_rows(ops: list[InsertOp]) -> list[tuple[str, int]]:
@@ -59,6 +60,8 @@ def report_rows(preview: WritePreview, notes: Iterable[str] = ()) -> list[tuple[
                      _text(c.old), _text(c.new), "ubah"))
     for description, row in inserted_rows(preview.inserts):
         rows.append((description, "", str(row), "", "", "baris sisipan (salinan baris di atasnya)", "sisip"))
+    for row in plan.extra_rows:
+        rows.append((owner.get(row, ""), "", str(row), "", "", EXTRA_ROW_NOTE, "baris lebih"))
     for row in plan.changed_colorway_rows:
         old, new = plan.colorway_text.get(row, ("", ""))
         rows.append((owner.get(row, ""), "", str(row), "COLOR", old, new, "baris colorway berubah"))

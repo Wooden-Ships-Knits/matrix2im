@@ -126,8 +126,9 @@ def test_prepare_summary_counts(tmp_path, excel_on):
     assert (s["styles"], s["groups"]) == (2, 2)
     assert (s["rows_inserted"], s["groups_inserted"], s["short_groups"]) == (1, 1, 0)
     assert s["unmatched_im_styles"] == 1 and s["missing_styles"] == 1 and s["skipped"] == 0
-    assert s["cells_changed"] == len(p.values.changes) == 15      # 5 baris x (COLOR1, WS TAG, WHS)
-    assert s["changed_colorway_rows"] == 5
+    assert s["cells_changed"] == len(p.values.changes) == 12      # 4 baris x (COLOR1, WS TAG, WHS)
+    assert s["changed_colorway_rows"] == 4
+    assert s["extra_rows"] == 1 and p.values.extra_rows == [60]   # baris ke-3 BBB (sesudah sisip)
     assert s["warnings"] == len(p.values.warnings) == 1
     assert "grup hanya 1 baris" in p.values.warnings[0] and "AAA - K" in p.values.warnings[0]
     assert p.fingerprint == fingerprint(im) and p.im_master == im

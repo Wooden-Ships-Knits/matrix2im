@@ -175,6 +175,7 @@ def prepare_write(final: dict, settings: Settings, password: str) -> WritePrevie
         "groups_inserted": len(ops),
         "changed_colorway_rows": len(values.changed_colorway_rows),
         "short_groups": len(values.short_groups),
+        "extra_rows": len(values.extra_rows),
         "skipped": len(skipped),
         "unmatched_im_styles": len(values.unmatched_im_styles),
         "missing_styles": len(values.missing_styles),

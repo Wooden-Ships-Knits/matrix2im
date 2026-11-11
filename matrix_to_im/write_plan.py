@@ -215,6 +215,7 @@ class ValuePlan:
     changes: list[CellChange] = field(default_factory=list)
     changed_colorway_rows: list[int] = field(default_factory=list)
     short_groups: list[str] = field(default_factory=list)
+    extra_rows: list[int] = field(default_factory=list)   # baris grup melebihi jumlah colorway MATRIX
     unmatched_im_styles: list[str] = field(default_factory=list)
     missing_styles: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -261,8 +262,6 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
         if r < n:
             plan.short_groups.append(f"{g.description}: kurang {n - r} baris")
         for i, row in enumerate(g.rows):
-            cw = cws[min(i, n - 1)]
-            yarns = cw.colors[:len(cols.colors)]
 
             def put(col: int, new: str | None) -> None:
                 old = layout.values.get((row, col))
@@ -271,6 +270,14 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
                 elif (None if _blank(old) else str(old)) != new and not (_blank(old) and new is None):
                     plan.changes.append(CellChange(row, col, old, new))
 
+            if i >= n:
+                # Baris lebih: WS TAG COLOR dan WHS dikosongkan, COLOR dibiarkan (keputusan user 11 Nov 2026).
+                plan.extra_rows.append(row)
+                put(cols.ws_tag, None)
+                put(cols.whs, None)
+                continue
+            cw = cws[i]
+            yarns = cw.colors[:len(cols.colors)]
             old_yarns: list[str] = []
             old_text: list[str] = []
             for j, col in enumerate(cols.colors):

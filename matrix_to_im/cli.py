@@ -135,6 +135,7 @@ def _cmd_ui(args: argparse.Namespace) -> int:
 _SUMMARY_LABELS = (("styles", "Style cocok"), ("groups", "Grup IM cocok"), ("cells_changed", "Sel diubah"),
                    ("rows_inserted", "Baris disisipkan"), ("groups_inserted", "Grup yang disisipi"),
                    ("changed_colorway_rows", "Baris colorway berubah"), ("short_groups", "Grup kekurangan baris"),
+                   ("extra_rows", "Baris lebih (WS TAG COLOR & WHS dikosongkan)"),
                    ("skipped", "Style dilewati"), ("unmatched_im_styles", "Style IM tanpa data MATRIX"),
                    ("missing_styles", "Style MATRIX tidak ada di IM (tidak ditulis)"), ("warnings", "Peringatan"))
 

@@ -101,3 +101,18 @@ def test_xlsx_header_bold_text_kept_as_text_and_illegal_chars_dropped():
     ws = wb["Laporan"]
     assert ws["A1"].font.b and ws["A2"].data_type == "s" and ws["A2"].value == "=SUM(A1)"
     assert ws["E2"].value == "000" and ws["F2"].value == "ab" and ws["B2"].value is None
+
+
+def test_extra_rows_listed(tmp_path, monkeypatch):
+    """Baris grup melebihi colorway MATRIX tercatat sebagai jenis "baris lebih" (nomor baris file hasil)."""
+    monkeypatch.setattr(im_writer, "excel_available", lambda: True)
+    im = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("AAA - K", [["a"], ["b"]], ws_tags=["T", "T"],
+                                                         whs=["000", "000"])])
+    add_file_sharing(im)
+    st = Settings(im_master=im, backup_dir=tmp_path / "cadangan", insert_engine="excel")
+    p = prepare_write({"records": [_rec("AAA", ["a"], 1, ws="T", whs="000")]}, st, TEST_PASSWORD)
+    kinds = _by_kind(report_rows(p))
+    assert kinds["baris lebih"] == [("AAA - K", "", "56", "", "",
+                                     "colorway MATRIX lebih sedikit; WS TAG COLOR dan WHS dikosongkan",
+                                     "baris lebih")]
+    assert {r[1] for r in kinds["ubah"]} == {"X56", "Y56"}

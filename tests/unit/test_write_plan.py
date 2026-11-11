@@ -203,12 +203,35 @@ def _by_cell(plan):
     return {(c.row, c.col): c for c in plan.changes}
 
 
-def test_rows_get_colorways_in_order_extra_rows_get_last():
-    lay = _vlayout([_grp("S - X/S", [5, 6, 7, 8])])
+def test_rows_get_colorways_in_order():
+    lay = _vlayout([_grp("S - X/S", [5, 6])])
     plan = plan_values(lay, {"S": [_cw(["A"]), _cw(["B"])]})
     got = _by_cell(plan)
-    assert [got[(r, 2)].new for r in (5, 6, 7, 8)] == ["A", "B", "B", "B"]
-    assert plan.short_groups == []
+    assert [got[(r, 2)].new for r in (5, 6)] == ["A", "B"]
+    assert plan.short_groups == [] and plan.extra_rows == []
+
+
+def test_extra_rows_clear_ws_tag_and_whs_keep_colors():
+    """Baris grup melebihi jumlah colorway MATRIX: WS TAG COLOR dan WHS dikosongkan, COLOR tidak disentuh
+    (keputusan user 11 Nov 2026; sebelumnya diisi colorway terakhir)."""
+    vals = {(7, 2): "OLD - 1", (7, 20): "OLD TAG", (7, 21): "000", (8, 2): "OLD - 2", (8, 21): "SY"}
+    lay = _vlayout([_grp("S - X/S", [5, 6, 7, 8])], vals)
+    plan = plan_values(lay, {"S": [_cw(["A"], "TA", "000"), _cw(["B"], "TB", "SY")]})
+    got = _by_cell(plan)
+    assert [got[(r, 2)].new for r in (5, 6)] == ["A", "B"]
+    assert not {(r, c) for r, c in got if r in (7, 8) and c < 20}
+    assert got[(7, 20)] == CellChange(7, 20, "OLD TAG", None)
+    assert got[(7, 21)].new is None and got[(8, 21)].new is None
+    assert (8, 20) not in got
+    assert plan.extra_rows == [7, 8]
+    assert plan.changed_colorway_rows == [5, 6]
+
+
+def test_extra_row_formula_not_cleared():
+    lay = _vlayout([_grp("S - X/S", [5, 6])], {(6, 20): "=T5"})
+    plan = plan_values(lay, {"S": [_cw(["A"], "TA", "000")]})
+    assert (6, 20) not in _by_cell(plan)
+    assert plan.warnings == ["sel T6 berisi rumus, tidak ditulis"]
 
 
 def test_color_slots_overwrite_clear_old_yarn_keep_accessory():
@@ -302,7 +325,8 @@ def test_warns_same_key_in_separate_parts_of_sheet():
                     _grp("ZED - X/S", [30]), _grp("ZED - S/M", [31]), _grp("ZED - X/S", [32])])
     plan = plan_values(lay, {"S": [_cw(["A"])]})
     assert plan.warnings == ["S - X/S: muncul di 2 bagian sheet; semua bagian diisi colorway yang sama"]
-    assert {c.row for c in plan.changes if c.col == 2} == {5, 7, 20, 21}
+    assert {c.row for c in plan.changes if c.col == 2} == {5, 7, 20}
+    assert plan.extra_rows == [21]
 
 
 def test_adjacent_blocks_of_same_key_are_one_part():
