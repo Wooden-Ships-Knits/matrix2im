@@ -20,14 +20,13 @@ from matrix_to_im.xlsx_cells import apply_cell_values, sheet_xml_path
 pytestmark = pytest.mark.regression
 
 # Angka rencana sisip F27 (salinan uji "AI TEST V2"), setelah R14 (baris subtotal = baris ber-rumus
-# SUBTOTAL, bukan label). Spike awal memperkirakan 177 op / 286 baris / 179 style IM tak cocok
-# dengan pengelompokan yang berbeda; pembacaan berbasis label sebelumnya juga salah (10 baris
-# subtotal berlabel varian terbaca sebagai baris data, 4 baris data "... BOTH WHS - ALT n" terbaca
-# sebagai subtotal). Hasil nyata kini: 181 op, 294 baris, 24 op grup 1 baris, 195 style IM tak cocok.
-# Penjelasan: .superpowers/sdd/2026-11-10-tulis-im-master/task-12-report.md (R3 dan fix R14).
-EXPECTED_OPS = 181
-EXPECTED_ROWS = 294
-EXPECTED_SINGLE_ROW_OPS = 24
+# SUBTOTAL) dan R15 (kunci grup = "STYLE - SIZE"; teks sesudahnya adalah catatan). Hasil nyata:
+# 177 op dan 286 baris (sama dengan perkiraan spike), 20 op grup 1 baris (perkiraan spike 27 memakai
+# pengelompokan lain), dan 195 style IM tak cocok (perkiraan spike 179; sisanya label musim/judul
+# satu segmen seperti GRASSY/FALL, belum direkonsiliasi). Rincian: .superpowers/sdd/2026-11-10-tulis-im-master/task-12-report.md
+EXPECTED_OPS = 177
+EXPECTED_ROWS = 286
+EXPECTED_SINGLE_ROW_OPS = 20
 EXPECTED_UNMATCHED_IM_STYLES = 195
 
 
@@ -60,6 +59,17 @@ def test_subtotal_rows_by_formula_f27(im_write_path, layout):
     assert {2976, 9305} <= sub_rows        # label varian "-BOTH WHS" dan "- SY ONLY" yang dulu terlewat
     assert 8207 in group_rows and 8207 not in sub_rows   # WHITNEY ... BOTH WHS - ALT 1: baris data
     assert {2976, 9305} <= assigned
+
+
+def test_annotated_whitney_rows_merge_into_size_blocks_f27(layout):
+    """R15: baris berkatalog "- ALT n" / "BOTH WHS" adalah baris colorway di blok sizenya."""
+    by_first = {g.rows[0]: g for g in layout.groups}
+    sm, ml = by_first[8207], by_first[8217]
+    assert (sm.description, sm.rows, sm.subtotal_row) == (
+        "WHITNEY POCKET TUNIC CHUNKY - S/M", tuple(range(8207, 8216)), 8216)
+    assert (ml.description, ml.rows, ml.subtotal_row) == (
+        "WHITNEY POCKET TUNIC CHUNKY - M/L", tuple(range(8217, 8226)), 8226)
+    assert all(len(g.description.split(" - ")) <= 2 for g in layout.groups)
 
 
 def test_style_colorways_f27(golden_final):

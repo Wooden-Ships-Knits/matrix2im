@@ -30,6 +30,7 @@ class GroupSpec:
     colorways: list[list[str]]
     subtotal: str | None = "BOTH WHS"
     subtotal_label: str | None = None      # label baris subtotal apa adanya (menggantikan "<desc> - <subtotal>")
+    row_descriptions: list[str | None] | None = None   # DESCRIPTION per baris colorway (anotasi); None = description
     subtotal_func: str = "SUBTOTAL"        # nama fungsi di rumus subtotal (mis. huruf kecil)
     ws_tags: list[str | None] | None = None
     whs: list[str | None] | None = None
@@ -49,7 +50,7 @@ def build_im_sheet(path: Path, groups: list[GroupSpec], *, extra_header: dict[st
     for g in groups:
         first = row
         for i, colors in enumerate(g.colorways):
-            ws.cell(row, 1, g.description)
+            ws.cell(row, 1, (g.row_descriptions[i] if g.row_descriptions else None) or g.description)
             ws.cell(row, 2, 10)
             ws.cell(row, 4, "=1/2")
             ws.cell(row, 6, "=1/2")

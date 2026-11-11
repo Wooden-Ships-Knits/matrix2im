@@ -9,7 +9,8 @@ import openpyxl
 
 from .errors import Matrix2ImError
 from .legend_config import (
-    IM_COLOR_KEYS, IM_DESCRIPTION_KEY, IM_HEADER_ROW, IM_SHEET, IM_SUBTOTAL_FUNC, IM_WHS_KEY, IM_WS_TAG_KEY,
+    IM_COLOR_KEYS, IM_DESCRIPTION_KEY, IM_GROUP_KEY_SEGMENTS, IM_HEADER_ROW, IM_SHEET, IM_SUBTOTAL_FUNC,
+    IM_WHS_KEY, IM_WS_TAG_KEY,
 )
 
 
@@ -92,7 +93,7 @@ def read_layout(path: Path, sheet: str = IM_SHEET, header_row: int = IM_HEADER_R
                 target_cols = (*columns.colors, columns.ws_tag, columns.whs)
                 continue
             desc_raw = row[columns.description - 1] if len(row) >= columns.description else None
-            desc = normalize(desc_raw)
+            desc = " - ".join(normalize(desc_raw).split(" - ")[:IM_GROUP_KEY_SEGMENTS])
             row_formulas = {c: v for c, v in enumerate(row, 1) if isinstance(v, str) and v.startswith("=")}
             if any(func_re.match(v) for v in row_formulas.values()):
                 close(r)

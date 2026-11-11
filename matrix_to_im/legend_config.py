@@ -48,6 +48,8 @@ IM_WS_TAG_KEY = "WS TAG COLOR"
 IM_WHS_KEY = "WHS"                      # yang ditulis: kolom tepat di kanan WS TAG COLOR (PRD aturan 6)
 # Baris subtotal dikenali dari rumus SUBTOTAL, bukan label: label di IM asli bervariasi.
 IM_SUBTOTAL_FUNC = "SUBTOTAL"
+# Kunci grup = "STYLE - SIZE" (2 segmen " - "); teks sesudahnya di DESCRIPTION adalah catatan (mis. "- ALT 1").
+IM_GROUP_KEY_SEGMENTS = 2
 SOURCE_NAME = "F27 MATRIX MASTER"
 TARGET_NAME = "F27 IM MASTER (sheet F27, header baris 54)"
 # Arti font -> WHS warna di atas garis merah; di bawah garis merah selalu "SY".

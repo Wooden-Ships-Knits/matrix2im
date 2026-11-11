@@ -74,7 +74,7 @@ def test_label_without_subtotal_formula_is_data_row(tmp_path):
     groups = [GroupSpec("BBB - K - BOTH WHS - ALT 1", _cw(2), subtotal=None)]
     lay = read_layout(build_im_sheet(tmp_path / "im.xlsx", groups))
     assert [(g.description, g.rows, g.subtotal_row) for g in lay.groups] == [
-        ("BBB - K - BOTH WHS - ALT 1", (55, 56), None)]
+        ("BBB - K", (55, 56), None)]    # R15: kunci grup = STYLE - SIZE
     assert lay.subtotal_formulas == {}
 
 
@@ -82,6 +82,33 @@ def test_lowercase_subtotal_function_counts(tmp_path):
     groups = [GroupSpec("CCC - K", _cw(1), subtotal_func="subtotal")]
     lay = read_layout(build_im_sheet(tmp_path / "im.xlsx", groups))
     assert lay.groups[0].subtotal_row == 56
+
+
+def _summary(path):
+    return [(g.description, g.rows, g.subtotal_row) for g in read_layout(path).groups]
+
+
+def test_annotated_first_row_stays_in_group(tmp_path):
+    """R15: kunci grup = 'STYLE - SIZE'; teks sesudahnya hanya catatan."""
+    g = GroupSpec("AAA - K", _cw(3), row_descriptions=["AAA - K - BOTH WHS - ALT 1", None, None])
+    assert _summary(build_im_sheet(tmp_path / "im.xlsx", [g])) == [("AAA - K", (55, 56, 57), 58)]
+
+
+def test_two_different_annotations_one_group(tmp_path):
+    g = GroupSpec("AAA - K", _cw(4), row_descriptions=["AAA - K - FAF - ALT 1", "AAA - K - FAF - ALT 2 (INSET)", None, None])
+    assert _summary(build_im_sheet(tmp_path / "im.xlsx", [g])) == [("AAA - K", (55, 56, 57, 58), 59)]
+
+
+def test_size_change_without_subtotal_splits(tmp_path):
+    groups = [GroupSpec("AAA - K", _cw(2), subtotal=None), GroupSpec("AAA - L", _cw(2), subtotal=None)]
+    assert _summary(build_im_sheet(tmp_path / "im.xlsx", groups)) == [("AAA - K", (55, 56), None),
+                                                                      ("AAA - L", (57, 58), None)]
+
+
+def test_one_segment_label_is_own_group(tmp_path):
+    groups = [GroupSpec("GRASSY", _cw(1), subtotal=None), GroupSpec("AAA - K", _cw(1), subtotal=None)]
+    assert _summary(build_im_sheet(tmp_path / "im.xlsx", groups)) == [("GRASSY", (55,), None),
+                                                                      ("AAA - K", (56,), None)]
 
 
 def test_normalize():

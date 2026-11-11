@@ -129,7 +129,7 @@ Langkah ini dikerjakan sendiri oleh pengelola (menyangkut pengaturan sistem), bu
 - **Celah file sudah dibuka:** pengecekan "file sedang dibuka" bergantung pada file pemilik `~$` buatan Excel. Apakah `~$` dari PC lain terlihat lewat Google Drive masih harus diuji (uji terima nomor 2, spec §10.4). Sampai terkonfirmasi, TIM IM tetap berkoordinasi manual. Bila seseorang sudah membuka IM MASTER sebelum tool menulis lalu menyimpan sesudahnya, simpanannya bisa menimpa hasil tool; cadangan dan log adalah jalan pemulihan.
 - **Rujukan dari file lain:** file lain yang merujuk ke sel IM MASTER diperlakukan seperti saat TIM menyisipkan baris manual; tidak ada penanganan khusus. Laporan menyebut baris yang disisipkan.
 - Grup yang hanya 1 baris dan disisipi baris: rumus di luar baris subtotal yang merujuk baris itu tidak ikut melebar (ada peringatan di pratinjau).
-- Baris subtotal dikenali dari rumus `SUBTOTAL(` di barisnya, bukan dari tulisan labelnya (label di IM asli bervariasi). Baris tanpa rumus SUBTOTAL dianggap baris colorway.
+- Baris subtotal dikenali dari rumus `SUBTOTAL(` di barisnya, bukan dari tulisan labelnya (label di IM asli bervariasi). Baris tanpa rumus SUBTOTAL dianggap baris colorway. Kunci grup adalah `STYLE - SIZE` (dua segmen pertama DESCRIPTION); teks sesudahnya, mis. `- ALT 1`, dianggap catatan dan tidak diubah.
 - Style IM yang tidak ada di MATRIX tidak disentuh. Label subtotal tidak diubah.
 
 ## Skema keluaran
