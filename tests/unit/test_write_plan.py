@@ -396,3 +396,60 @@ def test_project_layout_copies_fills_to_inserted_rows():
     proj = project_layout(lay, ops)
     assert proj.fills == {(55, 3): "FF99FF", (56, 3): "FF99FF", (57, 3): "FFCC99",
                           (59, 3): "969696", (60, 3): "969696"}
+
+
+# ---- pilih collection (tab MATRIX) yang ditulis; permintaan user 12 Nov 2026 ----
+
+from matrix_to_im.write_plan import CollectionInfo, collections_in, select_collections  # noqa: E402
+
+
+def _three_tabs():
+    return _final(
+        _rec("AAA", ["A1"], "FALL No.1 | B1 | g", whs="000"),
+        _rec("AAA", ["A2"], "FALL No.1 | B2 | g", whs="000"),
+        _rec("HUTTON", ["N"], "FALL No.2 | B3 | g", whs="000"),
+        _rec("BBB", ["B1"], "LUXE (WINTER) No.1 | B1 | g", whs="SY"),
+        _rec("HUTTON", ["N"], "LUXE No.7 | B9 | g", whs="SY"),
+        _rec("CCC", ["C1"], "GAME DAY No.1 | B1 | g", whs="000"),
+    )
+
+
+def test_collections_listed_in_matrix_order_with_counts():
+    assert collections_in(_three_tabs()) == [
+        CollectionInfo("FALL", styles=2, colorways=3),
+        CollectionInfo("LUXE", styles=2, colorways=2),
+        CollectionInfo("GAME DAY", styles=1, colorways=1),
+    ]
+
+
+def test_no_selection_keeps_every_record():
+    final = _three_tabs()
+    sel = select_collections(final, None)
+    assert sel.final["records"] == final["records"]
+    assert sel.collections is None and sel.not_selected == [] and sel.warnings == []
+
+
+def test_selection_keeps_only_styles_of_chosen_collections():
+    sel = select_collections(_three_tabs(), ["GAME DAY", "LUXE"])
+    assert sorted({r["DESCRIPTION"] for r in sel.final["records"]}) == ["BBB", "CCC", "HUTTON"]
+    assert sel.collections == ("GAME DAY", "LUXE")
+    assert sel.not_selected == ["AAA"]
+
+
+def test_style_also_in_unchosen_collection_keeps_all_its_records_and_warns():
+    """WHS gabungan lintas tab tetap benar: HUTTON 000 (FALL) + SY (LUXE) = BOTH WHS walau hanya LUXE dipilih."""
+    sel = select_collections(_three_tabs(), ["LUXE"])
+    out, skips = style_colorways(sel.final)
+    assert skips == [] and [c.whs for c in out["HUTTON"]] == ["BOTH WHS"]
+    assert sel.not_selected == ["AAA", "CCC"]
+    assert len(sel.warnings) == 1 and "HUTTON" in sel.warnings[0] and "FALL" in sel.warnings[0]
+
+
+def test_unknown_collection_rejected_with_available_names():
+    with pytest.raises(Matrix2ImError, match=r"ESSENTIAL.*FALL, LUXE, GAME DAY"):
+        select_collections(_three_tabs(), ["ESSENTIAL"])
+
+
+def test_empty_selection_rejected():
+    with pytest.raises(Matrix2ImError, match="minimal satu collection"):
+        select_collections(_three_tabs(), [])

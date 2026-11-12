@@ -110,6 +110,63 @@ def style_colorways(final: dict) -> tuple[dict[str, list[Colorway]], list[Skip]]
 
 
 @dataclass(frozen=True)
+class CollectionInfo:
+    """Satu collection (= tab MATRIX) di final.json, untuk daftar pilihan di UI/CLI."""
+    name: str
+    styles: int
+    colorways: int
+
+
+@dataclass(frozen=True)
+class CollectionSelection:
+    """final.json yang dibatasi ke collection pilihan; collections None = semua (tanpa pilihan)."""
+    final: dict
+    collections: tuple[str, ...] | None
+    not_selected: list[str]      # style (kunci ternormalisasi) yang tidak ditulis karena collection-nya tidak dipilih
+    warnings: list[str]
+
+
+def collections_in(final: dict) -> list[CollectionInfo]:
+    """Collection menurut urutan kemunculan di final.json (urutan tab MATRIX)."""
+    styles: dict[str, set[str]] = {}
+    counts: Counter[str] = Counter()
+    for rec in final["records"]:
+        sheet, _card = parse_ref(rec["_ref"])
+        styles.setdefault(sheet, set()).add(normalize(rec["DESCRIPTION"]))
+        counts[sheet] += 1
+    return [CollectionInfo(name, len(s), counts[name]) for name, s in styles.items()]
+
+
+def select_collections(final: dict, collections: Iterable[str] | None) -> CollectionSelection:
+    """Hanya style yang punya kartu di collection pilihan.
+
+    Style yang juga ada di collection lain ditulis dengan semua kartunya, supaya aturan lintas sheet
+    (WHS digabung, colorway berbeda dilewati) sama dengan saat semua collection dipilih.
+    """
+    if collections is None:
+        return CollectionSelection(final, None, [], [])
+    chosen = tuple(dict.fromkeys(collections))
+    if not chosen:
+        raise Matrix2ImError("Pilih minimal satu collection")
+    known = [c.name for c in collections_in(final)]
+    if unknown := [c for c in chosen if c not in known]:
+        raise Matrix2ImError(f"Collection tidak ada di MATRIX: {', '.join(unknown)}. "
+                             f"Collection yang ada: {', '.join(known)}")
+    sheets_of: dict[str, list[str]] = {}
+    for rec in final["records"]:
+        sheet, _card = parse_ref(rec["_ref"])
+        names = sheets_of.setdefault(normalize(rec["DESCRIPTION"]), [])
+        if sheet not in names:
+            names.append(sheet)
+    keep = {style for style, sheets in sheets_of.items() if any(s in chosen for s in sheets)}
+    warnings = [f"{style}: juga ada di collection {', '.join(s for s in sheets if s not in chosen)} yang tidak "
+                "dipilih; colorway dan WHS digabung dari semua collection"
+                for style, sheets in sheets_of.items() if style in keep and not set(sheets) <= set(chosen)]
+    records = [r for r in final["records"] if normalize(r["DESCRIPTION"]) in keep]
+    return CollectionSelection({**final, "records": records}, chosen, sorted(set(sheets_of) - keep), warnings)
+
+
+@dataclass(frozen=True)
 class InsertOp:
     """Satu sisipan baris di dalam grup; at_row/fill_* dalam koordinat sebelum sisipan op ini."""
     description: str

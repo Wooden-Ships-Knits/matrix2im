@@ -299,7 +299,7 @@ def test_write_options_override_settings_file(write_env, tmp_path, monkeypatch):
     toml.write_text('[im]\nmaster = "/tidak/ada.xlsx"\ninsert_engine = "excel"\n', encoding="utf-8")
     seen = {}
 
-    def fake_prepare(final, settings, password):
+    def fake_prepare(final, settings, password, **kw):
         seen["settings"] = settings
         raise Matrix2ImError("stop")
 
@@ -419,3 +419,43 @@ def test_write_failure_prints_run_report_path(write_env, monkeypatch, capsys):
     assert main(argv + ["--yes"]) == 1
     err = capsys.readouterr().err
     assert "Laporan: /x/laporan.xlsx" in err
+
+
+# ---------- write --collection (permintaan user 12 Nov 2026) ----------
+
+def _add_luxe_style(tmp_path):
+    final = tmp_path / "final.json"
+    data = json.loads(final.read_text(encoding="utf-8"))
+    rec = _rec("ZZZ", ["z"], "T", "000", 9)
+    rec["_ref"] = "LUXE No.9 | B1 | x"
+    data["records"].append(rec)
+    final.write_text(json.dumps(data), encoding="utf-8")
+
+
+def test_write_collection_limits_to_chosen_tab(write_env, tmp_path, monkeypatch, capsys):
+    im, argv = write_env
+    _add_luxe_style(tmp_path)
+    assert main(argv + ["--collection", "SHEET", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "Collection: SHEET" in out
+    assert "Style collection tidak dipilih (tidak ditulis): 1" in out
+    assert "ZZZ" not in out                      # bukan "tidak ada di IM": collection-nya tidak dipilih
+    monkeypatch.setattr("sys.stdin", io.StringIO(TEST_PASSWORD + "\n"))
+    assert main(argv + ["--collection", "SHEET", "--yes"]) == 0
+    assert "1 style MATRIX tidak ada di IM" not in capsys.readouterr().out
+
+
+def test_write_without_collection_says_all(write_env, capsys):
+    im, argv = write_env
+    assert main(argv + ["--dry-run"]) == 0
+    assert "Collection: semua" in capsys.readouterr().out
+
+
+def test_write_unknown_collection_exit_1_lists_available(write_env, tmp_path, capsys):
+    im, argv = write_env
+    _add_luxe_style(tmp_path)
+    before = _sha(im)
+    assert main(argv + ["--collection", "ESSENTIAL", "--yes"]) == 1
+    err = capsys.readouterr().err
+    assert "Collection yang ada: SHEET, LUXE" in err and "Traceback" not in err
+    assert _sha(im) == before

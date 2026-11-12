@@ -19,7 +19,7 @@ import zipfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterable
 from xml.etree import ElementTree as ET
 
 from openpyxl.utils import get_column_letter
@@ -31,7 +31,8 @@ from .im_lock import FileSharing, check_modify_password, owner_file, owner_name,
 from .legend_config import IM_KEEP_PARTS, IM_SHEET
 from .settings import Settings
 from .write_plan import (
-    InsertOp, Skip, ValuePlan, match_style, plan_inserts, plan_values, project_layout, style_colorways,
+    InsertOp, Skip, ValuePlan, match_style, plan_inserts, plan_values, project_layout, select_collections,
+    style_colorways,
 )
 from .write_report import inserted_rows, report_rows, report_xlsx_bytes
 from .xlsx_cells import apply_cell_values, sheet_xml_path, styles_xml_path
@@ -102,6 +103,7 @@ class WritePreview:
     values: ValuePlan
     skipped: list[Skip]
     summary: dict
+    collections: tuple[str, ...] | None = None   # collection (tab MATRIX) pilihan; None = semua
 
 
 @dataclass
@@ -132,8 +134,12 @@ def _no_owner(path: Path) -> None:
                            "Minta yang bersangkutan menutup file, lalu coba lagi.")
 
 
-def prepare_write(final: dict, settings: Settings, password: str) -> WritePreview:
-    """Dry-run: hitung sisipan dan perubahan sel tanpa mengubah apa pun."""
+def prepare_write(final: dict, settings: Settings, password: str,
+                  collections: Iterable[str] | None = None) -> WritePreview:
+    """Dry-run: hitung sisipan dan perubahan sel tanpa mengubah apa pun.
+
+    collections membatasi ke style collection (tab MATRIX) tertentu; style lain tidak disentuh.
+    """
     if settings.im_master is None:
         raise Matrix2ImError("Setting im_master belum diisi")
     if settings.backup_dir is None:
@@ -147,9 +153,10 @@ def prepare_write(final: dict, settings: Settings, password: str) -> WritePrevie
         fp = fingerprint(path)
     except OSError as exc:
         raise drive_access_error(path, exc) from exc
+    selection = select_collections(final, collections)
     layout = read_layout(path)
-    colorways, skipped = style_colorways(final)
-    warnings: list[str] = []
+    colorways, skipped = style_colorways(selection.final)
+    warnings: list[str] = list(selection.warnings)
     engine = "none"
     if settings.insert_engine == "excel":
         if excel_available():
@@ -159,8 +166,9 @@ def prepare_write(final: dict, settings: Settings, password: str) -> WritePrevie
     ops = plan_inserts(layout, colorways) if engine == "excel" else []
     projected = project_layout(layout, ops)
     values = plan_values(projected, colorways)
-    skipped_styles = {k.style for k in skipped}     # ada di MATRIX tapi dilewati: bukan "IM tanpa MATRIX"
-    values.unmatched_im_styles = [s for s in values.unmatched_im_styles if s not in skipped_styles]
+    # Ada di MATRIX tapi dilewati atau collection-nya tidak dipilih: bukan "IM tanpa MATRIX".
+    known_styles = {k.style for k in skipped} | set(selection.not_selected)
+    values.unmatched_im_styles = [s for s in values.unmatched_im_styles if s not in known_styles]
     group_size = {r: len(g.rows) for g in layout.groups for r in g.rows}
     for op in ops:
         if group_size.get(op.fill_from) == 1:
@@ -183,8 +191,10 @@ def prepare_write(final: dict, settings: Settings, password: str) -> WritePrevie
         "missing_styles": len(values.missing_styles),
         "warnings": len(values.warnings),
         "engine": engine,
+        "collections": list(selection.collections) if selection.collections is not None else None,
+        "not_selected_styles": len(selection.not_selected),
     }
-    return WritePreview(path, fp, engine, ops, projected, values, skipped, summary)
+    return WritePreview(path, fp, engine, ops, projected, values, skipped, summary, selection.collections)
 
 
 def _inserted_rows(ops: list[InsertOp]) -> list[int]:
@@ -375,7 +385,8 @@ def _execute(preview: WritePreview, final: dict, settings: Settings, password: s
             raise Matrix2ImError("Tata letak IM MASTER setelah sisip baris tidak sama dengan rencana; "
                                  "penulisan dibatalkan, file asli tidak diubah")
         progress("tulis nilai")
-        colorways, _ = style_colorways(final)
+        # Pilihan collection diterapkan lagi: final yang diberikan pemanggil boleh berisi semua collection.
+        colorways, _ = style_colorways(select_collections(final, preview.collections).final)
         again = plan_values(real, colorways)
         if (_cells(again.changes) != _cells(preview.values.changes)
                 or _cells(again.fills) != _cells(preview.values.fills)):

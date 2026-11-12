@@ -85,11 +85,21 @@ Dengan `insert_engine = "none"` (atau bila Excel tidak terpasang), tool hanya me
 ### Lewat UI
 
 1. Jalankan `.venv/bin/matrix2im ui` (di PC pusat: `--host 0.0.0.0`, lihat di bawah), upload MATRIX, klik **Proses**, lalu periksa hasilnya. IM MASTER tidak perlu diupload: penulisan selalu memakai file `master` di `matrix2im.local.toml` (header file itu juga dipakai untuk validasi bila tidak ada upload IM). Kotak upload IM MASTER opsional dan hanya untuk validasi header (fase 1); file yang diupload di sana tidak pernah ditulis.
-2. Di panel **Tulis ke IM MASTER**, isi **Nama Anda** (masuk log) dan **Password IM MASTER**, lalu klik **Buat rencana**. Belum ada yang ditulis pada tahap ini.
-3. Periksa pratinjau: jumlah sel dan baris yang berubah, daftar sel (nilai lama dan baru), baris yang disisipkan, style yang dilewati, style MATRIX yang tidak ada di IM (tidak ditulis sama sekali), dan peringatan. Tabel di layar dibatasi 500 sel; klik **Unduh semua perubahan (Excel)** untuk daftar lengkap dalam file .xlsx (isi di "Laporan Excel" di bawah).
+2. Di panel **Tulis ke IM MASTER**, pilih **collection** yang ditulis (lihat "Memilih collection" di bawah), isi **Nama Anda** (masuk log) dan **Password IM MASTER**, lalu klik **Buat rencana**. Belum ada yang ditulis pada tahap ini.
+3. Periksa pratinjau: collection yang dipilih, jumlah sel dan baris yang berubah, daftar sel (nilai lama dan baru), baris yang disisipkan, style yang dilewati, style MATRIX yang tidak ada di IM (tidak ditulis sama sekali), dan peringatan. Tabel di layar dibatasi 500 sel; klik **Unduh semua perubahan (Excel)** untuk daftar lengkap dalam file .xlsx (isi di "Laporan Excel" di bawah).
 4. Centang pernyataan bahwa tidak ada yang sedang membuka IM MASTER, lalu klik **Tulis semua ke IM**. Tunggu laporan; satu penulisan penuh F27 memakan waktu beberapa menit.
 
 Hanya satu orang yang bisa menulis pada satu waktu; sesi lain melihat pesan bahwa penulisan sedang berjalan.
+
+### Memilih collection
+
+Collection = tab (sheet) di MATRIX, misalnya ESSENTIALS COTTON, ESSENTIALS GRASSY, GAME DAY, FALL, dan LUXE di F27. Pilih sebagian bila collection lain belum selesai.
+
+- Di UI, semua collection tercentang setelah **Proses**, lengkap dengan jumlah style dan colorway-nya. Hilangkan centang collection yang belum ingin ditulis. Bila pilihan diubah setelah rencana dibuat, rencana lama dibatalkan dan perlu **Buat rencana ulang** (password tidak perlu diketik lagi).
+- Di CLI, pakai `--collection "NAMA TAB"` (boleh diulang). Tanpa opsi ini semua collection ditulis. Nama yang tidak ada ditolak, dan pesannya menyebut collection yang ada.
+- Style dari collection yang tidak dipilih tidak disentuh sama sekali di IM. Style itu tidak dihitung sebagai "Style IM tak ada di MATRIX", tapi muncul sebagai jumlah "style collection lain tidak ditulis".
+- Style yang ada di lebih dari satu collection (F27: HUTTON MOCK T NECK CHUNKY di ESSENTIALS GRASSY dan LUXE) ditulis bila salah satu collection-nya dipilih. Colorway dan WHS-nya tetap digabung dari semua collection seperti biasa, dan pratinjau memberi peringatan.
+- Collection yang dipilih tercatat di ringkasan pratinjau, laporan, dan log.
 
 ### Lewat CLI
 
@@ -99,6 +109,9 @@ Hanya satu orang yang bisa menulis pada satu waktu; sesi lain melihat pesan bahw
 
 # Tulis (menanyakan password dan konfirmasi 'ya')
 .venv/bin/matrix2im write out/final.json --user "Nama Anda"
+
+# Tulis hanya collection FALL dan LUXE
+.venv/bin/matrix2im write out/final.json --collection FALL --collection LUXE --user "Nama Anda"
 ```
 
 - Password dibaca dari prompt (atau baris pertama stdin), tidak pernah dari argumen perintah. Tanpa terminal, `--yes` wajib.

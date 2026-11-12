@@ -129,13 +129,14 @@ def test_upload_and_run_without_im(base, tmp_path):
     upload(base, "matrix", build_matrix(tmp_path / "m.xlsx"))
     status, payload = run(base)
     assert status == 200
-    assert list(payload) == ["files", "seconds", "raw", "final", "validation_errors", "im_checked"]
+    assert list(payload) == ["files", "seconds", "raw", "final", "validation_errors", "im_checked", "collections"]
     assert payload["files"] == {"matrix": "m.xlsx", "im": None}
     assert payload["raw"]["total_styles"] == 4
     colorways = sum(len(s[g]) for s in payload["raw"]["styles"]
                     for g in ("color_above_black_line", "color_between_black_and_red_line", "color_below_red_line"))
     assert payload["final"]["summary"]["total_records"] == colorways
     assert payload["validation_errors"] == [] and payload["im_checked"] is False
+    assert payload["collections"] == [{"name": "TEST", "styles": 4, "colorways": colorways}]
 
 
 def test_run_with_im_checks_header(base, tmp_path):
@@ -533,8 +534,8 @@ def test_prepare_caps_changes_at_500(serve_with, sessions, tmp_path, monkeypatch
     im, settings, final = _write_env(tmp_path)
     real = ui_server.prepare_write
 
-    def many(final, settings, password):
-        p = real(final, settings, password)
+    def many(final, settings, password, **kw):
+        p = real(final, settings, password, **kw)
         p.values.changes = [CellChange(i, 5, None, "x") for i in range(1, 701)]
         return p
 
@@ -850,8 +851,8 @@ def test_prepare_shows_inserts_and_skipped(serve_with, sessions, tmp_path, monke
     im, settings, final = _write_env(tmp_path)
     real = ui_server.prepare_write
 
-    def with_ops(final, settings, password):
-        p = real(final, settings, password)
+    def with_ops(final, settings, password, **kw):
+        p = real(final, settings, password, **kw)
         p.inserts = [InsertOp("AAA - K", 57, 2, 56, 56, None, {})]
         p.skipped = [Skip("ZZZ", "tidak ada di IM")]
         return p
@@ -1011,3 +1012,44 @@ def test_run_settings_im_permission_error_points_to_drive_permission(serve_with,
     payload = json.loads(body)
     assert status == 422 and "izin akses folder Google Drive" in payload["error"]
     assert "Menyiapkan PC pusat" in payload["error"]
+
+
+# ---------- pilih collection (permintaan user 12 Nov 2026) ----------
+
+def _collection_env(tmp_path):
+    groups = [GroupSpec("AAA - K", [["a"]]), GroupSpec("BBB - K", [["b"]])]
+    im = build_im_sheet(tmp_path / "im-koleksi.xlsx", groups)
+    add_file_sharing(im)
+    settings = Settings(im_master=im, backup_dir=tmp_path / "cadangan", insert_engine="none")
+    final = {"records": [
+        {"DESCRIPTION": "AAA", "COLOR1": "x1", "WS TAG COLOR": "T1", "WHS": "000", "_ref": "FALL No.1 | B1 | x"},
+        {"DESCRIPTION": "BBB", "COLOR1": "y1", "WS TAG COLOR": "T2", "WHS": "SY", "_ref": "LUXE No.1 | B1 | x"}]}
+    return im, settings, final
+
+
+def test_prepare_and_commit_only_chosen_collection(serve_with, sessions, tmp_path):
+    im, settings, final = _collection_env(tmp_path)
+    base = serve_with(settings)
+    cookie = _new_session(base)
+    _inject(sessions, cookie, final)
+    status, plan = post_json(base, "/api/write/prepare",
+                             {"name": "andi", "password": PW, "collections": ["FALL"]}, cookie)
+    assert status == 200, plan
+    assert plan["summary"]["collections"] == ["FALL"] and plan["summary"]["not_selected_styles"] == 1
+    assert {c["description"] for c in plan["changes"]} == {"AAA - K"}
+    status, _ = post_json(base, "/api/write/commit", {"token": plan["token"], "password": PW}, cookie)
+    assert status == 202
+    st = wait_state(base, cookie, ("done", "error"))
+    assert st["state"] == "done", st
+    assert st["report"]["summary"]["collections"] == ["FALL"]
+
+
+@pytest.mark.parametrize("value, code", [("FALL", 400), ([1], 400), ([], 422), (["ESSENTIAL"], 422)])
+def test_prepare_rejects_invalid_collections(serve_with, sessions, tmp_path, value, code):
+    im, settings, final = _collection_env(tmp_path)
+    base = serve_with(settings)
+    cookie = _new_session(base)
+    _inject(sessions, cookie, final)
+    status, payload = post_json(base, "/api/write/prepare",
+                                {"name": "andi", "password": PW, "collections": value}, cookie)
+    assert status == code and "collection" in payload["error"].lower()

@@ -20,6 +20,7 @@ import threading
 import time
 import urllib.parse
 import webbrowser
+from dataclasses import asdict
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
@@ -38,6 +39,7 @@ from .settings import Settings
 from .extract import extract
 from .transform import transform
 from .validate import read_im_header, validate
+from .write_plan import collections_in
 from .write_report import report_rows, report_xlsx_bytes
 
 log = logging.getLogger("matrix2im.ui")
@@ -202,8 +204,12 @@ def run_pipeline(matrix: Path, im: Path | None) -> dict:
     final = transform(raw)
     header = read_im_header(im) if im else None
     errors = validate(raw, final, header)
+    try:   # daftar pilihan collection di panel tulis; _ref tak terbaca sudah dilaporkan validasi
+        collections = [asdict(c) for c in collections_in(final)]
+    except Matrix2ImError:
+        collections = []
     return {"seconds": round(time.perf_counter() - started, 2), "raw": raw, "final": final,
-            "validation_errors": errors, "im_checked": header is not None}
+            "validation_errors": errors, "im_checked": header is not None, "collections": collections}
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -425,12 +431,17 @@ class _Handler(BaseHTTPRequestHandler):
         if not isinstance(password, str) or not password:
             self._error(HTTPStatus.BAD_REQUEST, "Isi password IM MASTER")
             return
+        collections = body.get("collections")   # None = semua collection
+        if collections is not None and (not isinstance(collections, list)
+                                        or not all(isinstance(c, str) for c in collections)):
+            self._error(HTTPStatus.BAD_REQUEST, "Pilihan collection tidak valid")
+            return
         if (busy := self._busy_message()) is not None:
             self._error(HTTPStatus.CONFLICT, busy)
             return
         final = last["final"]
         try:
-            preview = prepare_write(final, self.server.settings, password)
+            preview = prepare_write(final, self.server.settings, password, collections=collections)
         except WrongPassword as exc:
             self._error(HTTPStatus.UNAUTHORIZED, str(exc))
             return

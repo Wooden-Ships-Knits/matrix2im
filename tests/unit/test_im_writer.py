@@ -983,3 +983,39 @@ def test_commit_aborts_on_unplanned_fill_change(tmp_path, monkeypatch):
     _patch_apply(monkeypatch, mutate_fills=lambda fs: [*fs, FillChange(55, 24, "FF99FF", "FFCC99")])
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
     _aborted(st, rep, "Verifikasi gagal: warna sel X55", im, before, ino)
+
+
+# ---------- pilih collection (permintaan user 12 Nov 2026) ----------
+
+def _two_collections(tmp_path):
+    """AAA di collection FALL, BBB di collection LUXE; IM berisi keduanya (baris 55 dan 57)."""
+    groups = [GroupSpec("AAA - K", [["a"]]), GroupSpec("BBB - K", [["b"]])]
+    im, st = _make(tmp_path, groups)
+    a, b = _rec("AAA", ["x1"], "T1", "000"), _rec("BBB", ["y1"], "T2", "SY")
+    a["_ref"], b["_ref"] = "FALL No.1 | B1 | x", "LUXE No.1 | B1 | x"
+    return im, st, {"records": [a, b]}
+
+
+def test_prepare_with_collection_plans_only_chosen_styles(tmp_path):
+    im, st, final = _two_collections(tmp_path)
+    p = prepare_write(final, st, PW, collections=["FALL"])
+    assert {c.row for c in p.values.changes} == {55}
+    assert p.values.unmatched_im_styles == []          # BBB tidak dipilih, bukan "IM tanpa data MATRIX"
+    assert p.summary["collections"] == ["FALL"] and p.summary["not_selected_styles"] == 1
+
+
+def test_prepare_without_collection_plans_all_styles(tmp_path):
+    im, st, final = _two_collections(tmp_path)
+    p = prepare_write(final, st, PW)
+    assert {c.row for c in p.values.changes} == {55, 57}
+    assert p.summary["collections"] is None and p.summary["not_selected_styles"] == 0
+
+
+def test_commit_writes_only_chosen_collection_even_given_full_final(tmp_path):
+    im, st, final = _two_collections(tmp_path)
+    p = prepare_write(final, st, PW, collections=["FALL"])
+    rep = commit_write(p, final, st, PW, "andi", "matrix.xlsx")
+    assert rep.ok, rep.message
+    assert _values(im, 55) == ["x1", "T1", "000"] and _values(im, 57) == ["b", None, None]
+    entry = json.loads((st.backup_dir / "matrix2im-log.jsonl").read_text(encoding="utf-8").splitlines()[0])
+    assert entry["summary"]["collections"] == ["FALL"]

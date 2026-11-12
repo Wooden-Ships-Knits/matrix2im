@@ -173,6 +173,16 @@
   .field input { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
   .field input:disabled { opacity: .6; }
   .field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .wcoll { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px 12px; margin: 0 0 14px; }
+  .wcoll legend { color: var(--muted); font-size: 12.5px; padding: 0 4px; }
+  .wcoll .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .wcoll .opt { display: inline-flex; gap: 6px; align-items: center; background: var(--surface); border: 1px solid var(--border);
+                border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+  .wcoll .opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .wcoll .opt .sub { color: var(--muted); font-size: 12px; }
+  .wcoll .opt input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .wcoll .quick { display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
+  .wcoll .quick .hint { margin: 0; }
   .wsub { margin-top: 18px; }
   .wsub h3 { font-size: 14px; margin-bottom: 6px; }
   .wlist { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
@@ -295,6 +305,15 @@
     <div id="write-main">
       <p class="hint">Hasil proses di atas akan dicocokkan dengan IM MASTER bersama. Buat rencana dulu untuk melihat pratinjau;
         belum ada yang ditulis sampai Anda menekan <strong>Tulis semua ke IM</strong>.</p>
+      <fieldset class="wcoll" id="write-collections" hidden>
+        <legend>Collection yang ditulis ke IM (tab MATRIX)</legend>
+        <div class="opts" id="write-coll-opts"></div>
+        <div class="quick">
+          <button class="btn" type="button" id="write-coll-all">Pilih semua</button>
+          <button class="btn" type="button" id="write-coll-none">Kosongkan</button>
+          <span class="hint" id="write-coll-note"></span>
+        </div>
+      </fieldset>
       <form class="wform" id="write-form" autocomplete="off" onsubmit="return false">
         <div class="field"><label for="write-name">Nama Anda</label>
           <input type="text" id="write-name" autocomplete="off" maxlength="80"></div>
@@ -764,13 +783,48 @@
   function writeShowError(msg) { const el = $("#write-error"); el.innerHTML = `<strong>Gagal</strong>${esc(msg)}`; el.hidden = false; }
   function writeHideError() { $("#write-error").hidden = true; }
 
+  // Collection (tab MATRIX) pilihan; semua tercentang = semua collection (dikirim sebagai null).
+  const collBoxes = () => [...document.querySelectorAll("#write-coll-opts input[type=checkbox]")];
+  function chosenCollections() {
+    const boxes = collBoxes();
+    const chosen = boxes.filter((b) => b.checked).map((b) => b.value);
+    return { all: chosen.length === boxes.length, chosen };
+  }
+  function collNote() {
+    const boxes = collBoxes();
+    const { all, chosen } = chosenCollections();
+    $("#write-coll-note").textContent = all ? "Semua collection ditulis."
+      : chosen.length ? `${chosen.length} dari ${boxes.length} collection ditulis; style collection lain tidak disentuh.`
+      : "Pilih minimal satu collection.";
+  }
+  function renderCollections() {
+    const list = (data && data.collections) || [];
+    $("#write-collections").hidden = !list.length;
+    $("#write-coll-opts").innerHTML = list.map((c) => `<label class="opt"><input type="checkbox" value="${esc(c.name)}" checked>
+      <span><b>${esc(c.name)}</b> <span class="sub">· ${num(c.styles)} style, ${num(c.colorways)} colorway</span></span></label>`).join("");
+    collNote();
+  }
+  function onCollectionsChanged() {   // rencana lama tidak berlaku lagi; password tetap dipegang untuk "Buat rencana ulang"
+    collNote();
+    if (writePlan) {
+      writePlan.stale = true;
+      $("#write-preview").hidden = true;      // tombol tulis ikut tersembunyi sampai rencana dibuat ulang
+      $("#write-confirm").checked = false;
+      $("#write-coll-note").textContent += " Rencana lama dibatalkan; tekan Buat rencana ulang.";
+    }
+    writeSyncButtons();
+  }
+
   function writeSyncButtons() {
     const hasPlan = Boolean(writePlan);
+    collBoxes().forEach((b) => { b.disabled = writeBusy; });
+    $("#write-coll-all").disabled = writeBusy;
+    $("#write-coll-none").disabled = writeBusy;
     $("#write-prepare").disabled = writeBusy;
     $("#write-name").disabled = writeBusy || hasPlan;
     $("#write-password").disabled = writeBusy || hasPlan;
     $("#write-confirm").disabled = writeBusy;
-    $("#write-commit").disabled = writeBusy || !$("#write-confirm").checked;
+    $("#write-commit").disabled = writeBusy || !$("#write-confirm").checked || Boolean(writePlan && writePlan.stale);
     $("#write-prepare").textContent = hasPlan ? "Buat rencana ulang" : "Buat rencana";
   }
   function writeSetBusy(on, phaseText) {
@@ -799,6 +853,7 @@
     $("#write-disabled").hidden = !off;
     $("#write-main").hidden = off;
     if (off) $("#write-disabled").innerHTML = `<strong>Penulisan ke IM MASTER belum aktif</strong>${esc(writeCfg.reason || "")}`;
+    renderCollections();
   }
 
   function listBlock(title, items, fmt) {
@@ -809,6 +864,8 @@
     const s = p.summary;
     const tile = (label, value, sub) => `<div class="tile"><div class="label">${label}</div><div class="value">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ""}</div>`;
     $("#write-tiles").innerHTML = [
+      tile("Collection", s.collections ? esc(s.collections.join(", ")) : "semua",
+           s.not_selected_styles ? `${num(s.not_selected_styles)} style collection lain tidak ditulis` : ""),
       tile("Style cocok", num(s.styles), `${num(s.groups)} grup di IM`),
       tile("Sel berubah", num(s.cells_changed)),
       tile("Warna latar diubah", num(s.fills_changed ?? 0), "WS TAG COLOR &amp; WHS: 000 pink · SY oranye · BOTH WHS abu"),
@@ -853,9 +910,11 @@
     const pw = writePlan ? writePw : $("#write-password").value;
     if (!name) { writeShowError("Isi nama Anda dulu"); return; }
     if (!pw) { writeShowError("Isi password IM MASTER"); return; }
+    const { all, chosen } = chosenCollections();
+    if (!chosen.length && collBoxes().length) { writeShowError("Pilih minimal satu collection"); return; }
     writeSetBusy(true, "Membuat rencana…");
     try {
-      const p = await postJson("/api/write/prepare", { name, password: pw });
+      const p = await postJson("/api/write/prepare", { name, password: pw, collections: all ? null : chosen });
       writePlan = p; writePw = pw;
       $("#write-password").value = "";
       renderWritePreview(p);
@@ -869,7 +928,7 @@
   }
 
   async function writeCommit() {
-    if (!writePlan || !$("#write-confirm").checked) return;
+    if (!writePlan || writePlan.stale || !$("#write-confirm").checked) return;
     writeHideError();
     $("#write-report").hidden = true;
     writeSetBusy(true, PHASES["mulai"]);
@@ -896,7 +955,8 @@
       const r = st.report || {};
       const sm = r.summary || {};
       box.innerHTML = `<div class="alert ok"><strong>Penulisan selesai</strong>${esc(r.message || "")}
-        <dl><dt>Cadangan</dt><dd class="mono">${esc(r.backup || "(tidak ada)")}</dd>
+        <dl><dt>Collection</dt><dd>${sm.collections ? esc(sm.collections.join(", ")) : "semua"}</dd>
+        <dt>Cadangan</dt><dd class="mono">${esc(r.backup || "(tidak ada)")}</dd>
         <dt>Sel diubah</dt><dd>${num(sm.cells_changed ?? 0)}</dd>
         <dt>Baris disisipkan</dt><dd>${num(sm.rows_inserted ?? 0)}${(r.inserted_rows || []).length ? ` (baris ${esc(r.inserted_rows.join(", "))})` : ""}</dd>
         <dt>Laporan</dt><dd class="mono">${esc(r.laporan || "(tidak dibuat)")}</dd>
@@ -950,6 +1010,9 @@
   $("#write-prepare").addEventListener("click", writePrepare);
   $("#write-commit").addEventListener("click", writeCommit);
   $("#write-confirm").addEventListener("change", writeSyncButtons);
+  $("#write-coll-opts").addEventListener("change", onCollectionsChanged);
+  $("#write-coll-all").addEventListener("click", () => { collBoxes().forEach((b) => { b.checked = true; }); onCollectionsChanged(); });
+  $("#write-coll-none").addEventListener("click", () => { collBoxes().forEach((b) => { b.checked = false; }); onCollectionsChanged(); });
   $("#write-password").addEventListener("keydown", (e) => { if (e.key === "Enter") writePrepare(); });
   initWrite();
 })();

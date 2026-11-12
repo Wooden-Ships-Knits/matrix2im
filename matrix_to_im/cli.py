@@ -138,13 +138,15 @@ _SUMMARY_LABELS = (("styles", "Style cocok"), ("groups", "Grup IM cocok"), ("cel
                    ("changed_colorway_rows", "Baris colorway berubah"), ("short_groups", "Grup kekurangan baris"),
                    ("extra_rows", "Baris lebih (WS TAG COLOR & WHS dikosongkan, latar kuning)"),
                    ("skipped", "Style dilewati"), ("unmatched_im_styles", "Style IM tanpa data MATRIX"),
-                   ("missing_styles", "Style MATRIX tidak ada di IM (tidak ditulis)"), ("warnings", "Peringatan"))
+                   ("missing_styles", "Style MATRIX tidak ada di IM (tidak ditulis)"),
+                   ("not_selected_styles", "Style collection tidak dipilih (tidak ditulis)"), ("warnings", "Peringatan"))
 
 
 def format_write_preview(preview: WritePreview) -> str:
     """Ringkasan rencana tulis (sebelum konfirmasi dan pada --dry-run) dalam Bahasa Indonesia."""
     lines = ["Rencana tulis ke IM MASTER:", f"  File IM MASTER: {preview.im_master}",
-             f"  Mesin sisip: {preview.engine}"]
+             f"  Mesin sisip: {preview.engine}",
+             f"  Collection: {', '.join(preview.collections) if preview.collections else 'semua'}"]
     lines += [f"  {label}: {preview.summary[key]}" for key, label in _SUMMARY_LABELS if key in preview.summary]
     for warning in preview.values.warnings:
         lines.append(f"  PERINGATAN: {warning}")
@@ -202,7 +204,7 @@ def _cmd_write(args: argparse.Namespace) -> int:
     if not interactive and not args.dry_run and not args.yes:
         raise Matrix2ImError("Input bukan terminal; tambahkan --yes untuk menulis tanpa konfirmasi")
     password = _read_password()
-    preview = prepare_write(final, settings, password)
+    preview = prepare_write(final, settings, password, collections=args.collection)
     print(format_write_preview(preview))
     if report_path is not None:
         print(f"Laporan rencana (Excel): {_write_preview_report(report_path, preview)}")
@@ -282,6 +284,8 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--yes", action="store_true", help="tulis tanpa konfirmasi")
     p.add_argument("--report", type=Path,
                    help="tulis laporan .xlsx semua perubahan rencana ke file ini (juga saat --dry-run)")
+    p.add_argument("--collection", action="append", metavar="NAMA_TAB",
+                   help="tulis hanya style dari collection (nama tab MATRIX) ini; boleh diulang. Default: semua")
     p.set_defaults(func=_cmd_write)
 
     p = sub.add_parser("ui", help="buka UI web untuk upload Excel dan melihat hasil")
