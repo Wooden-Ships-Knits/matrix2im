@@ -4,9 +4,9 @@ from collections import Counter
 from datetime import date
 
 from .errors import Matrix2ImError
-from .legend_config import DESCRIPTOR_RE, IM_COLOR_KEYS, NEED_REVIEW, SOURCE_NAME, TARGET_NAME
-from .review import Code, Problem
-from .tag_rules import build_ws_tag_color, unique_yarns
+from .legend_config import DESCRIPTOR_RE, NEED_REVIEW, SOURCE_NAME, TARGET_NAME, color_key
+from .review import Code
+from .tag_rules import build_ws_tag_color
 from .whs_rules import color_whs, final_whs
 
 GROUPS = (("color_above_black_line", "above_black"),
@@ -17,17 +17,19 @@ GROUPS = (("color_above_black_line", "above_black"),
 # membawa comment sel MATRIX sebagai gantinya.
 _WITH_TAG_INSTRUCTION = frozenset({Code.TAG_CONDITIONAL, Code.TAG_CN_OUT_OF_RANGE, Code.TAG_EMPTY,
                                    Code.TAG_UNRESOLVED, Code.FONT_COLOR_NO_RULE, Code.WHS_STYLE_UNKNOWN,
-                                   Code.WHS_CONFLICT, Code.TOO_MANY_YARNS})
+                                   Code.WHS_CONFLICT})
 
 RULES = {
     "DESCRIPTION": "nama style dari MATRIX (tanpa size); berlaku untuk semua size di IM",
-    "COLOR1-COLOR18": "1 benang = 1 kolom, nilai apa adanya dari MATRIX; benang berulang (stripe) ditulis sekali; "
-                      "slot tanpa benang tidak dicantumkan (tidak ditulis ke IM); benang yang sama dianggap sama "
-                      "tanpa membedakan huruf besar/kecil",
+    "COLOR1-COLORn": "1 benang = 1 kolom, nilai dan urutan apa adanya dari MATRIX; benang berulang (stripe) "
+                     "tetap ditulis di posisinya karena urutan = urutan warna; jumlah key mengikuti colorway "
+                     "(bisa lebih dari 18; kelebihan kolom di IM diperingatkan saat menulis); slot tanpa benang "
+                     "tidak dicantumkan",
     "WS TAG COLOR": "instruksi TAG, C1/C2/... diganti nama warna benang (tanpa prefix YCA/YST dan kode); "
                     "STRIPED -> STRIPE; alias nama (mis. BLACK B -> BLACK); akhiran dobel (STRIPE STRIPE) "
-                    "dijadikan satu; TAG bersyarat dipilih per colorway: (For Solid) = 1 benang, (For Marled/"
-                    "Heathered) = lebih dari 1 benang, (For <nama colorway>) = colorway itu; 'Need Review' bila "
+                    "dijadikan satu; Cn = benang ke-n sesuai urutan MATRIX (benang berulang ikut dihitung); "
+                    "TAG bersyarat dipilih per colorway: (For Solid) = 1 benang unik, (For Marled/"
+                    "Heathered) = lebih dari 1 benang unik, (For <nama colorway>) = colorway itu; 'Need Review' bila "
                     "TAG bersyarat tidak cocok/singkatan, Cn di luar jumlah benang, "
                     "TAG kosong, TAG belum diterjemahkan, atau COLOR berupa deskripsi (lihat needs_review)",
     "WHS": "kolom CE. Warna: di bawah garis merah = SY; di atas garis merah = BOTH WHS, "
@@ -52,18 +54,17 @@ def _with_extra(item: dict, **extra) -> dict:
 
 
 def _build_records(raw: dict) -> tuple[list[dict], list[dict]]:
-    """Bangun record dan item review per-record (urutan: TAG, font, WHS, TOO_MANY, DESCRIPTOR)."""
+    """Bangun record dan item review per-record (urutan: TAG, font, WHS, DESCRIPTOR)."""
     records, review = [], []
     descriptor = re.compile(DESCRIPTOR_RE)
     for style in raw["styles"]:
         for group_key, group in GROUPS:
             for cw in style[group_key]:
-                yarns = unique_yarns(cw["yarns"])
+                yarns = list(cw["yarns"])          # benang berulang dipertahankan (keputusan user 13 Nov 2026)
                 rec = {"DESCRIPTION": style["style"]}
-                for key, yarn in zip(IM_COLOR_KEYS, yarns):
-                    rec[key] = yarn
-                shown = yarns[:len(IM_COLOR_KEYS)]
-                desc = [y for y in shown if descriptor.search(y.upper())]
+                for n, yarn in enumerate(yarns, 1):
+                    rec[color_key(n)] = yarn
+                desc = [y for y in yarns if descriptor.search(y.upper())]
                 tag, p_tag = build_ws_tag_color(style["tag"], yarns)
                 col, p_font = color_whs(group, cw["font_color"])
                 whs, p_whs = final_whs(style.get("style_whs"), col)
@@ -76,11 +77,8 @@ def _build_records(raw: dict) -> tuple[list[dict], list[dict]]:
                 idx = len(records)
                 records.append(rec)
 
-                colorway = "/".join(shown)
+                colorway = "/".join(yarns)
                 problems = [p for p in (p_tag, p_font, p_whs) if p]
-                if len(yarns) > len(IM_COLOR_KEYS):
-                    problems.append(Problem(Code.TOO_MANY_YARNS,
-                                            f"{len(yarns)} benang unik, slot COLOR hanya {len(IM_COLOR_KEYS)}"))
                 for p in problems:
                     item = _item(idx, p.code, rec["DESCRIPTION"], colorway, p.issue, ref)
                     if p.code in _WITH_TAG_INSTRUCTION:

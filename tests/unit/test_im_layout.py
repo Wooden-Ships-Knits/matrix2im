@@ -171,3 +171,17 @@ def test_color_fills_read_for_group_rows(tmp_path):
     assert lay.fills.get((55, 5)) == "FFFF00"
     assert (55, 7) in lay.fills and lay.fills[(55, 7)] is None   # COLOR2 tanpa warna
     assert all((55, c) in lay.fills for c in lay.columns.colors)
+
+
+# ---- kolom COLOR dibaca dari header, berapa pun jumlahnya (IM bisa ditambah COLOR19.., 13 Nov 2026) ----
+
+def test_color_columns_beyond_18_follow_header(tmp_path):
+    p = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("A", _cw(1))], extra_header={"Z": "COLOR19"})
+    cols = read_layout(p).columns
+    assert len(cols.colors) == 19 and cols.colors[-1] == 26 and cols.ws_tag == 24
+
+
+def test_color_column_gap_is_rejected(tmp_path):
+    p = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("A", _cw(1))], extra_header={"W": "COLOR20"})
+    with pytest.raises(Matrix2ImError, match="COLOR18"):
+        read_layout(p)

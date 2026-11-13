@@ -132,3 +132,15 @@ def test_fill_rows_show_old_and_new_color(tmp_path, monkeypatch):
         ("AAA - K", "Y55", "55", "WHS (warna latar)", "tanpa warna", "969696", "warna"),
         ("AAA - K", "X56", "56", "WS TAG COLOR (warna latar)", "FFCC99", "FFFF00", "warna"),
         ("AAA - K", "Y56", "56", "WHS (warna latar)", "tanpa warna", "FFFF00", "warna")]
+
+
+def test_color_columns_beyond_18_named_by_number(tmp_path, monkeypatch):
+    """IM yang sudah ditambah kolom COLOR19..: laporan menamai kolomnya COLOR19, bukan huruf kolom."""
+    monkeypatch.setattr(im_writer, "excel_available", lambda: True)
+    im = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("AAA - K", [["a"]])], extra_header={"Z": "COLOR19"})
+    add_file_sharing(im)
+    st = Settings(im_master=im, backup_dir=tmp_path / "cadangan", insert_engine="excel")
+    p = prepare_write({"records": [_rec("AAA", [f"y{i}" for i in range(1, 20)], 1, ws="T", whs="000")]},
+                      st, TEST_PASSWORD)
+    rows = {r[1]: r for r in report_rows(p) if r[-1] == "ubah"}
+    assert rows["Z55"][3:6] == ("COLOR19", "catatan", "y19")

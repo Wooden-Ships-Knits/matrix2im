@@ -1,6 +1,7 @@
 """Validasi otomatis hasil transform dan pencocokan key record dengan header IM MASTER."""
 from __future__ import annotations
 
+import re
 import zipfile
 from pathlib import Path
 
@@ -8,7 +9,7 @@ import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 
 from .errors import Matrix2ImError
-from .legend_config import IM_HEADER_ROW, IM_SHEET, NEED_REVIEW, WHS_VALUES
+from .legend_config import IM_COLOR_HEADER_RE, IM_HEADER_ROW, IM_SHEET, NEED_REVIEW, WHS_VALUES
 from .review import Code
 from .transform import GROUPS
 
@@ -16,6 +17,12 @@ _TAG_CODES = frozenset({Code.TAG_CONDITIONAL, Code.TAG_CN_OUT_OF_RANGE, Code.TAG
 # 'Need Review' di WS TAG COLOR hanya sah bila ada alasannya di needs_review.
 _NEED_REVIEW_CODES = _TAG_CODES | {Code.COLOR_IS_DESCRIPTOR}
 _WHS_NULL_CODES = frozenset({Code.WHS_CONFLICT, Code.FONT_COLOR_NO_RULE})
+_COLOR_KEY = re.compile(IM_COLOR_HEADER_RE)
+
+
+def _color_number(key: str) -> int | None:
+    m = _COLOR_KEY.match(key)
+    return int(m.group(1)) if m else None
 
 
 def read_im_header(path: Path, sheet: str = IM_SHEET, row: int = IM_HEADER_ROW) -> set[str]:
@@ -76,10 +83,15 @@ def validate(raw: dict, final: dict, im_header: set[str] | None = None) -> list[
         if isinstance(item.get("record"), int):
             codes_by_record.setdefault(item["record"], set()).add(item["code"])
 
+    # COLOR ke-n di atas jumlah kolom COLOR IM bukan salah key: penulis IM memperingatkannya (13 Nov 2026).
+    im_colors = max((n for h in im_header or () if (n := _color_number(h)) is not None), default=0)
     for i, rec in enumerate(records):
         if im_header is not None:
             for key in rec:
-                if not key.startswith("_") and key not in im_header:
+                if key.startswith("_") or key in im_header:
+                    continue
+                n = _color_number(key)
+                if n is None or n <= im_colors:
                     errors.append(f"record {i}: key '{key}' tidak ada di header IM MASTER")
         for key, value in rec.items():
             if not key.startswith("_") and not _is_clean_value(value):

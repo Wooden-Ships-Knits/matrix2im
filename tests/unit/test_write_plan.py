@@ -511,3 +511,23 @@ def test_formula_color_cell_not_painted():
     lay = _flayout([_grp("S - X/S", [5])], {}, values={(5, 2): "=B1"})
     plan = plan_values(lay, {"S": [_cw(["A", "B"])]})
     assert plan.fills == [FillChange(5, 3, None, "7F7F7F")]
+
+
+
+# ---- colorway lebih panjang dari kolom COLOR di IM (13 Nov 2026) ----
+
+def test_colorway_longer_than_im_color_columns_writes_first_slots_and_warns():
+    yarns = [f"Y{i}" for i in range(1, 21)]                    # _VCOLS punya 18 kolom COLOR (2..19)
+    plan = plan_values(_vlayout([_grp("S - X/S", [5])]), {"S": [_cw(yarns)]})
+    written = {c.col: c.new for c in plan.changes if c.col < 20}
+    assert written == {col: f"Y{col - 1}" for col in range(2, 20)}
+    assert "S - X/S (baris 5): 20 warna, kolom COLOR di IM hanya 18; warna ke-19 dan seterusnya tidak ditulis" \
+        in plan.warnings
+
+
+def test_colorway_reads_color_keys_beyond_18_in_number_order():
+    rec = {"DESCRIPTION": "S", "COLOR1": "A", "COLOR2": "B", "COLOR3": "C", "COLOR 4": "D",
+           **{f"COLOR{i}": f"Y{i}" for i in range(5, 21)}, "WS TAG COLOR": "T", "WHS": "000",
+           "_ref": "TAB No.1 | A1 | above_black"}
+    cws, _ = style_colorways({"records": [rec]})
+    assert cws["S"][0].colors == ("A", "B", "C", "D", *[f"Y{i}" for i in range(5, 21)])

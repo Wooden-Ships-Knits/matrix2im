@@ -18,7 +18,7 @@ from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
-from .legend_config import IM_COLOR_KEYS, IM_WHS_KEY, IM_WS_TAG_KEY
+from .legend_config import IM_WHS_KEY, IM_WS_TAG_KEY, color_key
 from .write_plan import InsertOp
 
 if TYPE_CHECKING:
@@ -51,7 +51,8 @@ def report_rows(preview: WritePreview, notes: Iterable[str] = ()) -> list[tuple[
     kolom `baru` berisi keterangan. `notes` = peringatan tambahan dari saat menulis (mis. alasan gagal).
     """
     cols = preview.projected.columns
-    names = {**dict(zip(cols.colors, IM_COLOR_KEYS)), cols.ws_tag: IM_WS_TAG_KEY, cols.whs: IM_WHS_KEY}
+    names = {**{c: color_key(n) for n, c in enumerate(cols.colors, 1)}, cols.ws_tag: IM_WS_TAG_KEY,
+             cols.whs: IM_WHS_KEY}
     owner = {r: g.description for g in preview.projected.groups for r in g.rows}
     plan = preview.values
     rows: list[tuple[str, ...]] = []

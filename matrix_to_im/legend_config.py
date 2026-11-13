@@ -48,7 +48,17 @@ NEED_REVIEW = "Need Review"
 DESCRIPTOR_RE = r"\b(STRIPE|STRIPED|MARL|MULTI)$"
 # Aksesoris di slot COLOR (mis. "XBP 729 2 CM-DARK ROAST", "XZIP") tidak boleh dihapus.
 IM_ACCESSORY_RE = r"^X[A-Z]+(\s|$)"
-IM_COLOR_KEYS = ("COLOR1", "COLOR2", "COLOR3", "COLOR 4") + tuple(f"COLOR{i}" for i in range(5, 19))
+# Kolom COLOR di IM: COLOR1, COLOR2, COLOR3, "COLOR 4" (dengan spasi, seperti di IM asli), COLOR5, ...
+# Jumlahnya mengikuti header IM (bisa lebih dari 18 bila IM ditambah kolom, 13 Nov 2026); key record final
+# memakai nama yang sama, satu key per benang sesuai urutan MATRIX.
+IM_COLOR_HEADER_RE = r"^COLOR ?(\d+)$"
+
+
+def color_key(n: int) -> str:
+    """Nama kolom/key COLOR ke-n (mulai 1)."""
+    return "COLOR 4" if n == 4 else f"COLOR{n}"
+
+
 WHS_VALUES = ("000", "SY", WHS_BOTH)
 IM_SHEET = "F27"
 IM_HEADER_ROW = 54

@@ -10,9 +10,11 @@ import openpyxl
 from .errors import Matrix2ImError
 from .xlsx_cells import read_fills
 from .legend_config import (
-    IM_COLOR_KEYS, IM_DESCRIPTION_KEY, IM_GROUP_KEY_SEGMENTS, IM_HEADER_ROW, IM_SHEET, IM_SUBTOTAL_FUNC,
-    IM_WHS_KEY, IM_WS_TAG_KEY,
+    IM_COLOR_HEADER_RE, IM_DESCRIPTION_KEY, IM_GROUP_KEY_SEGMENTS, IM_HEADER_ROW, IM_SHEET, IM_SUBTOTAL_FUNC,
+    IM_WHS_KEY, IM_WS_TAG_KEY, color_key,
 )
+
+_COLOR_HEADER = re.compile(IM_COLOR_HEADER_RE)
 
 
 def normalize(text: object) -> str:
@@ -42,7 +44,7 @@ class ImLayout:
     groups: list[ImGroup]
     values: dict[tuple[int, int], object]
     subtotal_formulas: dict[int, dict[int, str]]
-    # Warna latar COLOR1..18, WS TAG COLOR, dan WHS per baris grup (kunci xlsx_styles.fill_key: "FF99FF", None = tanpa warna).
+    # Warna latar COLOR1..n, WS TAG COLOR, dan WHS per baris grup (kunci xlsx_styles.fill_key: "FF99FF", None = tanpa warna).
     fills: dict[tuple[int, int], str | None] = field(default_factory=dict)
 
 
@@ -50,6 +52,20 @@ def _find(header: dict[str, int], key: str) -> int:
     if key not in header:
         raise Matrix2ImError(f"Kolom '{key}' tidak ditemukan di header IM MASTER")
     return header[key]
+
+
+def _color_columns(header: dict[str, int]) -> tuple[int, ...]:
+    """Kolom COLOR1..COLORn menurut nomor di header, berapa pun n (IM bisa ditambah kolom COLOR19..)."""
+    found: dict[int, int] = {}
+    for name, col in header.items():
+        if m := _COLOR_HEADER.match(name):
+            found.setdefault(int(m.group(1)), col)
+    n = max(found, default=1)
+    missing = [k for k in range(1, n + 1) if k not in found]
+    if missing:
+        raise Matrix2ImError(f"Kolom '{color_key(missing[0])}' tidak ditemukan di header IM MASTER "
+                             f"(kolom COLOR harus berurutan dari COLOR1 sampai COLOR{n})")
+    return tuple(found[k] for k in range(1, n + 1))
 
 
 def read_layout(path: Path, sheet: str = IM_SHEET, header_row: int = IM_HEADER_ROW) -> ImLayout:
@@ -87,7 +103,7 @@ def read_layout(path: Path, sheet: str = IM_SHEET, header_row: int = IM_HEADER_R
                 ws_tag = _find(header, IM_WS_TAG_KEY)
                 columns = ImColumns(
                     description=_find(header, IM_DESCRIPTION_KEY),
-                    colors=tuple(_find(header, k) for k in IM_COLOR_KEYS),
+                    colors=_color_columns(header),
                     ws_tag=ws_tag, whs=ws_tag + 1, last=last,
                 )
                 nxt = row[ws_tag] if len(row) > ws_tag else None

@@ -4,7 +4,7 @@ Tanggal: 9 November 2026 · AI Team · Revisi: 10 November 2026 (hasil review `n
 
 ## Ringkasan
 
-Sistem ini membaca file Excel F27 MATRIX MASTER dan menghasilkan JSON siap pakai untuk IM MASTER: DESCRIPTION, COLOR1–COLOR18, WS TAG COLOR, dan WHS untuk setiap colorway. Versi ini berhenti di JSON; penulisan ke IM MASTER adalah fase berikutnya.
+Sistem ini membaca file Excel F27 MATRIX MASTER dan menghasilkan JSON siap pakai untuk IM MASTER: DESCRIPTION, COLOR1–COLORn, WS TAG COLOR, dan WHS untuk setiap colorway. Versi ini berhenti di JSON; penulisan ke IM MASTER adalah fase berikutnya.
 
 Saat ini kolom warna dan WS TAG COLOR di IM diisi manual dari MATRIX MASTER. MATRIX berbentuk kartu style, dan banyak artinya disimpan sebagai warna font, warna background, dan garis border, bukan teks.
 
@@ -24,7 +24,7 @@ Di luar scope versi ini:
 - Melengkapi jenis benang (prefix YCA/YST dan kode) di MATRIX MASTER. Ini dikerjakan automation lain, jadi nilai COLOR diambil apa adanya.
 - Menulis ke file IM MASTER. Aturannya sudah disepakati dan dicatat di bagian Fase berikutnya.
 - Mengubah file MATRIX MASTER.
-- Kolom IM selain DESCRIPTION, COLOR1–COLOR18, WS TAG COLOR, dan WHS.
+- Kolom IM selain DESCRIPTION, COLOR1–COLORn, WS TAG COLOR, dan WHS.
 
 ## Alur sistem
 
@@ -33,7 +33,7 @@ flowchart TD
     A(["Output automation Image → MATRIX MASTER<br/>file Excel MATRIX MASTER sudah diperbarui"]) --> B["Input: file Excel MATRIX MASTER (.xlsx)<br/>5 sheet koleksi · kartu style · legend warna"]
     B --> C["Tahap 1 · Ekstraksi<br/>cari halaman, kartu, garis hitam dan merah per kartu<br/>ambil No, Style, WHS style, TAG, colorway, warna font"]
     C --> D["raw JSON"]
-    D --> E["Tahap 2 · Transformasi<br/>DESCRIPTION, COLOR1–COLOR18, WS TAG COLOR<br/>WHS = irisan WHS style dan WHS warna"]
+    D --> E["Tahap 2 · Transformasi<br/>DESCRIPTION, COLOR1–COLORn, WS TAG COLOR<br/>WHS = irisan WHS style dan WHS warna"]
     E --> F{"Aturan bisa<br/>memutuskan?"}
     F -- ya --> G["Nilai ditulis<br/>ke record final"]
     F -- tidak --> H["Nilai null / Need Review<br/>masuk needs_review + alasan"]
@@ -122,8 +122,8 @@ Setiap colorway menjadi satu record. Key record sama persis dengan header IM MAS
 | Kolom IM (key) | Aturan |
 | --- | --- |
 | DESCRIPTION | nama style apa adanya, tanpa size; berlaku untuk semua size di IM |
-| COLOR1 … COLOR18 | 1 benang = 1 kolom, nilai persis seperti di MATRIX. Benang yang berulang (stripe) ditulis sekali, sesuai urutan kemunculan pertama. Slot tanpa benang tidak dicantumkan |
-| WS TAG COLOR | TAG tanpa awalan "TAG:", setiap Cn diganti nama warna benang ke-n (tanpa prefix YCA/YST/YTX/BJ/YP/POODLE dan tanpa kode). Alias BLACK B → BLACK; STRIPED → STRIPE; akhiran dobel dibuang. TAG bersyarat dipilih per colorway: `(For Solid)` = colorway 1 benang (solid), `(For Marled)`/`(For Heathered)` = lebih dari 1 benang, `(For <nama colorway>)` = colorway dengan benang persis itu (didahulukan). Diisi teks `Need Review` + review bila: TAG bersyarat tanpa syarat yang cocok, TAG singkatan ("abbreviated color names") atau TAG per colorway tanpa syarat; Cn melebihi jumlah benang; TAG kosong; TAG masih berisi instruksi yang belum diterjemahkan (`C(…)` tanpa nomor atau kata COLOR); atau COLOR colorway berupa deskripsi stripe/marl |
+| COLOR1 … COLORn | 1 benang = 1 kolom, nilai dan urutan persis seperti di MATRIX. Benang yang berulang (stripe) tetap ditulis di posisinya, karena urutan benang = urutan warna (revisi 13 November 2026; sebelumnya ditulis sekali). Jumlah kolom mengikuti colorway, bisa lebih dari 18. Slot tanpa benang tidak dicantumkan |
+| WS TAG COLOR | TAG tanpa awalan "TAG:", setiap Cn diganti nama warna benang ke-n sesuai urutan MATRIX, benang berulang ikut dihitung (tanpa prefix YCA/YST/YTX/BJ/YP/POODLE dan tanpa kode). Alias BLACK B → BLACK; STRIPED → STRIPE; akhiran dobel dibuang. TAG bersyarat dipilih per colorway: `(For Solid)` = colorway 1 benang unik (solid), `(For Marled)`/`(For Heathered)` = lebih dari 1 benang unik, `(For <nama colorway>)` = colorway dengan benang unik persis itu (didahulukan). Diisi teks `Need Review` + review bila: TAG bersyarat tanpa syarat yang cocok, TAG singkatan ("abbreviated color names") atau TAG per colorway tanpa syarat; Cn melebihi jumlah benang; TAG kosong; TAG masih berisi instruksi yang belum diterjemahkan (`C(…)` tanpa nomor atau kata COLOR); atau COLOR colorway berupa deskripsi stripe/marl |
 | WHS (kolom CE) | irisan WHS style dan WHS warna (tabel di bawah) |
 
 WHS warna ditentukan dari posisi colorway dan warna fontnya. Garis hitam tidak memengaruhi WHS.
@@ -187,7 +187,7 @@ Jenis item `needs_review` dan jumlahnya pada file F27:
 | WHS style tidak diketahui: warna background di luar legend (`WHS_STYLE_UNKNOWN`) | 0 | dipakai WHS warna |
 | Irisan WHS style dan WHS warna kosong (`WHS_CONFLICT`) | 0 | WHS null |
 | Warna font tanpa aturan WHS (`FONT_COLOR_NO_RULE`) | 0 | WHS null |
-| Benang unik lebih dari 18 (`TOO_MANY_YARNS`) | 0 | 18 benang pertama ditulis |
+| Colorway lebih panjang dari kolom COLOR di IM (peringatan saat menulis ke IM, bukan item review; `TOO_MANY_YARNS` dihapus 13 November 2026) | 8 record di F27 (maks 32 benang) bila IM hanya punya COLOR1–COLOR18 | benang sebanyak kolom COLOR di IM ditulis, sisanya diperingatkan |
 | Warning ekstraksi (`EXTRACTION_WARNING`) | 0 | dicek tim |
 
 Tidak lagi masuk review sejak revisi 10 November 2026: WHS warna yang diturunkan oleh batas WHS style (17 record di F27, nilai WHS tetap mengikuti style), dan style yang muncul di dua sheet (8 item HUTTON, record tiap sheet dicatat terpisah).

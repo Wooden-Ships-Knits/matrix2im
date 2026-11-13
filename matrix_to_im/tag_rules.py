@@ -53,6 +53,7 @@ def _conditional_instruction(tag: str, yarns: list[str]) -> tuple[str | None, st
     """Instruksi TAG yang berlaku untuk colorway ini, atau (None, alasan) bila tidak bisa diputuskan.
 
     Urutan: syarat nama colorway (persis, urutan benang sama), lalu solid (1 benang) / bukan solid.
+    Keduanya dinilai dari benang unik: benang berulang (stripe) tidak membuat colorway bukan solid.
     Lebih dari satu bagian yang cocok dianggap ambigu.
     """
     if any(m in tag for m in TAG_COND_UNSUPPORTED):
@@ -60,8 +61,9 @@ def _conditional_instruction(tag: str, yarns: list[str]) -> tuple[str | None, st
     clauses = _clauses(tag)
     if not clauses:
         return None, "TAG kondisional / singkatan: perlu aturan khusus"
-    names = [color_name(y) for y in yarns]
-    solid = len(yarns) == 1
+    distinct = unique_yarns(yarns)
+    names = [color_name(y) for y in distinct]
+    solid = len(distinct) == 1
     by_colorway = [i for c, i in clauses if c not in TAG_COND_SOLID | TAG_COND_NOT_SOLID
                    and [n.strip() for n in c.split("/")] == names]
     by_kind = [i for c, i in clauses if c in (TAG_COND_SOLID if solid else TAG_COND_NOT_SOLID)]
@@ -70,12 +72,14 @@ def _conditional_instruction(tag: str, yarns: list[str]) -> tuple[str | None, st
             return found[0], ""
         if len(found) > 1:
             return None, "TAG bersyarat: lebih dari satu syarat cocok untuk colorway ini"
-    kind = "solid, 1 benang" if solid else f"bukan solid, {len(yarns)} benang"
+    kind = "solid, 1 benang" if solid else f"bukan solid, {len(distinct)} benang"
     return None, f"TAG bersyarat: tidak ada syarat yang cocok untuk colorway ini ({kind})"
 
 
 def build_ws_tag_color(tag: str | None, yarns: list[str]) -> tuple[str | None, Problem | None]:
-    """Ganti C1, C2, ... di instruksi TAG dengan nama warna benang (yarns = hasil unique_yarns).
+    """Ganti C1, C2, ... di instruksi TAG dengan nama warna benang.
+
+    yarns = benang sesuai urutan MATRIX termasuk yang berulang, jadi Cn = benang ke-n (keputusan user 13 Nov 2026).
 
     Seluruh hasil di-uppercase (keputusan D7, sama dengan prototipe).
     """

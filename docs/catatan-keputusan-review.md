@@ -95,6 +95,21 @@ Catatan sementara hasil review tab *Needs review* di UI. Setelah semua kasus dip
 - `needs_review`: 3 item `EXTRACTION_WARNING` hilang. Kode `EXTRACTION_WARNING` tetap dipakai untuk warning lain (mis. garis merah tidak ditemukan, TAG di area warna).
 - PRD dan PROMPT §6.10 diperbarui ("diabaikan + warning" → "diabaikan").
 
+## 9. Benang berulang dipertahankan — diputuskan 2026-11-13
+
+**Keputusan (user):** benang yang berulang di satu colorway (stripe, mis. `BLACK, BLACK, BROWN BRICK`) tidak lagi digabung. Urutan benang di MATRIX adalah urutan warna (sesuai COLOR SEQUENCE di IM), jadi COLOR1..COLORn ditulis apa adanya.
+
+**Turunan (keputusan perancang, dicatat ke user):**
+- Cn di TAG = benang ke-n sesuai urutan MATRIX, benang berulang ikut dihitung.
+- Solid dan syarat `(For <nama colorway>)` dinilai dari benang unik: `FRIGID GRAY, FRIGID GRAY` tetap solid.
+- `TOO_MANY_YARNS` dihapus. Final tidak dibatasi 18; colorway yang melebihi kolom COLOR di IM diperingatkan saat menulis.
+- Validasi header: key COLOR di atas jumlah kolom COLOR IM bukan error (kelebihan kolom), key COLOR yang salah nama tetap error.
+
+**Dampak pada golden F27 (dikerjakan):**
+- Records: 66 record berubah kolom COLOR (benang berulang kembali di posisinya). 8 record lebih dari 18 benang, maksimum 32.
+- `WS TAG COLOR`: 21 record dari `Need Review` menjadi terisi, semuanya bekas `TAG_CN_OUT_OF_RANGE` (mis. PEBBLE STITCH `TAG: C1/C3 MARL` → `BLACK/BROWN BRICK MARL`). Satu di antaranya, MIXX V CHUNKY E97 (`TAG: C1/C2 MARL`, benang `TWILIGHT SKY, TWILIGHT SKY`), menjadi `TWILIGHT SKY/TWILIGHT SKY MARL`; perlu konfirmasi user.
+- Summary: 699 terisi / 25 `Need Review` / 0 null (sebelumnya 678 / 46 / 0). `needs_review` 25: 12 TAG_CONDITIONAL, 7 TAG_UNRESOLVED, 6 COLOR_IS_DESCRIPTOR.
+
 ## Ringkasan dampak semua keputusan (F27, rencana)
 
 | Metrik | Sekarang | Setelah keputusan 1–8 |

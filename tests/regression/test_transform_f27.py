@@ -28,10 +28,10 @@ def test_baseline(f27_final):
     assert s["total_records"] == 724 and s["total_styles"] == 211
     assert s["WHS"] == {"BOTH WHS": 194, "000": 354, "SY": 176}
     # TAG bersyarat diputuskan per colorway sejak 11 Nov 2026: 45 record keluar dari Need Review.
-    assert (s["WS_TAG_COLOR_filled"], s["WS_TAG_COLOR_need_review"], s["WS_TAG_COLOR_null"]) == (678, 46, 0)
-    assert s["needs_review_items"] == 46
-    assert s["needs_review_by_issue"] == {"TAG_CONDITIONAL": 12, "TAG_CN_OUT_OF_RANGE": 21,
-                                          "TAG_UNRESOLVED": 7, "COLOR_IS_DESCRIPTOR": 6}
+    # Benang berulang dipertahankan sejak 13 Nov 2026 (Cn = benang ke-n): 21 TAG_CN_OUT_OF_RANGE terselesaikan.
+    assert (s["WS_TAG_COLOR_filled"], s["WS_TAG_COLOR_need_review"], s["WS_TAG_COLOR_null"]) == (699, 25, 0)
+    assert s["needs_review_items"] == 25
+    assert s["needs_review_by_issue"] == {"TAG_CONDITIONAL": 12, "TAG_UNRESOLVED": 7, "COLOR_IS_DESCRIPTOR": 6}
 
 
 def _items(final, code):
@@ -44,7 +44,7 @@ def _review_records(final):
 
 def test_need_review_only_where_reviewed(f27_final):
     marked = {i for i, r in enumerate(f27_final["records"]) if r["WS TAG COLOR"] == "Need Review"}
-    assert len(marked) == 46 and marked == _review_records(f27_final)
+    assert len(marked) == 25 and marked == _review_records(f27_final)
 
 
 def test_hutton_in_two_sheets_are_separate_records_without_review(f27_final):
@@ -100,3 +100,11 @@ def test_conditional_tags_resolved_by_solid_rule(f27_final):
     left = {x["DESCRIPTION"] for x in _items(f27_final, "TAG_CONDITIONAL")}
     assert left == {"CANDY CANES HEART CREW CHUNKY", "CHEERS COCKTAIL CREW CHUNKY", "MERRY COCKTAIL CREW CHUNKY",
                     "FA LA LA FAIR ISLE CREW CHUNKY"}
+
+
+def test_repeated_yarns_kept_and_long_colorways(f27_final):
+    """Keputusan user 13 Nov 2026: benang berulang dipertahankan (urutan = urutan warna)."""
+    recs = f27_final["records"]
+    assert recs[452]["WS TAG COLOR"] == "BLACK/BROWN BRICK MARL"           # TAG: C1/C3 MARL, C1 = C2
+    lengths = [sum(k.startswith("COLOR") for k in r) for r in recs]
+    assert max(lengths) == 32 and sum(n > 18 for n in lengths) == 8

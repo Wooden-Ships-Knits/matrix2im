@@ -11,10 +11,11 @@ from openpyxl.utils import get_column_letter
 from .errors import Matrix2ImError
 from .im_layout import ImGroup, ImLayout, normalize
 from .legend_config import (COLOR_DARK_FILLS, COLOR_FIXED_FILL, EXTRA_ROW_FILL, FILL_BY_WHS, IM_ACCESSORY_RE,
-                            IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS, WHS_VALUES)
+                            IM_COLOR_HEADER_RE, NEED_REVIEW, WHS_SETS, WHS_VALUES)
 
 _REF_RE = re.compile(r"^(?P<sheet>.+?)(?: \((?P<section>[^)]*)\))? No\.(?P<no>.+?) \| ")
 _WHS_BY_SET = {parts: name for name, parts in WHS_SETS.items()}
+_COLOR_KEY = re.compile(IM_COLOR_HEADER_RE)
 
 
 @dataclass(frozen=True)
@@ -39,7 +40,9 @@ def parse_ref(ref: str) -> tuple[str, str]:
 
 
 def _colorway(rec: dict) -> Colorway:
-    colors = tuple(str(rec[k]) for k in IM_COLOR_KEYS if rec.get(k))
+    """COLOR1..COLORn menurut nomor key (berapa pun n), benang berulang tetap di posisinya."""
+    keys = sorted((int(m.group(1)), k) for k in rec if (m := _COLOR_KEY.match(k)))
+    colors = tuple(str(rec[k]) for _, k in keys if rec.get(k))
     return Colorway(colors, rec.get("WS TAG COLOR"), rec.get("WHS"))
 
 
@@ -358,6 +361,9 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
                 continue
             cw = cws[i]
             yarns = cw.colors[:len(cols.colors)]
+            if len(cw.colors) > len(cols.colors):
+                plan.warnings.append(f"{g.description} (baris {row}): {len(cw.colors)} warna, kolom COLOR di IM hanya "
+                                     f"{len(cols.colors)}; warna ke-{len(cols.colors) + 1} dan seterusnya tidak ditulis")
             old_yarns: list[str] = []
             old_text: list[str] = []
             for j, col in enumerate(cols.colors):

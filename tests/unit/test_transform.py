@@ -49,18 +49,25 @@ def test_ref_with_and_without_section():
                     "ESSENTIALS GRASSY No.21 | D166 | between_black_red"]
 
 
-def test_stripe_yarns_written_once():
+def test_repeated_yarns_kept_in_matrix_order():
+    """Keputusan user 13 Nov 2026: benang berulang dibiarkan; posisinya = urutan warna (COLOR SEQUENCE di IM)."""
     rec = transform(raw_one(["A", "B", "a", "B"]))["records"][0]
-    assert rec["COLOR1"] == "A" and rec["COLOR2"] == "B" and "COLOR3" not in rec
+    assert [rec[k] for k in ("COLOR1", "COLOR2", "COLOR3", "COLOR 4")] == ["A", "B", "a", "B"]
 
 
-def test_too_many_yarns():
-    yarns = [f"Y{i}" for i in range(1, 20)]
+def test_tag_cn_uses_position_of_repeated_yarn():
+    doc = transform(raw_of(style(tag="TAG: C1/C3 MARL", above=[cw(["YST BLACK", "YST BLACK", "YST BROWN BRICK"])])))
+    assert doc["records"][0]["WS TAG COLOR"] == "BLACK/BROWN BRICK MARL" and doc["needs_review"] == []
+
+
+def test_long_colorway_keeps_every_yarn_without_review():
+    """Final tidak dibatasi jumlah kolom IM; kelebihan kolom diperingatkan saat menulis ke IM."""
+    yarns = [f"Y{i}" for i in range(1, 33)]
     doc = transform(raw_one(yarns))
-    assert doc["records"][0]["COLOR18"] == "Y18" and "COLOR19" not in doc["records"][0]
-    item = by_code(doc, "TOO_MANY_YARNS")[0]
-    assert item["issue"] == "19 benang unik, slot COLOR hanya 18"
-    assert item["colorway"].endswith("/Y18")
+    rec = doc["records"][0]
+    keys = [k for k in rec if k.startswith("COLOR")]
+    assert keys == ["COLOR1", "COLOR2", "COLOR3", "COLOR 4", *[f"COLOR{i}" for i in range(5, 33)]]
+    assert rec["COLOR32"] == "Y32" and doc["needs_review"] == []
 
 
 def test_descriptor_review_carries_comment():

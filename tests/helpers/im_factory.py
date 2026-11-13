@@ -9,7 +9,7 @@ from xml.sax.saxutils import quoteattr
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
-from matrix_to_im.legend_config import IM_COLOR_KEYS, IM_HEADER_ROW, IM_SHEET
+from matrix_to_im.legend_config import IM_HEADER_ROW, IM_SHEET, color_key
 
 TEST_PASSWORD = "rahasia-uji"
 TEST_SALT_B64 = "AAECAwQFBgcICQoLDA0ODw=="
@@ -19,9 +19,9 @@ TEST_HASH_SPIN100000 = "hzY8X1+Zw+dryKltyS4V+shqaVXxQ9h3IGLqGwSL3/G1Et9T0OIbktcJ
 # Kolom A..Z; WHS di C adalah pengecoh (kolom G di IM asli), WHS sungguhan di Y.
 _HEADERS = ["DESCRIPTION", "PCS", "WHS", "C1Y%", "COLOR1", "C2Y%", "COLOR2", "COLOR3", "COLOR 4",
             *[f"COLOR{i}" for i in range(5, 19)], "WS TAG COLOR", "WHS", "NOTE"]
-_COLOR_COLS = [5, 7, 8, 9, *range(10, 24)]      # E, G, H, I, J..W untuk IM_COLOR_KEYS
+_COLOR_COLS = [5, 7, 8, 9, *range(10, 24)]      # E, G, H, I, J..W untuk COLOR1..COLOR18
 _WS_TAG_COL, _WHS_COL, _NOTE_COL = 24, 25, 26
-assert len(_COLOR_COLS) == len(IM_COLOR_KEYS)
+assert [_HEADERS[c - 1] for c in _COLOR_COLS] == [color_key(n) for n in range(1, 19)]
 
 
 @dataclass

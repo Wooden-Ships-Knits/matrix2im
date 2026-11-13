@@ -123,3 +123,25 @@ def test_conditional_two_clauses_same_condition_is_ambiguous():
 def test_conditional_chosen_instruction_follows_normal_rules():
     v, p = build_ws_tag_color(SHEPHERD.replace("C1 MARL", "C3 MARL"), ["A", "B"])
     assert v is None and p.code is Code.TAG_CN_OUT_OF_RANGE
+
+
+# ---- benang berulang dipertahankan (keputusan user 13 Nov 2026): urutan benang = urutan warna ----
+
+def test_cn_follows_yarn_position_with_repeated_yarns():
+    """C3 = benang ke-3 sesuai urutan MATRIX walau sama dengan benang sebelumnya."""
+    assert build_ws_tag_color("TAG: C1/C3 MARL", ["YST BLACK", "YST BLACK", "YST BROWN BRICK"]) == \
+        ("BLACK/BROWN BRICK MARL", None)
+
+
+@pytest.mark.parametrize("tag, yarns, want", [
+    (SHEPHERD, ["FAWN", "fawn"], "FAWN"),                                            # 1 benang unik = solid
+    (HUTTON, ["YCA PURE SNOW - 1", "YCA ALMOND BUTTER - 2", "YCA PURE SNOW - 1"], "SNOW MARL"),
+])
+def test_conditional_tag_uses_unique_yarns(tag, yarns, want):
+    """Solid dan syarat nama colorway dinilai dari benang unik (urutan kemunculan pertama)."""
+    assert build_ws_tag_color(tag, yarns) == (want, None)
+
+
+def test_conditional_no_match_counts_unique_yarns():
+    v, p = build_ws_tag_color(HUTTON, ["BLACK", "RED", "BLACK"])
+    assert v is None and p.issue.endswith("(bukan solid, 2 benang)")

@@ -67,8 +67,20 @@ def test_validate_count_mismatch():
 
 
 def test_validate_unknown_key():
-    msgs = validate(raw_n(1), final_of([rec(**{"COLOR 4": "Z"})]), HEADER - {"COLOR 4"})
-    assert any("COLOR 4" in m for m in msgs)
+    msgs = validate(raw_n(1), final_of([rec(**{"NOTE": "Z"})]), HEADER)
+    assert any("'NOTE'" in m for m in msgs)
+
+
+def test_validate_misnamed_color_key_within_im_color_columns():
+    """IM punya COLOR1..COLOR4 (tanpa spasi): key 'COLOR 4' salah nama, bukan kelebihan kolom."""
+    header = {"DESCRIPTION", "COLOR1", "COLOR2", "COLOR3", "COLOR4", "WS TAG COLOR", "WHS"}
+    msgs = validate(raw_n(1), final_of([rec(**{"COLOR 4": "Z"})]), header)
+    assert any("'COLOR 4'" in m for m in msgs)
+
+
+def test_validate_color_key_beyond_im_color_columns_is_not_error():
+    """Colorway lebih panjang dari kolom COLOR IM: bukan salah key; diperingatkan saat menulis ke IM."""
+    assert validate(raw_n(1), final_of([rec(**{"COLOR5": "Z", "COLOR19": "Y"})]), HEADER) == []
 
 
 def test_validate_bad_whs():
