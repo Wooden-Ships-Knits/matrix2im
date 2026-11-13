@@ -106,5 +106,8 @@ def test_repeated_yarns_kept_and_long_colorways(f27_final):
     """Keputusan user 13 Nov 2026: benang berulang dipertahankan (urutan = urutan warna)."""
     recs = f27_final["records"]
     assert recs[452]["WS TAG COLOR"] == "BLACK/BROWN BRICK MARL"           # TAG: C1/C3 MARL, C1 = C2
+    # MIXX V CHUNKY E97: C1/C2 MARL, TWILIGHT SKY dua kali -> TAG sekali, COLOR tetap dua.
+    assert (recs[276]["COLOR1"], recs[276]["COLOR2"], recs[276]["WS TAG COLOR"]) == \
+        ("TWILIGHT SKY", "TWILIGHT SKY", "TWILIGHT SKY MARL")
     lengths = [sum(k.startswith("COLOR") for k in r) for r in recs]
     assert max(lengths) == 32 and sum(n > 18 for n in lengths) == 8

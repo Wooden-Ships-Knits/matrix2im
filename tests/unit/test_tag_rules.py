@@ -145,3 +145,16 @@ def test_conditional_tag_uses_unique_yarns(tag, yarns, want):
 def test_conditional_no_match_counts_unique_yarns():
     v, p = build_ws_tag_color(HUTTON, ["BLACK", "RED", "BLACK"])
     assert v is None and p.issue.endswith("(bukan solid, 2 benang)")
+
+
+# ---- nama warna sama di deret C1/C2/..: TAG cukup sekali, kolom COLOR tetap terpisah (permintaan user 13 Nov 2026) ----
+
+@pytest.mark.parametrize("tag, yarns, want", [
+    ("TAG: C1/C2 MARL", ["TWILIGHT SKY", "TWILIGHT SKY"], "TWILIGHT SKY MARL"),
+    ("TAG: C1/C2 MARL", ["YCA TWILIGHT SKY - 701", "YST TWILIGHT SKY - 5"], "TWILIGHT SKY MARL"),   # pemasok beda
+    ("TAG: C1/C2/C3", ["A", "A", "B"], "A/B"),
+    ("TAG: C1/C2/C3", ["A", "B", "A"], "A/B"),
+    ("TAG: C1/C3 MARL", ["YST BLACK", "YST BLACK", "YST BROWN BRICK"], "BLACK/BROWN BRICK MARL"),
+])
+def test_same_color_name_written_once_in_cn_sequence(tag, yarns, want):
+    assert build_ws_tag_color(tag, yarns) == (want, None)

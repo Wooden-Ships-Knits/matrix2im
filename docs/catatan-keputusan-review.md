@@ -107,7 +107,7 @@ Catatan sementara hasil review tab *Needs review* di UI. Setelah semua kasus dip
 
 **Dampak pada golden F27 (dikerjakan):**
 - Records: 66 record berubah kolom COLOR (benang berulang kembali di posisinya). 8 record lebih dari 18 benang, maksimum 32.
-- `WS TAG COLOR`: 21 record dari `Need Review` menjadi terisi, semuanya bekas `TAG_CN_OUT_OF_RANGE` (mis. PEBBLE STITCH `TAG: C1/C3 MARL` → `BLACK/BROWN BRICK MARL`). Satu di antaranya, MIXX V CHUNKY E97 (`TAG: C1/C2 MARL`, benang `TWILIGHT SKY, TWILIGHT SKY`), menjadi `TWILIGHT SKY/TWILIGHT SKY MARL`; perlu konfirmasi user.
+- `WS TAG COLOR`: 21 record dari `Need Review` menjadi terisi, semuanya bekas `TAG_CN_OUT_OF_RANGE` (mis. PEBBLE STITCH `TAG: C1/C3 MARL` → `BLACK/BROWN BRICK MARL`). Satu di antaranya, MIXX V CHUNKY E97 (`TAG: C1/C2 MARL`, benang `TWILIGHT SKY, TWILIGHT SKY`), awalnya menjadi `TWILIGHT SKY/TWILIGHT SKY MARL`. Aturan tambahan dari user (13 November 2026): nama warna yang sama di deret Cn bergaris miring (C1/C2, C1/C2/C3) ditulis sekali di TAG, jadi `TWILIGHT SKY MARL`; kolom COLOR tetap terpisah (COLOR1 dan COLOR2 sama-sama TWILIGHT SKY). Di F27 hanya record ini yang terdampak.
 - Summary: 699 terisi / 25 `Need Review` / 0 null (sebelumnya 678 / 46 / 0). `needs_review` 25: 12 TAG_CONDITIONAL, 7 TAG_UNRESOLVED, 6 COLOR_IS_DESCRIPTOR.
 
 ## Ringkasan dampak semua keputusan (F27, rencana)

@@ -28,6 +28,8 @@ RULES = {
     "WS TAG COLOR": "instruksi TAG, C1/C2/... diganti nama warna benang (tanpa prefix YCA/YST dan kode); "
                     "STRIPED -> STRIPE; alias nama (mis. BLACK B -> BLACK); akhiran dobel (STRIPE STRIPE) "
                     "dijadikan satu; Cn = benang ke-n sesuai urutan MATRIX (benang berulang ikut dihitung); "
+                    "nama warna yang sama di deret C1/C2/.. ditulis sekali (C1/C2 MARL dengan TWILIGHT SKY dua "
+                    "kali -> TWILIGHT SKY MARL); "
                     "TAG bersyarat dipilih per colorway: (For Solid) = 1 benang unik, (For Marled/"
                     "Heathered) = lebih dari 1 benang unik, (For <nama colorway>) = colorway itu; 'Need Review' bila "
                     "TAG bersyarat tidak cocok/singkatan, Cn di luar jumlah benang, "

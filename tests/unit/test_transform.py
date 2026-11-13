@@ -60,6 +60,12 @@ def test_tag_cn_uses_position_of_repeated_yarn():
     assert doc["records"][0]["WS TAG COLOR"] == "BLACK/BROWN BRICK MARL" and doc["needs_review"] == []
 
 
+def test_same_color_twice_tag_once_colors_separate():
+    """MIXX V CHUNKY: C1/C2 MARL dengan TWILIGHT SKY dua kali -> TAG sekali, COLOR1 dan COLOR2 tetap terpisah."""
+    doc = transform(raw_of(style(tag="TAG: C1/C2 MARL", above=[cw(["TWILIGHT SKY", "TWILIGHT SKY"])])))
+    rec = doc["records"][0]
+    assert (rec["COLOR1"], rec["COLOR2"], rec["WS TAG COLOR"]) == ("TWILIGHT SKY", "TWILIGHT SKY", "TWILIGHT SKY MARL")
+
 def test_long_colorway_keeps_every_yarn_without_review():
     """Final tidak dibatasi jumlah kolom IM; kelebihan kolom diperingatkan saat menulis ke IM."""
     yarns = [f"Y{i}" for i in range(1, 33)]

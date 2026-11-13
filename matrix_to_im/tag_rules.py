@@ -8,6 +8,8 @@ from .review import Code, Problem
 
 _PREFIX = re.compile(TAG_PREFIX_RE)
 _CN = re.compile(TAG_CN_RE)
+# Deret Cn bergaris miring (C1/C2, C1/C2/C3): nama warna yang sama cukup ditulis sekali.
+_CN_RUN = re.compile(TAG_CN_RE + r"(?:\s*/\s*" + TAG_CN_RE.replace("(", "(?:") + r")+")
 _REPLACEMENTS = tuple((re.compile(pattern), repl) for pattern, repl in TAG_REPLACEMENTS)
 _PUNCTUATION_ONLY = re.compile(PUNCTUATION_ONLY_RE)
 _UNRESOLVED = re.compile(TAG_UNRESOLVED_RE, re.IGNORECASE)
@@ -104,7 +106,11 @@ def build_ws_tag_color(tag: str | None, yarns: list[str]) -> tuple[str | None, P
     # Dicek pada teks TAG sebelum Cn diganti, supaya nama benang (mis. "MULTI COLOR") tidak ikut terdeteksi.
     if _UNRESOLVED.search(body):
         return None, Problem(Code.TAG_UNRESOLVED, f"TAG masih berisi instruksi yang belum diterjemahkan: {tag}")
-    val = _CN.sub(lambda m: color_name(yarns[int(m.group(1)) - 1]), body)
+    # Benang berbeda bernama warna sama (mis. TWILIGHT SKY dua kali, C1/C2 MARL): TAG cukup "TWILIGHT SKY MARL";
+    # kolom COLOR tetap terpisah (permintaan user 13 Nov 2026).
+    val = _CN_RUN.sub(lambda m: "/".join(dict.fromkeys(
+        color_name(yarns[int(n) - 1]) for n in _CN.findall(m.group(0)))), body)
+    val = _CN.sub(lambda m: color_name(yarns[int(m.group(1)) - 1]), val)
     for pattern, repl in _REPLACEMENTS:   # mis. STRIPED -> STRIPE (catatan header IM)
         val = pattern.sub(repl, val)
     # Nama benang sudah berakhir dengan sufiks itu ("OYSTER MARL" + " MARL"), jadi lipat jadi satu.
