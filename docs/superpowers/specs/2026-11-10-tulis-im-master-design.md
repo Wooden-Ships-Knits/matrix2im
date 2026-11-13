@@ -175,6 +175,7 @@ Tambahan:
 - **[Keputusan user, 13 November 2026]** Sel COLOR1..COLORn yang ditulis dari MATRIX diberi latar abu 7F7F7F (`COLOR_FIXED_FILL`) sebagai tanda benang di sel itu sudah final.
   - Berlaku juga bila isinya sudah sama dengan MATRIX, di baris sisipan, dan untuk COLOR berisi deskripsi stripe/marl (Needs review).
   - Warna dibiarkan seperti di IM untuk slot di atas COLORn yang dikosongkan, aksesoris (XBP/XZIP), baris lebih, dan style yang tidak ditulis.
+  - **[Keputusan user, 13 November 2026, lanjutan]** Sel yang sudah abu gelap tidak dicat ulang; isinya saja yang ditimpa. Abu gelap = 7F7F7F, 808080 (yang dipakai IM tim), atau indexed 23 (= 808080 di palet bawaan; `COLOR_DARK_FILLS`). Kondisi bawaan sebelum COLOR diisi adalah abu muda C0C0C0, dan sel itu menjadi 7F7F7F setelah ditulis.
   - **[Keputusan perancang]** Sel COLOR berisi rumus tidak ditulis, jadi juga tidak diberi abu.
   - Cara menulis, laporan (`warna`), dan verifikasi sama dengan warna WS TAG COLOR/WHS; `read_layout` kini membaca warna COLOR1..18 juga.
 - **[Keputusan user, 11 November 2026]** Baris grup IM yang melebihi jumlah colorway MATRIX ("baris lebih", 3.044 baris di 758 grup pada salinan AI TEST V2): WS TAG COLOR dan WHS dikosongkan dan kedua selnya diberi latar kuning FFFF00 (`EXTRA_ROW_FILL`; revisi user setelah sempat "tanpa warna"), dan COLOR dibiarkan apa adanya. Jumlah baris tidak diubah. Laporan mencatat jenis `baris lebih`; ringkasan menghitung `extra_rows`. Sel rumus tetap tidak ditulis (peringatan).

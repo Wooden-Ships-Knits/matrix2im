@@ -474,6 +474,23 @@ def test_color_with_same_value_still_gets_fixed_fill():
     assert plan.changes == [] and plan.fills == [FillChange(5, 2, None, "7F7F7F")]
 
 
+
+# Sel yang sudah abu gelap di IM tim (808080, atau indexed 23 = 808080 di palet bawaan) tidak dicat ulang:
+# isinya saja yang ditimpa (permintaan user 13 Nov 2026).
+@pytest.mark.parametrize("dark", ["808080", "solid indexed=23", "7F7F7F"])
+def test_already_dark_gray_color_cell_only_value_overwritten(dark):
+    lay = _flayout([_grp("S - X/S", [5])], {(5, 2): dark}, values={(5, 2): "YST PURE SNOW"})
+    plan = plan_values(lay, {"S": [_cw(["A"])]})
+    assert [(c.row, c.col, c.new) for c in plan.changes] == [(5, 2, "A")]
+    assert plan.fills == []
+
+
+def test_light_gray_default_color_cell_gets_dark_gray():
+    """Kondisi bawaan sebelum COLOR diisi: abu muda C0C0C0; setelah diisi tool jadi abu gelap."""
+    lay = _flayout([_grp("S - X/S", [5])], {(5, 2): "C0C0C0", (5, 3): "C0C0C0"})
+    plan = plan_values(lay, {"S": [_cw(["A"])]})
+    assert plan.fills == [FillChange(5, 2, "C0C0C0", "7F7F7F")]       # slot 2 tidak diisi: tetap abu muda
+
 def test_cleared_slot_and_accessory_keep_their_fill():
     """Slot di atas COLORn: isinya dikosongkan tapi warnanya dibiarkan; aksesoris tidak disentuh sama sekali."""
     lay = _flayout([_grp("S - X/S", [5])], {(5, 3): "7F7F7F", (5, 4): "FFFF00"},

@@ -10,8 +10,8 @@ from openpyxl.utils import get_column_letter
 
 from .errors import Matrix2ImError
 from .im_layout import ImGroup, ImLayout, normalize
-from .legend_config import (COLOR_FIXED_FILL, EXTRA_ROW_FILL, FILL_BY_WHS, IM_ACCESSORY_RE, IM_COLOR_KEYS,
-                            NEED_REVIEW, WHS_SETS, WHS_VALUES)
+from .legend_config import (COLOR_DARK_FILLS, COLOR_FIXED_FILL, EXTRA_ROW_FILL, FILL_BY_WHS, IM_ACCESSORY_RE,
+                            IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS, WHS_VALUES)
 
 _REF_RE = re.compile(r"^(?P<sheet>.+?)(?: \((?P<section>[^)]*)\))? No\.(?P<no>.+?) \| ")
 _WHS_BY_SET = {parts: name for name, parts in WHS_SETS.items()}
@@ -368,7 +368,7 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
                 if j < len(yarns):
                     put(col, yarns[j])
                     old_fill = layout.fills.get((row, col))
-                    if not _is_formula(old) and old_fill != COLOR_FIXED_FILL:
+                    if not _is_formula(old) and old_fill not in COLOR_DARK_FILLS:
                         plan.fills.append(FillChange(row, col, old_fill, COLOR_FIXED_FILL))
                 elif not _blank(old) and not _ACCESSORY.match(str(old)):
                     put(col, None)

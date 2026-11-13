@@ -62,6 +62,10 @@ EXTRA_ROW_FILL = "FFFF00"
 # Sel COLOR1..COLORn yang ditulis dari MATRIX berlatar abu: benang di sel itu sudah final (permintaan user 13 Nov 2026).
 # Slot yang dikosongkan, aksesoris, baris lebih, dan sel rumus tidak diubah warnanya.
 COLOR_FIXED_FILL = "7F7F7F"
+# Sel COLOR yang sudah abu gelap tidak dicat ulang, isinya saja yang ditimpa (permintaan user 13 Nov 2026).
+# IM tim memakai 808080, juga lewat indexed 23 (= 808080 di palet bawaan Excel; IM tidak punya palet sendiri).
+# Kunci menurut xlsx_styles.fill_key. Abu muda C0C0C0 = kondisi bawaan sebelum COLOR diisi.
+COLOR_DARK_FILLS = frozenset({COLOR_FIXED_FILL, "808080", "solid indexed=23"})
 # Baris subtotal dikenali dari rumus SUBTOTAL, bukan label: label di IM asli bervariasi.
 IM_SUBTOTAL_FUNC = "SUBTOTAL"
 # Kunci grup = "STYLE - SIZE" (2 segmen " - "); teks sesudahnya di DESCRIPTION adalah catatan (mis. "- ALT 1").
