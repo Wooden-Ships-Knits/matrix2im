@@ -42,7 +42,7 @@ class ImLayout:
     groups: list[ImGroup]
     values: dict[tuple[int, int], object]
     subtotal_formulas: dict[int, dict[int, str]]
-    # Warna latar WS TAG COLOR dan WHS per baris grup (kunci xlsx_styles.fill_key: "FF99FF", None = tanpa warna).
+    # Warna latar COLOR1..18, WS TAG COLOR, dan WHS per baris grup (kunci xlsx_styles.fill_key: "FF99FF", None = tanpa warna).
     fills: dict[tuple[int, int], str | None] = field(default_factory=dict)
 
 
@@ -117,7 +117,8 @@ def read_layout(path: Path, sheet: str = IM_SHEET, header_row: int = IM_HEADER_R
     if columns is None:
         raise Matrix2ImError(f"Header IM MASTER baris {header_row} kosong")
     try:
-        fills = read_fills(path, sheet, [(r, c) for g in groups for r in g.rows for c in (columns.ws_tag, columns.whs)])
+        fill_cols = (*columns.colors, columns.ws_tag, columns.whs)
+        fills = read_fills(path, sheet, [(r, c) for g in groups for r in g.rows for c in fill_cols])
     except Matrix2ImError:
         raise
     except Exception as exc:

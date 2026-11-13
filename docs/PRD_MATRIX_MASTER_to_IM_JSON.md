@@ -217,6 +217,7 @@ Sudah disepakati:
 6. WS TAG COLOR ditulis ke kolom CD, yang header-nya dicocokkan dari baris pertama ("WS TAG COLOR"). WHS ditulis ke kolom CE, bukan kolom G.
 7. Nilai null tidak ditulis, dan kolom formula tidak pernah disentuh.
 8. Warna latar sel WS TAG COLOR dan WHS mengikuti WHS baris itu: 000 = FF99FF, SY = FFCC99, BOTH WHS = 969696 (revisi 11 November 2026). WHS null tidak mengubah warna.
+9. Sel COLOR1..COLORn yang ditulis dari MATRIX diberi latar abu 7F7F7F, tanda benang di sel itu sudah final (revisi 13 November 2026). Juga bila isinya sudah sama dan di baris sisipan. Slot di atas COLORn yang dikosongkan, aksesoris, baris lebih, dan sel rumus tidak diubah warnanya.
 
 Usulan yang masih menunggu konfirmasi:
 

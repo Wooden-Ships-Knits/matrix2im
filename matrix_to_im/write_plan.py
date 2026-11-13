@@ -10,8 +10,8 @@ from openpyxl.utils import get_column_letter
 
 from .errors import Matrix2ImError
 from .im_layout import ImGroup, ImLayout, normalize
-from .legend_config import (EXTRA_ROW_FILL, FILL_BY_WHS, IM_ACCESSORY_RE, IM_COLOR_KEYS, NEED_REVIEW, WHS_SETS,
-                            WHS_VALUES)
+from .legend_config import (COLOR_FIXED_FILL, EXTRA_ROW_FILL, FILL_BY_WHS, IM_ACCESSORY_RE, IM_COLOR_KEYS,
+                            NEED_REVIEW, WHS_SETS, WHS_VALUES)
 
 _REF_RE = re.compile(r"^(?P<sheet>.+?)(?: \((?P<section>[^)]*)\))? No\.(?P<no>.+?) \| ")
 _WHS_BY_SET = {parts: name for name, parts in WHS_SETS.items()}
@@ -287,7 +287,7 @@ class ValuePlan:
     changed_colorway_rows: list[int] = field(default_factory=list)
     short_groups: list[str] = field(default_factory=list)
     extra_rows: list[int] = field(default_factory=list)   # baris grup melebihi jumlah colorway MATRIX
-    fills: list[FillChange] = field(default_factory=list)  # warna latar WS TAG COLOR / WHS yang berubah
+    fills: list[FillChange] = field(default_factory=list)  # warna latar COLOR / WS TAG COLOR / WHS yang berubah
     unmatched_im_styles: list[str] = field(default_factory=list)
     missing_styles: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -367,6 +367,9 @@ def plan_values(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> Value
                     old_text.append(str(old))
                 if j < len(yarns):
                     put(col, yarns[j])
+                    old_fill = layout.fills.get((row, col))
+                    if not _is_formula(old) and old_fill != COLOR_FIXED_FILL:
+                        plan.fills.append(FillChange(row, col, old_fill, COLOR_FIXED_FILL))
                 elif not _blank(old) and not _ACCESSORY.match(str(old)):
                     put(col, None)
             if tuple(old_yarns) != tuple(normalize(y) for y in yarns):

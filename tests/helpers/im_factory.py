@@ -36,6 +36,7 @@ class GroupSpec:
     whs: list[str | None] | None = None
     ws_tag_fills: list[str | None] | None = None   # warna latar WS TAG COLOR (6 hex) per baris
     whs_fills: list[str | None] | None = None      # warna latar WHS (6 hex) per baris
+    color1_fill: str = "FFFF00"                     # warna latar COLOR1 semua baris colorway (7F7F7F = benang final)
 
 
 def build_im_sheet(path: Path, groups: list[GroupSpec], *, extra_header: dict[str, str] | None = None) -> Path:
@@ -47,7 +48,6 @@ def build_im_sheet(path: Path, groups: list[GroupSpec], *, extra_header: dict[st
         ws.cell(IM_HEADER_ROW, col, text)
     for letter, text in (extra_header or {}).items():
         ws[f"{letter}{IM_HEADER_ROW}"] = text
-    yellow = PatternFill("solid", fgColor="FFFFFF00")
     row = IM_HEADER_ROW + 1
     for g in groups:
         first = row
@@ -58,7 +58,7 @@ def build_im_sheet(path: Path, groups: list[GroupSpec], *, extra_header: dict[st
             ws.cell(row, 6, "=1/2")
             for col, value in zip(_COLOR_COLS, colors):
                 ws.cell(row, col, value)
-            ws.cell(row, _COLOR_COLS[0]).fill = yellow
+            ws.cell(row, _COLOR_COLS[0]).fill = PatternFill("solid", fgColor="FF" + g.color1_fill)
             if g.ws_tags and g.ws_tags[i] is not None:
                 ws.cell(row, _WS_TAG_COL, g.ws_tags[i])
             if g.whs and g.whs[i] is not None:

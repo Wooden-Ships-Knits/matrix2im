@@ -127,6 +127,7 @@ def test_fill_rows_show_old_and_new_color(tmp_path, monkeypatch):
     p = prepare_write({"records": [_rec("AAA", ["a"], 1, ws="T", whs="BOTH WHS")]}, st, TEST_PASSWORD)
     kinds = _by_kind(report_rows(p))
     assert kinds["warna"] == [
+        ("AAA - K", "E55", "55", "COLOR1 (warna latar)", "FFFF00", "7F7F7F", "warna"),
         ("AAA - K", "X55", "55", "WS TAG COLOR (warna latar)", "FFFF00", "969696", "warna"),
         ("AAA - K", "Y55", "55", "WHS (warna latar)", "tanpa warna", "969696", "warna"),
         ("AAA - K", "X56", "56", "WS TAG COLOR (warna latar)", "FFCC99", "FFFF00", "warna"),

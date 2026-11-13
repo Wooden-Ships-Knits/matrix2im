@@ -366,19 +366,24 @@ def _flayout(groups, fills, values=None):
     return ImLayout(_VCOLS, groups, values or {}, {}, fills)
 
 
+def _ws_whs_fills(plan):
+    """Hanya warna WS TAG COLOR (20) dan WHS (21); warna COLOR punya test sendiri."""
+    return [f for f in plan.fills if f.col in (20, 21)]
+
+
 def test_ws_tag_and_whs_fill_follow_whs():
     """WS TAG COLOR dan WHS: 000 = FF99FF, SY = FFCC99, BOTH WHS = 969696 (permintaan user 11 Nov 2026);
     yang sudah benar tidak diubah."""
     lay = _flayout([_grp("S - X/S", [5, 6, 7])], {(5, 20): "FF99FF", (5, 21): "FF99FF", (6, 20): "FFFF00",
                                                   (7, 21): "969696"})
     plan = plan_values(lay, {"S": [_cw(["A"], whs="000"), _cw(["B"], whs="SY"), _cw(["C"], whs="BOTH WHS")]})
-    assert plan.fills == [FillChange(6, 20, "FFFF00", "FFCC99"), FillChange(6, 21, None, "FFCC99"),
-                          FillChange(7, 20, None, "969696")]
+    assert _ws_whs_fills(plan) == [FillChange(6, 20, "FFFF00", "FFCC99"), FillChange(6, 21, None, "FFCC99"),
+                                   FillChange(7, 20, None, "969696")]
 
 
 def test_fill_untouched_when_whs_unknown():
     lay = _flayout([_grp("S - X/S", [5])], {(5, 20): "FFFF00", (5, 21): "FF99FF"})
-    assert plan_values(lay, {"S": [_cw(["A"], whs=None)]}).fills == []
+    assert _ws_whs_fills(plan_values(lay, {"S": [_cw(["A"], whs=None)]})) == []
 
 
 def test_extra_row_ws_tag_and_whs_yellow():
@@ -386,7 +391,7 @@ def test_extra_row_ws_tag_and_whs_yellow():
     lay = _flayout([_grp("S - X/S", [5, 6, 7])], {(5, 20): "FF99FF", (5, 21): "FF99FF", (6, 20): "FF99FF",
                                                   (7, 20): "FFFF00", (7, 21): "FFFF00"})
     plan = plan_values(lay, {"S": [_cw(["A"], whs="000")]})
-    assert plan.fills == [FillChange(6, 20, "FF99FF", "FFFF00"), FillChange(6, 21, None, "FFFF00")]
+    assert _ws_whs_fills(plan) == [FillChange(6, 20, "FF99FF", "FFFF00"), FillChange(6, 21, None, "FFFF00")]
 
 
 def test_project_layout_copies_fills_to_inserted_rows():
@@ -453,3 +458,39 @@ def test_unknown_collection_rejected_with_available_names():
 def test_empty_selection_rejected():
     with pytest.raises(Matrix2ImError, match="minimal satu collection"):
         select_collections(_three_tabs(), [])
+
+
+# ---- latar 7F7F7F = benang di sel COLOR sudah final (permintaan user 13 Nov 2026) ----
+
+def test_written_color_slots_get_fixed_fill():
+    lay = _flayout([_grp("S - X/S", [5, 6])], {(5, 2): "FFFF00", (6, 2): "7F7F7F"})
+    plan = plan_values(lay, {"S": [_cw(["A", "B"]), _cw(["C"])]})
+    assert plan.fills == [FillChange(5, 2, "FFFF00", "7F7F7F"), FillChange(5, 3, None, "7F7F7F")]   # 6,2 sudah abu
+
+
+def test_color_with_same_value_still_gets_fixed_fill():
+    lay = _flayout([_grp("S - X/S", [5])], {}, values={(5, 2): "A"})
+    plan = plan_values(lay, {"S": [_cw(["A"])]})
+    assert plan.changes == [] and plan.fills == [FillChange(5, 2, None, "7F7F7F")]
+
+
+def test_cleared_slot_and_accessory_keep_their_fill():
+    """Slot di atas COLORn: isinya dikosongkan tapi warnanya dibiarkan; aksesoris tidak disentuh sama sekali."""
+    lay = _flayout([_grp("S - X/S", [5])], {(5, 3): "7F7F7F", (5, 4): "FFFF00"},
+                   values={(5, 2): "OLD1", (5, 3): "OLD2", (5, 4): "XBP 729"})
+    plan = plan_values(lay, {"S": [_cw(["A"])]})
+    assert plan.fills == [FillChange(5, 2, None, "7F7F7F")]
+    assert {(c.row, c.col): c.new for c in plan.changes} == {(5, 2): "A", (5, 3): None}
+
+
+def test_extra_row_color_fill_untouched():
+    lay = _flayout([_grp("S - X/S", [5, 6])], {(5, 2): "7F7F7F", (6, 2): "FFFF00", (6, 20): "FFFF00", (6, 21): "FFFF00"})
+    plan = plan_values(lay, {"S": [_cw(["A"])]})
+    assert plan.fills == []
+
+
+def test_formula_color_cell_not_painted():
+    """Sel rumus tidak ditimpa, jadi benangnya tidak ditandai final."""
+    lay = _flayout([_grp("S - X/S", [5])], {}, values={(5, 2): "=B1"})
+    plan = plan_values(lay, {"S": [_cw(["A", "B"])]})
+    assert plan.fills == [FillChange(5, 3, None, "7F7F7F")]

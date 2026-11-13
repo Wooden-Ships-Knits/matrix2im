@@ -172,6 +172,11 @@ Tambahan:
   - **[Keputusan perancang]** Warna ditulis tanpa openpyxl: `styles.xml` hanya ditambah (warna dan format baru di akhir `fills`/`cellXfs`; format lama tidak diubah; format yang sama dipakai ulang, jadi menjalankan ulang tidak menumpuk format). Di sheet, hanya atribut `s` sel WS TAG COLOR dan WHS yang diganti, juga di sel rumus.
   - Baris sisipan mewarisi warna baris sumbernya (Excel `fill down` menyalin format); rencana warna dihitung ulang sesudah sisip dan harus sama dengan pratinjau.
   - Laporan mencatat jenis `warna` (warna lama dan baru, "tanpa warna" bila kosong). Ringkasan menghitung `fills_changed`.
+- **[Keputusan user, 13 November 2026]** Sel COLOR1..COLORn yang ditulis dari MATRIX diberi latar abu 7F7F7F (`COLOR_FIXED_FILL`) sebagai tanda benang di sel itu sudah final.
+  - Berlaku juga bila isinya sudah sama dengan MATRIX, di baris sisipan, dan untuk COLOR berisi deskripsi stripe/marl (Needs review).
+  - Warna dibiarkan seperti di IM untuk slot di atas COLORn yang dikosongkan, aksesoris (XBP/XZIP), baris lebih, dan style yang tidak ditulis.
+  - **[Keputusan perancang]** Sel COLOR berisi rumus tidak ditulis, jadi juga tidak diberi abu.
+  - Cara menulis, laporan (`warna`), dan verifikasi sama dengan warna WS TAG COLOR/WHS; `read_layout` kini membaca warna COLOR1..18 juga.
 - **[Keputusan user, 11 November 2026]** Baris grup IM yang melebihi jumlah colorway MATRIX ("baris lebih", 3.044 baris di 758 grup pada salinan AI TEST V2): WS TAG COLOR dan WHS dikosongkan dan kedua selnya diberi latar kuning FFFF00 (`EXTRA_ROW_FILL`; revisi user setelah sempat "tanpa warna"), dan COLOR dibiarkan apa adanya. Jumlah baris tidak diubah. Laporan mencatat jenis `baris lebih`; ringkasan menghitung `extra_rows`. Sel rumus tetap tidak ditulis (peringatan).
 - **[Terbuka]** Label subtotal otomatis (usulan PRD: semua 000 → "000 ONLY", semua SY → "SHOPIFY ONLY", campuran → "BOTH WHS"). Sampai diputuskan, label subtotal **tidak diubah**.
 

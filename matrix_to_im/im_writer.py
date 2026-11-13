@@ -479,7 +479,7 @@ def commit_write(preview: WritePreview, final: dict, settings: Settings, passwor
             _execute(preview, final, settings, password, progress, inserter, state)
             ok = True
             message = (f"IM MASTER diperbarui: {preview.summary['cells_changed']} sel diubah, "
-                       f"{preview.summary['fills_changed']} warna latar diubah (WS TAG COLOR dan WHS), "
+                       f"{preview.summary['fills_changed']} warna latar diubah (COLOR, WS TAG COLOR, dan WHS), "
                        f"{preview.summary['rows_inserted']} baris disisipkan.")
             if missing := len(preview.values.missing_styles):
                 message += f" {missing} style MATRIX tidak ada di IM (tidak ditulis)."

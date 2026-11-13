@@ -879,10 +879,13 @@ def _painted(tmp_path, engine="none", groups=None):
 def test_commit_paints_ws_tag_by_whs_and_clears_extra_row(tmp_path):
     im, st, final = _painted(tmp_path)
     p = prepare_write(final, st, PW)
-    assert p.summary["fills_changed"] == 4 and p.summary["extra_rows"] == 1   # 56 dua kolom, 57 dua kolom
+    # 56 dan 57 dua kolom (WS TAG/WHS); COLOR1 baris 55 dan 56 menjadi abu (benang final)
+    assert p.summary["fills_changed"] == 6 and p.summary["extra_rows"] == 1
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
     assert rep.ok, rep.message
-    assert "4 warna latar diubah" in rep.message
+    assert "6 warna latar diubah" in rep.message
+    assert read_fills(im, "F27", [(55, 5), (56, 5), (57, 5)]) == {
+        (55, 5): "7F7F7F", (56, 5): "7F7F7F", (57, 5): "FFFF00"}      # baris lebih: warna COLOR dibiarkan
     cells = [(r, c) for r in (55, 56, 57) for c in (24, 25)]
     assert read_fills(im, "F27", cells) == {
         (55, 24): "FF99FF", (56, 24): "969696", (57, 24): "FFFF00",
@@ -898,12 +901,13 @@ def test_commit_inserted_rows_get_whs_fill(tmp_path, excel_on):
     groups = [GroupSpec("AAA - K", [["a1"]], ws_tags=["T1"], whs=["000"], ws_tag_fills=["FFFF00"])]
     im, st, final = _painted(tmp_path, "excel", groups)
     p = prepare_write(final, st, PW)
-    assert [(f.row, f.col, f.old, f.new) for f in p.values.fills] == [
+    assert [(f.row, f.col, f.old, f.new) for f in p.values.fills if f.col in (24, 25)] == [
         (55, 24, "FFFF00", "FF99FF"), (55, 25, None, "FF99FF"), (56, 24, "FFFF00", "969696"), (56, 25, None, "969696")]
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx", inserter=fake_inserter)
     assert rep.ok, rep.message
     assert read_fills(im, "F27", [(55, 24), (56, 24), (55, 25), (56, 25)]) == {
         (55, 24): "FF99FF", (56, 24): "969696", (55, 25): "FF99FF", (56, 25): "969696"}
+    assert read_fills(im, "F27", [(55, 5), (56, 5)]) == {(55, 5): "7F7F7F", (56, 5): "7F7F7F"}   # sisipan juga
 
 
 def test_commit_aborts_when_fill_not_written_as_planned(tmp_path, monkeypatch):
@@ -912,7 +916,7 @@ def test_commit_aborts_when_fill_not_written_as_planned(tmp_path, monkeypatch):
     before, ino = im.read_bytes(), os.stat(im).st_ino
     _patch_apply(monkeypatch, mutate_fills=lambda fs: [dataclasses.replace(fs[0], new="FFFF00"), *fs[1:]])
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
-    _aborted(st, rep, "Verifikasi gagal: warna sel X56", im, before, ino)
+    _aborted(st, rep, "Verifikasi gagal: warna sel E55", im, before, ino)    # fs[0] = COLOR1 baris 55
 
 
 def test_commit_aborts_when_styles_change_beyond_append(tmp_path, monkeypatch):
@@ -926,8 +930,8 @@ def test_commit_aborts_when_styles_change_beyond_append(tmp_path, monkeypatch):
 
 
 def test_commit_aborts_when_styles_change_without_planned_fills(tmp_path, monkeypatch):
-    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a1"]])])
-    final = {"records": [_rec("AAA", ["x1"], "T1", None, 1)]}       # WHS tak diketahui: warna tidak diubah
+    im, st = _make(tmp_path, [GroupSpec("AAA - K", [["a1"]], color1_fill="7F7F7F")])
+    final = {"records": [_rec("AAA", ["x1"], "T1", None, 1)]}       # WHS tak diketahui, COLOR1 sudah abu: tanpa warna
     p = prepare_write(final, st, PW)
     assert p.values.fills == []
     before, ino = im.read_bytes(), os.stat(im).st_ino
@@ -967,7 +971,8 @@ def test_commit_keeps_inherited_fill_when_text_written_into_absent_cell(tmp_path
     im, st = _row_filled(tmp_path)
     final = {"records": [_rec("AAA", ["a1"], "T1", "000", 1)]}
     p = prepare_write(final, st, PW)
-    assert p.values.fills == [] and {(c.row, c.col) for c in p.values.changes} >= {(55, 24)}
+    assert [f for f in p.values.fills if f.col in (24, 25)] == []
+    assert {(c.row, c.col) for c in p.values.changes} >= {(55, 24)}
     rep = commit_write(p, final, st, PW, "andi", "m.xlsx")
     assert rep.ok, rep.message
     assert read_fills(im, "F27", [(55, 24)]) == {(55, 24): "FF99FF"}

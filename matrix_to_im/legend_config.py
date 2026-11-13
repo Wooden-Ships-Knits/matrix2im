@@ -59,6 +59,9 @@ IM_WHS_KEY = "WHS"                      # yang ditulis: kolom tepat di kanan WS 
 FILL_BY_WHS = {"000": "FF99FF", "SY": "FFCC99", WHS_BOTH: "969696"}
 # Baris lebih (WS TAG COLOR dan WHS dikosongkan): kedua sel berlatar kuning.
 EXTRA_ROW_FILL = "FFFF00"
+# Sel COLOR1..COLORn yang ditulis dari MATRIX berlatar abu: benang di sel itu sudah final (permintaan user 13 Nov 2026).
+# Slot yang dikosongkan, aksesoris, baris lebih, dan sel rumus tidak diubah warnanya.
+COLOR_FIXED_FILL = "7F7F7F"
 # Baris subtotal dikenali dari rumus SUBTOTAL, bukan label: label di IM asli bervariasi.
 IM_SUBTOTAL_FUNC = "SUBTOTAL"
 # Kunci grup = "STYLE - SIZE" (2 segmen " - "); teks sesudahnya di DESCRIPTION adalah catatan (mis. "- ALT 1").

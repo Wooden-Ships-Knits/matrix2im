@@ -159,5 +159,15 @@ def test_ws_tag_and_whs_fills_read_for_group_rows(tmp_path):
                                                         ws_tag_fills=["FF99FF", None, "969696"],
                                                         whs_fills=[None, "FFCC99", "969696"])])
     lay = read_layout(p)
-    assert lay.fills == {(55, 24): "FF99FF", (56, 24): None, (57, 24): "969696",
-                         (55, 25): None, (56, 25): "FFCC99", (57, 25): "969696"}
+    assert {k: v for k, v in lay.fills.items() if k[1] in (24, 25)} == {
+        (55, 24): "FF99FF", (56, 24): None, (57, 24): "969696",
+        (55, 25): None, (56, 25): "FFCC99", (57, 25): "969696"}
+
+
+def test_color_fills_read_for_group_rows(tmp_path):
+    """Warna COLOR1..18 dibaca untuk tanda benang final (7F7F7F); pabrik IM memberi COLOR1 (kolom E) latar kuning."""
+    p = build_im_sheet(tmp_path / "im.xlsx", [GroupSpec("S - X/S", [["A", "B"]])])
+    lay = read_layout(p)
+    assert lay.fills.get((55, 5)) == "FFFF00"
+    assert (55, 7) in lay.fills and lay.fills[(55, 7)] is None   # COLOR2 tanpa warna
+    assert all((55, c) in lay.fills for c in lay.columns.colors)
