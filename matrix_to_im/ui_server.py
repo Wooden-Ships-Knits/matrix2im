@@ -29,6 +29,7 @@ from typing import Callable
 
 from openpyxl.utils import get_column_letter
 
+from .black_line_export import above_black_xlsx_bytes
 from .errors import Matrix2ImError
 from .legend_config import EXCEL_TIMEOUT_S
 from .im_lock import WrongPassword
@@ -256,6 +257,8 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.OK, page, "text/html; charset=utf-8")
         elif path in ("/api/download/raw.json", "/api/download/final.json"):
             self._download(path.rsplit("/", 1)[1])
+        elif path == "/api/download/atas-garis-hitam.xlsx":
+            self._download_above_black()
         elif path == "/api/write/config":
             self._write_config()
         elif path == "/api/write/status":
@@ -534,6 +537,28 @@ class _Handler(BaseHTTPRequestHandler):
         body = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
         self._send(HTTPStatus.OK, body, "application/json; charset=utf-8",
                    {"Content-Disposition": f'attachment; filename="{name}"'})
+
+
+    def _download_above_black(self) -> None:
+        """Excel colorway di atas garis hitam dari hasil Proses terakhir sesi ini (untuk dicek tim)."""
+        last = self.state.last
+        if last is None:
+            self._error(HTTPStatus.NOT_FOUND, "Belum ada hasil; jalankan proses dulu")
+            return
+        try:
+            body = above_black_xlsx_bytes(last["raw"], last["final"])
+        except Matrix2ImError as exc:
+            self._error(HTTPStatus.UNPROCESSABLE_ENTITY, str(exc))
+            return
+        stem = Path(str(last["matrix_name"]).replace("\\", "/")).stem
+        self._send(HTTPStatus.OK, body, XLSX_TYPE,
+                   {"Content-Disposition": attachment(f"matrix2im atas garis hitam {stem}.xlsx")})
+
+
+def attachment(filename: str) -> str:
+    """Content-Disposition untuk nama file bebas: fallback ASCII tanpa kutip/kontrol + filename* UTF-8."""
+    fallback = "".join(c if 32 <= ord(c) < 127 and c not in '"\\' else "_" for c in filename)
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{urllib.parse.quote(filename, safe='')}"
 
 
 class _UiServer(ThreadingHTTPServer):

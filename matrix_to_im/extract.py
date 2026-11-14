@@ -28,6 +28,8 @@ _PUNCTUATION_ONLY = re.compile(PUNCTUATION_ONLY_RE)
 _FONT_MEANING = {rgb6(k): v for k, v in FONT_MEANING.items()}
 _BLACK_FONT = frozenset(rgb6(k) for k in BLACK_FONT_RGB)
 _STYLE_WHS_BY_FILL = {rgb6(k) or k: v for k, v in STYLE_WHS_BY_FILL.items()}
+# Ekor warning "<sheet> <sel nama> <style>: ..."; export atas garis hitam mencocokkan teks ini per kartu.
+NO_BLACK_LINE = "ada warna di atas garis merah tapi garis hitam tidak ditemukan"
 
 
 def split_yarns(text: object) -> list[str]:
@@ -360,7 +362,7 @@ def _read_card(page: _Page, col: int, warnings: list[str]) -> Card | None:
         warnings.append(f"{ws.title} {no_cell} No.{no} {style}: "
                         f"background nomor tidak dikenali ({no_fill}), WHS style tidak bisa ditentukan")
     if (above or between) and black is None:
-        warnings.append(f"{name_ref}: ada warna di atas garis merah tapi garis hitam tidak ditemukan")
+        warnings.append(f"{name_ref}: {NO_BLACK_LINE}")
     if not tag_rows:
         warnings.append(f"{name_ref}: tidak ada baris TAG")
     if not (above or between or below):

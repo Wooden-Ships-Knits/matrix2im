@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import threading
@@ -9,6 +10,7 @@ from pathlib import Path
 
 import pytest
 from helpers.matrix_factory import build_im, build_matrix
+from openpyxl import load_workbook
 
 from matrix_to_im.cli import main
 from matrix_to_im.settings import Settings
@@ -187,6 +189,36 @@ def test_download_after_run(base, tmp_path):
         assert status == 200
         assert headers["Content-Disposition"] == f'attachment; filename="{name}"'
         assert key in json.loads(body)
+
+
+def test_above_black_download_before_run_is_404(base):
+    status, _, _ = call(f"{base}/api/download/atas-garis-hitam.xlsx")
+    assert status == 404
+
+
+def test_above_black_download_after_run(base, tmp_path):
+    upload(base, "matrix", build_matrix(tmp_path / "m.xlsx"))
+    run(base)
+    status, headers, body = call(f"{base}/api/download/atas-garis-hitam.xlsx", headers=own(base))
+    assert status == 200
+    assert headers["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert headers["Content-Disposition"] == (
+        "attachment; filename=\"matrix2im atas garis hitam m.xlsx\"; "
+        "filename*=UTF-8''matrix2im%20atas%20garis%20hitam%20m.xlsx")
+    wb = load_workbook(io.BytesIO(body), read_only=True)
+    assert wb.sheetnames == ["Atas garis hitam", "Tanpa warna atas garis hitam"]
+    assert [r[3] for r in wb["Atas garis hitam"].iter_rows(min_row=2, values_only=True)] == ["NEWPORT CREW"]
+
+
+def test_above_black_filename_is_safe_for_header(base, tmp_path):
+    """Nama upload bebas (kutip, non-ASCII, folder): header tetap satu baris yang valid."""
+    upload(base, "matrix", build_matrix(tmp_path / "m.xlsx"), name='x/F27 "MATRIX" é.xlsx')
+    run(base)
+    status, headers, _ = call(f"{base}/api/download/atas-garis-hitam.xlsx", headers=own(base))
+    assert status == 200
+    assert headers["Content-Disposition"] == (
+        "attachment; filename=\"matrix2im atas garis hitam F27 _MATRIX_ _.xlsx\"; "
+        "filename*=UTF-8''matrix2im%20atas%20garis%20hitam%20F27%20%22MATRIX%22%20%C3%A9.xlsx")
 
 
 @pytest.mark.parametrize("method,path", [("GET", "/tidak-ada"), ("POST", "/api/upload/lain"),
