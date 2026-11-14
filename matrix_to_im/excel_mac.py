@@ -43,7 +43,7 @@ def _runs(cols: list[int]) -> list[list[int]]:
 def _op_lines(op: InsertOp, last_col: str) -> list[str]:
     lines = [
         f'      insert into range (range "{op.at_row}:{op.at_row + op.count - 1}" of ws) shift shift down',
-        f'      fill down range "A{op.fill_from}:{last_col}{op.fill_to}" of ws',
+        f'      fill {"up" if op.fill_up else "down"} range "A{op.fill_from}:{last_col}{op.fill_to}" of ws',
     ]
     # Rumus diperbaiki di sini juga: subtotal_row_after hanya berlaku sebelum op yang lebih atas dijalankan.
     if op.formula_fixes and op.subtotal_row_after is not None:

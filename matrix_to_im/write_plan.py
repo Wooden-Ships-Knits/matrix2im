@@ -171,7 +171,13 @@ def select_collections(final: dict, collections: Iterable[str] | None) -> Collec
 
 @dataclass(frozen=True)
 class InsertOp:
-    """Satu sisipan baris di dalam grup; at_row/fill_* dalam koordinat sebelum sisipan op ini."""
+    """Satu sisipan baris di dalam grup.
+
+    at_row = baris pertama sisipan (koordinat sebelum op ini). fill_from..fill_to = range yang di-fill sesudah sisip.
+    fill_up=False: fill down, sumber = fill_from (baris di atas sisipan, tidak bergeser oleh op ini).
+    fill_up=True: fill up, sumber = fill_to, yaitu baris lama di at_row yang terdorong turun; fill_from == at_row,
+    jadi dalam koordinat sebelum op sumbernya tetap fill_from.
+    """
     description: str
     at_row: int
     count: int
@@ -179,6 +185,7 @@ class InsertOp:
     fill_to: int
     subtotal_row_after: int | None
     formula_fixes: dict[int, str]
+    fill_up: bool = False
 
 
 def match_style(description: str, styles: Iterable[str]) -> str | None:
@@ -213,8 +220,10 @@ def plan_inserts(layout: ImLayout, colorways: dict[str, list[Colorway]]) -> list
             continue
         k = n - r
         if r >= 2:
+            # Di atas baris terakhir agar SUBTOTAL ikut melebar; isinya salinan baris terakhir (fill up), jadi baris
+            # yang sudah ada tetap di posisinya beserta kolom yang tidak ditulis tool (mis. kancing XBP).
             last = g.rows[-1]
-            ops.append(InsertOp(g.description, last, k, last - 1, last + k - 1, None, {}))
+            ops.append(InsertOp(g.description, last, k, last, last + k, None, {}, fill_up=True))
             continue
         row = g.rows[0]
         fixes: dict[int, str] = {}
@@ -244,7 +253,7 @@ def project_layout(layout: ImLayout, ops: list[InsertOp]) -> ImLayout:
                 new = list(range(start, start + o.count))
                 group_new.setdefault(idx, []).extend(new)
                 for row in new:
-                    inserted[row] = shift(o.fill_from)
+                    inserted[row] = shift(o.fill_from)  # sumber dalam koordinat sebelum op (lihat InsertOp)
     groups = [
         ImGroup(g.description, tuple(sorted([shift(x) for x in g.rows] + group_new.get(i, []))),
                 None if g.subtotal_row is None else shift(g.subtotal_row))

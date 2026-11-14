@@ -110,6 +110,14 @@ Catatan sementara hasil review tab *Needs review* di UI. Setelah semua kasus dip
 - `WS TAG COLOR`: 21 record dari `Need Review` menjadi terisi, semuanya bekas `TAG_CN_OUT_OF_RANGE` (mis. PEBBLE STITCH `TAG: C1/C3 MARL` → `BLACK/BROWN BRICK MARL`). Satu di antaranya, MIXX V CHUNKY E97 (`TAG: C1/C2 MARL`, benang `TWILIGHT SKY, TWILIGHT SKY`), awalnya menjadi `TWILIGHT SKY/TWILIGHT SKY MARL`. Aturan tambahan dari user (13 November 2026): nama warna yang sama di deret Cn bergaris miring (C1/C2, C1/C2/C3) ditulis sekali di TAG, jadi `TWILIGHT SKY MARL`; kolom COLOR tetap terpisah (COLOR1 dan COLOR2 sama-sama TWILIGHT SKY). Di F27 hanya record ini yang terdampak.
 - Summary: 699 terisi / 25 `Need Review` / 0 null (sebelumnya 678 / 46 / 0). `needs_review` 25: 12 TAG_CONDITIONAL, 7 TAG_UNRESOLVED, 6 COLOR_IS_DESCRIPTOR.
 
+## 10. Baris sisipan menyalin baris terakhir grup — diputuskan 2026-11-14
+
+**Masalah (dilaporkan user):** ALIANA MARLED V BUTTON CARDI CHUNKY COTTON - X/S di IM tim punya 3 baris; baris ke-3 KHAKI/BLUSH CHAMPAGNE MARL berkancing `XBP 005 2 CM-PEARL`. MATRIX berisi 4 colorway, jadi 1 baris disisipkan. Sisipan di atas baris terakhir menyalin baris di atasnya (kancing `XBP 729 2 CM-DARK ROAST`), dan baris KHAKI lama terdorong ke posisi ke-4. Karena benang ditulis menurut posisi, KHAKI/BLUSH mendapat kancing DARK ROAST dan PEARL pindah ke CHOCOLATE ALE/DARK DUSK. Kancing (aksesori) tidak ada di MATRIX dan tidak ditulis tool, jadi ia ikut baris fisiknya.
+
+**Keputusan (user setuju usulan perancang):** untuk grup dengan 2 baris atau lebih, baris tetap disisipkan di atas baris colorway terakhir supaya SUBTOTAL ikut melebar, tetapi isinya disalin dari **baris terakhir** (Excel `fill up`), bukan dari baris di atasnya. Baris yang sudah ada tetap di posisinya beserta kolom yang tidak ditulis tool (kancing, rumus berat/harga, dst.), dan baris tambahan mewarisi isi baris terakhir. Grup 1 baris tidak berubah (sisip di bawah, `fill down`).
+
+**Dampak pada penulisan 13 November 17:47 ke IM tim:** 94 grup ber-2+ baris disisipi; hanya ALIANA X/S dan X/L yang kancing baris terakhirnya berbeda dari baris di atasnya.
+
 ## Ringkasan dampak semua keputusan (F27, rencana)
 
 | Metrik | Sekarang | Setelah keputusan 1–8 |

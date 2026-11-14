@@ -71,7 +71,7 @@ Semua uji dilakukan di salinan. File di Google Drive tidak disentuh.
 | Lewat Excel + AppleScript (cara A) | Buka sekitar 9 detik, tulis + simpan 3 sel sekitar 3 detik. Semua bagian file utuh, kunci tetap ada. Butuh izin macOS sekali (Terminal mengontrol Excel, akses file). |
 | Akses Google Drive dari Terminal | Ditolak macOS ("Operation not permitted") sampai user memberi izin di System Settings. |
 | Pencocokan nama | Ke-211 style MATRIX F27 punya baris di IM bila spasi berlebih diabaikan (IM memakai mis. `REEGAN CABLE CREW POODLE  - X/S`). Ada 179 style di IM yang tidak ada di MATRIX. |
-| Sisip baris di dalam grup (Excel) | Sisip di atas baris colorway terakhir, lalu `fill down` dari baris di atasnya. SUBTOTAL di baris subtotal ikut melebar (`SUBTOTAL(1,CG55:CG57)` → `CG55:CG58`), dan rumus baris baru ikut menyesuaikan (HM58 → `HJ58+HL58`). |
+| Sisip baris di dalam grup (Excel) | Sisip di atas baris colorway terakhir, lalu `fill up` dari baris terakhir lama yang terdorong turun (sebelum 14 November 2026: `fill down` dari baris di atasnya). SUBTOTAL di baris subtotal ikut melebar (`SUBTOTAL(1,CG55:CG57)` → `CG55:CG58`), dan rumus baris baru ikut menyesuaikan (HM58 → `HJ58+HL58`). |
 | Kecepatan sisip | Sisip baris utuh sekitar 0,25 detik. `fill down` yang dibatasi ke kolom terpakai (A:IJ) sekitar 0,3 detik per grup, termasuk sisip (50 grup dalam 16 detik). `copy range` satu baris sekitar 2 detik dan memecah conditional formatting (249 → 1.153 blok setelah 50 kali); `fill down` terbatas tidak mengubah CF (248 blok, 328 aturan). Sisip pada range kolom (bukan baris utuh) sekitar 3,4 detik. **Pakai: sisip baris utuh + `fill down` terbatas.** |
 | Grup 1 baris (27 grup kurang baris di F27) | Sisip di atas baris terakhir tidak bisa, jadi baris disisipkan di bawah baris colorway lalu `fill down`. Rumus subtotal yang merujuk baris itu (mis. `=SUBTOTAL(1,CG229)`, 12 rumus) diperlebar lewat Excel menjadi `CG229:CG231`. Terbukti di salinan; bagian file lain tidak berubah. |
 | Kebutuhan sisip F27 | 1.108 subgrup size milik style MATRIX: 176 pas, 755 kelebihan baris, 177 kurang (total 286 baris). Perkiraan sisip penuh sekitar 1 menit. |
@@ -128,7 +128,7 @@ Aturan 1–7 di PRD bagian "Fase berikutnya: penulisan ke IM MASTER" berlaku pen
 - hanya baris colorway yang diisi;
 - semua grup size mendapat daftar colorway yang sama dengan urutan MATRIX;
 - baris berlebih: WS TAG COLOR dan WHS dikosongkan dan berlatar kuning (lihat keputusan 11 November 2026 di bawah; menggantikan "diisi colorway terakhir");
-- baris yang kurang disisipkan di dalam grup dengan menyalin baris di atasnya, dan formula/SUBTOTAL ikut menyesuaikan;
+- baris yang kurang disisipkan di dalam grup dengan menyalin baris terakhir grup, dan formula/SUBTOTAL ikut menyesuaikan;
 - WS TAG COLOR ke kolom CD dan WHS ke kolom CE, keduanya dicocokkan lewat nama header;
 - nilai null tidak ditulis;
 - kolom formula tidak pernah disentuh.
@@ -160,9 +160,9 @@ Tambahan:
   - Tool boleh menimpa nilai yang sudah ada, kecuali satu hal: sel yang sudah berisi tidak pernah diganti dengan `Need Review`. Ini supaya perbaikan tangan TIM IM tidak hilang.
   - Semua sel yang nilainya akan berubah ditampilkan di ringkasan sebelum konfirmasi.
   - Cara memenuhinya: UI menampilkan 500 perubahan pertama. Daftar lengkapnya bisa diunduh sebagai laporan Excel. Setiap penulisan juga menyimpan laporan Excel di samping cadangan.
-- **[Keputusan user]** Baris sisipan menyalin seluruh isi baris di atasnya, termasuk kolom per colorway. Baris sisipan ditandai di laporan supaya dicek.
+- **[Keputusan user]** Baris sisipan menyalin seluruh isi baris terakhir grup, termasuk kolom per colorway. Baris yang sudah ada tetap di posisinya beserta kolom yang tidak ditulis tool (mis. kancing XBP). Baris sisipan ditandai di laporan supaya dicek. (Diubah 14 November 2026 dari "baris di atasnya", setelah kancing KHAKI/BLUSH di ALIANA X/S tertukar; lihat docs/catatan-keputusan-review.md §10.)
 - **[Keputusan perancang, dari spike]** Cara menyisipkan k baris pada grup dengan R baris:
-  - R ≥ 2: sisip k baris utuh tepat di atas baris colorway terakhir, lalu `fill down` kolom A sampai kolom terpakai terakhir, dari baris di atas titik sisip sampai baris sisipan terakhir. Semua rujukan ke grup, termasuk SUBTOTAL, ikut melebar.
+  - R ≥ 2: sisip k baris utuh tepat di atas baris colorway terakhir, lalu `fill up` kolom A sampai kolom terpakai terakhir, dari baris terakhir lama (sekarang tepat di bawah sisipan) ke atas sampai baris sisipan pertama. Semua rujukan ke grup, termasuk SUBTOTAL, ikut melebar.
   - R = 1: sisip k baris utuh di bawah baris colorway, lalu `fill down` dari baris itu. Rumus di baris subtotal grup yang merujuk baris colorway (mis. `CG229`) diperlebar menjadi range (`CG229:CG231`). Rujukan ke baris itu di luar baris subtotal tidak ikut melebar, dan laporan mencantumkan peringatannya.
   - Grup diproses dari bawah ke atas supaya nomor baris grup di atasnya tidak bergeser selama proses.
 - **[Keputusan user]** Satu style dengan beberapa kartu di sheet yang sama (contoh F27: CROP BOYFRIEND CREW COTTON S2 - A/B, CHRISTMAS LABRADOR CREW CHUNKY 1A/1B, CHIN-CHIN CREW CHUNKY S9 - A/B) digabung menjadi satu daftar: colorway kartu A, lalu kartu B, sesuai urutan di MATRIX. Aturan lintas sheet di atas (HUTTON) tetap berlaku untuk style yang muncul di sheet berbeda.
@@ -170,7 +170,7 @@ Tambahan:
 - **[Keputusan user, 11 November 2026]** Label WHS `000 & SY` diganti `BOTH WHS` (konstanta `WHS_BOTH`). `final.json` dengan label WHS di luar `000`/`SY`/`BOTH WHS` ditolak saat rencana dibuat, dengan pesan untuk membuat ulang `final.json`.
 - **[Keputusan user, 11 November 2026]** Warna latar sel WS TAG COLOR **dan WHS** mengikuti WHS colorway: `000` = FF99FF, `SY` = FFCC99, `BOTH WHS` = 969696 (`FILL_BY_WHS`, sama dengan kebiasaan di IM asli). Warna diterapkan di semua baris colorway yang dikelola tool, juga bila teksnya tidak berubah; WHS null tidak mengubah warna.
   - **[Keputusan perancang]** Warna ditulis tanpa openpyxl: `styles.xml` hanya ditambah (warna dan format baru di akhir `fills`/`cellXfs`; format lama tidak diubah; format yang sama dipakai ulang, jadi menjalankan ulang tidak menumpuk format). Di sheet, hanya atribut `s` sel WS TAG COLOR dan WHS yang diganti, juga di sel rumus.
-  - Baris sisipan mewarisi warna baris sumbernya (Excel `fill down` menyalin format); rencana warna dihitung ulang sesudah sisip dan harus sama dengan pratinjau.
+  - Baris sisipan mewarisi warna baris sumbernya (Excel `fill up`/`fill down` menyalin format); rencana warna dihitung ulang sesudah sisip dan harus sama dengan pratinjau.
   - Laporan mencatat jenis `warna` (warna lama dan baru, "tanpa warna" bila kosong). Ringkasan menghitung `fills_changed`.
 - **[Keputusan user, 13 November 2026]** Sel COLOR1..COLORn yang ditulis dari MATRIX diberi latar abu 7F7F7F (`COLOR_FIXED_FILL`) sebagai tanda benang di sel itu sudah final.
   - Berlaku juga bila isinya sudah sama dengan MATRIX, di baris sisipan, dan untuk COLOR berisi deskripsi stripe/marl (Needs review).

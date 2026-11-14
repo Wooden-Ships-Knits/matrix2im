@@ -213,7 +213,7 @@ Sudah disepakati:
 2. Semua grup size (X/S, S/M, M/L FAF, M/L FAH, X/L) mendapat daftar colorway yang sama, dengan urutan sesuai MATRIX.
 3. Baris ke-1 sampai ke-N di setiap grup diisi colorway berurutan (N = jumlah colorway).
 4. Kalau baris lebih dari N, jumlah baris tetap (tangga harga WHLS LINE PRICE +1 per baris tetap utuh). Di sisa baris, WS TAG COLOR dan WHS dikosongkan dan kedua selnya diberi latar kuning (FFFF00); COLOR dibiarkan. (Revisi 11 November 2026; sebelumnya sisa baris diisi colorway terakhir.)
-5. Kalau baris kurang dari N, baris ditambahkan di dalam grup, sebelum baris subtotal, dengan menyalin baris di atasnya. Formula dan range SUBTOTAL ikut menyesuaikan.
+5. Kalau baris kurang dari N, baris ditambahkan di dalam grup, sebelum baris subtotal, dengan menyalin baris terakhir grup. Baris yang sudah ada tetap di posisinya beserta kolom yang tidak ditulis tool (mis. kancing). Formula dan range SUBTOTAL ikut menyesuaikan.
 6. WS TAG COLOR ditulis ke kolom CD, yang header-nya dicocokkan dari baris pertama ("WS TAG COLOR"). WHS ditulis ke kolom CE, bukan kolom G.
 7. Nilai null tidak ditulis, dan kolom formula tidak pernah disentuh.
 8. Warna latar sel WS TAG COLOR dan WHS mengikuti WHS baris itu: 000 = FF99FF, SY = FFCC99, BOTH WHS = 969696 (revisi 11 November 2026). WHS null tidak mengubah warna.
@@ -319,7 +319,7 @@ Arti setiap warna diambil dari legend di bagian atas setiap halaman MATRIX MASTE
 
 1. Ditambahkan penulis IM MASTER: `matrix2im write` dan panel **Tulis ke IM MASTER** di UI (multi-sesi, satu penulis pada satu waktu). Aturan 1 sampai 7 di "Fase berikutnya" berlaku penuh.
 2. Pengaman: cocokkan password ubah dengan hash `fileSharing`, cek file `~$`, cadangan bertanggal, deteksi perubahan file sejak rencana, verifikasi hasil, dan log JSONL (`matrix2im-log.jsonl`, tanpa password).
-3. Sisip baris lewat Excel (baris utuh, `fill down` terbatas); nilai sel ditulis langsung di XML sheet. openpyxl tidak pernah menyimpan IM MASTER. Setting `insert_engine = "none"` hanya mengisi baris yang ada.
+3. Sisip baris lewat Excel (baris utuh, `fill up`/`fill down` terbatas); nilai sel ditulis langsung di XML sheet. openpyxl tidak pernah menyimpan IM MASTER. Setting `insert_engine = "none"` hanya mengisi baris yang ada.
 4. Regression F27 pada salinan uji AI TEST V2: 211 style tanpa dilewati; 177 sisipan (286 baris, 20 di grup 1 baris) dan 179 style IM tanpa data MATRIX. Ketiganya sama dengan perkiraan spike (177 / 286 / 179); 16 label musim/judul satu segmen (DESCRIPTION tanpa " - ") tidak dihitung sebagai style. Baris subtotal dikenali dari rumus SUBTOTAL, bukan label, dan kunci grup IM adalah `STYLE - SIZE` (teks sesudahnya dianggap catatan).
 5. Laporan perubahan berupa file Excel (.xlsx, sheet `Laporan`): bisa diunduh dari pratinjau sebelum konfirmasi (atau `matrix2im write --report`), dan tiap penulisan menyimpan `<nama> <tanggal jam> laporan matrix2im.xlsx` di folder cadangan. Isinya setiap sel yang berubah, baris sisipan, baris yang colorway-nya berubah, style dilewati, style MATRIX yang tidak ada di IM, style IM tanpa MATRIX, dan peringatan.
 6. Dokumentasi: README bagian "Menulis ke IM MASTER" dan daftar uji terima `docs/uji-terima-tulis-im.md`.

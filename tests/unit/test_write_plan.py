@@ -127,10 +127,11 @@ def test_no_insert_when_enough_rows():
 
 
 def test_insert_inside_group_two_or_more_rows():
+    """Sisip di atas baris terakhir (SUBTOTAL ikut melebar), lalu fill up dari baris terakhir lama yang terdorong."""
     lay = _layout([ImGroup("S - X/S", (55, 56, 57), 58)])
     assert plan_inserts(lay, {"S": _cws(5)}) == [
-        InsertOp("S - X/S", at_row=57, count=2, fill_from=56, fill_to=58,
-                 subtotal_row_after=None, formula_fixes={})]
+        InsertOp("S - X/S", at_row=57, count=2, fill_from=57, fill_to=59,
+                 subtotal_row_after=None, formula_fixes={}, fill_up=True)]
 
 
 def test_single_row_group_inserts_below_and_widens_subtotal():
@@ -172,11 +173,20 @@ def test_project_layout_shifts_rows_and_copies_values():
     out = project_layout(lay, ops)
     assert out.groups == [ImGroup("A - X", (55, 56, 57, 58), 59), ImGroup("B - X", (60, 61, 62), 63)]
     assert out.values[(55, 2)] == "a"
-    assert out.values[(56, 2)] == "a" and out.values[(57, 2)] == "a"  # sisipan = salinan fill_from
+    assert out.values[(56, 2)] == "b" and out.values[(57, 2)] == "b"  # sisipan = salinan baris terakhir b
     assert out.values[(58, 2)] == "b"
-    assert out.values[(60, 2)] == "c" and out.values[(61, 2)] == "c"  # sisipan = salinan baris c
+    assert out.values[(60, 2)] == "c" and out.values[(61, 2)] == "d"  # sisipan = salinan baris terakhir d
     assert out.values[(62, 2)] == "d"
     assert set(out.subtotal_formulas) == {59, 63}
+
+
+def test_inserted_rows_keep_existing_rows_in_place():
+    """ALIANA X/S: kancing (aksesori) baris ke-3 tetap di posisi ke-3 saat colorway ke-4 ditambahkan."""
+    lay = _layout([ImGroup("S - X/S", (55, 56, 57), 58)],
+                  values={(55, 9): "XBP 729", (56, 9): "XBP 729", (57, 9): "XBP 005"})
+    out = project_layout(lay, plan_inserts(lay, {"S": _cws(4)}))
+    assert out.groups == [ImGroup("S - X/S", (55, 56, 57, 58), 59)]
+    assert [out.values[(r, 9)] for r in (55, 56, 57, 58)] == ["XBP 729", "XBP 729", "XBP 005", "XBP 005"]
 
 
 # --- plan_values -----------------------------------------------------------
@@ -399,7 +409,8 @@ def test_project_layout_copies_fills_to_inserted_rows():
                    {(55, 3): "FF99FF", (56, 3): "FFCC99", (58, 3): "969696"})
     ops = plan_inserts(lay, {"S": _cws(3), "T": _cws(2)})
     proj = project_layout(lay, ops)
-    assert proj.fills == {(55, 3): "FF99FF", (56, 3): "FF99FF", (57, 3): "FFCC99",
+    # S (2 baris): sisipan = salinan baris terakhir (FFCC99); T (1 baris): sisipan = salinan baris itu
+    assert proj.fills == {(55, 3): "FF99FF", (56, 3): "FFCC99", (57, 3): "FFCC99",
                           (59, 3): "969696", (60, 3): "969696"}
 
 

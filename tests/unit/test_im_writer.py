@@ -53,16 +53,17 @@ def _simple(tmp_path, engine="none"):
 def fake_inserter(path, password, ops, sheet, last_col, drop=0):
     """Sisip via openpyxl pada file sintetis (tanpa gambar) lalu pulihkan fileSharing.
 
-    Seperti fill down Excel, baris sisipan menyalin nilai dan format (termasuk warna) baris sumber.
+    Seperti fill down/up Excel, baris sisipan menyalin nilai dan format (termasuk warna) baris sumber.
     """
     wb = load_workbook(path)
     ws = wb[sheet]
     for op in ops:
         ws.insert_rows(op.at_row, op.count - drop)
+        src = op.at_row + op.count - drop if op.fill_up else op.fill_from
         for r in range(op.at_row, op.at_row + op.count - drop):
             for c in range(1, ws.max_column + 1):
-                ws.cell(r, c).value = ws.cell(op.fill_from, c).value
-                ws.cell(r, c)._style = copy(ws.cell(op.fill_from, c)._style)
+                ws.cell(r, c).value = ws.cell(src, c).value
+                ws.cell(r, c)._style = copy(ws.cell(src, c)._style)
     wb.save(path)
     add_file_sharing(path)
     return 0.1

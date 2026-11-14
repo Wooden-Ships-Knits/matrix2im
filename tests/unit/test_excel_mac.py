@@ -16,8 +16,15 @@ from matrix_to_im.write_plan import Colorway, InsertOp, plan_inserts
 from tests.helpers.im_factory import TEST_PASSWORD, GroupSpec, add_file_sharing, build_im_sheet
 
 
-def _op(at, count, fill_from, fill_to, fixes=None, after=None):
-    return InsertOp("X - BOTH WHS", at, count, fill_from, fill_to, after, fixes or {})
+def _op(at, count, fill_from, fill_to, fixes=None, after=None, fill_up=False):
+    return InsertOp("X - BOTH WHS", at, count, fill_from, fill_to, after, fixes or {}, fill_up)
+
+
+def test_script_fill_up_from_pushed_down_last_row():
+    script = build_insert_script([_op(57, 2, 57, 59, fill_up=True), _op(10, 1, 9, 10)], "F27", "IJ")
+    assert 'insert into range (range "57:58" of ws) shift shift down' in script
+    assert 'fill up range "A57:IJ59" of ws' in script
+    assert 'fill down range "A9:IJ10" of ws' in script
 
 
 def test_script_ops_in_given_order_and_fill_limited_to_last_col():
@@ -259,6 +266,10 @@ def test_real_excel_inserts_and_widens_subtotals(tmp_path):
     assert ws["B64"].value == "=SUBTOTAL(9,B61:B63)"
     for row in (58, 59, 62, 63):
         assert ws.cell(row, 26).value == "catatan"
+    # AAA (3 baris): sisipan di atas baris terakhir berisi salinan baris terakhir; baris a, b tetap di tempat
+    assert [ws.cell(r, 5).value for r in range(55, 60)] == ["a", "b", "c", "c", "c"]
+    # BBB (1 baris): sisipan di bawahnya berisi salinan baris itu
+    assert [ws.cell(r, 5).value for r in range(61, 64)] == ["x", "x", "x"]
     check_modify_password(path, TEST_PASSWORD)
 
 
